@@ -64,11 +64,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (Array.isArray(dataEmployees)) {
         setEmployees(dataEmployees);
         if (!currentEmployee && dataEmployees.length > 0) {
-          // Default to Admin or Manager
-          const adminOrManager = dataEmployees.find(
-            (e: Employee) => e.role === "ADMIN" || e.role === "MANAGER"
+          // Default to Stock Clerk
+          const stockClerk = dataEmployees.find(
+            (e: Employee) => e.role === "STOCK_CLERK"
           ) || dataEmployees[0];
-          setCurrentEmployee(adminOrManager);
+          setCurrentEmployee(stockClerk);
         }
       }
     } catch (err) {

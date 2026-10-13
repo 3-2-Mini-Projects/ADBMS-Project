@@ -2,11 +2,9 @@
 
 import React, { useState } from "react";
 import { useApp } from "@/lib/context";
-import Link from "next/link";
 import {
   Store,
   UserCheck,
-  ShoppingCart,
   Database,
   ChevronDown,
   Sparkles,
@@ -66,25 +64,10 @@ export function Header() {
             </div>
           )}
         </div>
-
-        {/* Database Live Status Chip */}
-        <div className="hidden md:flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-950/40 border border-emerald-800/50 text-[11px] text-emerald-400">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="font-mono">MySQL: supermarket_ADBMS</span>
-        </div>
       </div>
 
       {/* Right Controls */}
       <div className="flex items-center gap-3">
-        {/* POS Fast Button */}
-        <Link
-          href="/pos"
-          className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-medium text-xs shadow-lg shadow-emerald-900/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
-        >
-          <ShoppingCart className="w-3.5 h-3.5" />
-          <span>Launch POS</span>
-        </Link>
-
         {/* Employee & Role Switcher */}
         <div className="relative">
           <button
