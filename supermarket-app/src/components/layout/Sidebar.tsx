@@ -7,6 +7,7 @@ import { useApp } from "@/lib/context";
 import { canAccess, PermissionKey } from "@/lib/permissions";
 import {
   LayoutDashboard,
+  AlertTriangle,
   ShoppingCart,
   Receipt,
   RotateCcw,
@@ -14,6 +15,7 @@ import {
   Layers,
   Truck,
   Boxes,
+  ClipboardCheck,
   FileSpreadsheet,
   Users,
   Tag,
@@ -26,6 +28,11 @@ import {
   ChevronRight,
   Sparkles,
   Lock,
+  PackagePlus,
+  Settings,
+  UserCircle,
+  LogOut,
+  LayoutGrid,
 } from "lucide-react";
 
 interface NavItem {
@@ -55,6 +62,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     group: "CATALOG & INVENTORY",
     items: [
+      { title: "Inventory Dashboard", href: "/inventory/dashboard", icon: LayoutGrid, permission: "manage_inventory", badge: "New" },
       { title: "Products", href: "/products", icon: Package, permission: "manage_catalog" },
       { title: "Categories", href: "/categories", icon: Layers, permission: "manage_catalog" },
       { title: "Suppliers", href: "/suppliers", icon: Truck },
@@ -81,12 +89,43 @@ const NAV_GROUPS: NavGroup[] = [
   },
 ];
 
+const CLERK_NAV_GROUPS: NavGroup[] = [
+  {
+    group: "INVENTORY",
+    items: [
+      { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+      { title: "Inventory Dashboard", href: "/inventory/dashboard", icon: LayoutGrid, badge: "New" },
+      { title: "Inventory", href: "/inventory", icon: Boxes },
+      { title: "Product Batches", href: "/inventory/batches", icon: PackagePlus },
+      { title: "Stock Alerts", href: "/inventory/stock-alerts", icon: AlertTriangle },
+      { title: "Reorder Suggestions", href: "/inventory/reorder-suggestions", icon: ClipboardCheck },
+    ],
+  },
+  {
+    group: "PURCHASING",
+    items: [
+      { title: "Purchase Orders", href: "/purchases", icon: FileSpreadsheet },
+      { title: "Create Purchase Order", href: "/purchases/new", icon: ClipboardCheck },
+      { title: "Receive Stock", href: "/purchases", icon: PackagePlus },
+    ],
+  },
+  {
+    group: "ACCOUNT",
+    items: [
+      { title: "My Profile", href: "/profile", icon: UserCircle },
+      { title: "Settings", href: "/settings", icon: Settings },
+      { title: "Logout", href: "/logout", icon: LogOut },
+    ],
+  },
+];
+
 export function Sidebar() {
   const pathname = usePathname();
   const { currentEmployee, currentBranch } = useApp();
   const [collapsed, setCollapsed] = useState(false);
 
   const role = currentEmployee?.role ?? "ADMIN";
+  const navGroups = role === "STOCK_CLERK" ? CLERK_NAV_GROUPS : NAV_GROUPS;
 
   return (
     <aside
@@ -142,7 +181,7 @@ export function Sidebar() {
 
         {/* Navigation List */}
         <div className="px-3 py-3 space-y-5 overflow-y-auto max-h-[calc(100vh-140px)]">
-          {NAV_GROUPS.map((group) => {
+          {navGroups.map((group) => {
             return (
               <div key={group.group} className="space-y-1">
                 {!collapsed && (
