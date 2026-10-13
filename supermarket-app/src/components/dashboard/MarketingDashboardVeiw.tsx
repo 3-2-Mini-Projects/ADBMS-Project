@@ -127,10 +127,7 @@ export function MarketingDashboardVeiw() {
       {/* Top Banner Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-2 border-b border-slate-800">
         <div>
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-amber-400">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Marketing Role Analytics</span>
-          </div>
+
           <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight mt-1">
             Marketing & Loyalty Dashboard
           </h1>
@@ -319,19 +316,19 @@ export function MarketingDashboardVeiw() {
               tierName === "PLATINUM"
                 ? "border-purple-600/40 bg-purple-950/20 text-purple-300"
                 : tierName === "GOLD"
-                ? "border-amber-600/40 bg-amber-950/20 text-amber-300"
-                : tierName === "SILVER"
-                ? "border-slate-500/40 bg-slate-900/30 text-slate-300"
-                : "border-orange-600/40 bg-orange-950/20 text-orange-300";
+                  ? "border-amber-600/40 bg-amber-950/20 text-amber-300"
+                  : tierName === "SILVER"
+                    ? "border-slate-500/40 bg-slate-900/30 text-slate-300"
+                    : "border-orange-600/40 bg-orange-950/20 text-orange-300";
 
             const barColor =
               tierName === "PLATINUM"
                 ? "bg-purple-500"
                 : tierName === "GOLD"
-                ? "bg-amber-500"
-                : tierName === "SILVER"
-                ? "bg-slate-400"
-                : "bg-orange-500";
+                  ? "bg-amber-500"
+                  : tierName === "SILVER"
+                    ? "bg-slate-400"
+                    : "bg-orange-500";
 
             return (
               <div
@@ -461,19 +458,17 @@ export function MarketingDashboardVeiw() {
                       <td className="py-3 font-mono text-[11px] text-amber-400">{lt.card_no}</td>
                       <td className="py-3">
                         <span
-                          className={`text-[9px] font-mono px-1.5 py-0.5 rounded font-bold ${
-                            lt.transaction_type === "EARNED"
-                              ? "bg-emerald-950 text-emerald-300 border border-emerald-800/40"
-                              : "bg-rose-950 text-rose-300 border border-rose-800/40"
-                          }`}
+                          className={`text-[9px] font-mono px-1.5 py-0.5 rounded font-bold ${lt.transaction_type === "EARNED"
+                            ? "bg-emerald-950 text-emerald-300 border border-emerald-800/40"
+                            : "bg-rose-950 text-rose-300 border border-rose-800/40"
+                            }`}
                         >
                           {lt.transaction_type}
                         </span>
                       </td>
                       <td
-                        className={`py-3 text-right font-mono font-bold ${
-                          lt.points_change > 0 ? "text-emerald-400" : "text-rose-400"
-                        }`}
+                        className={`py-3 text-right font-mono font-bold ${lt.points_change > 0 ? "text-emerald-400" : "text-rose-400"
+                          }`}
                       >
                         {lt.points_change > 0 ? `+${lt.points_change}` : lt.points_change} pts
                       </td>
