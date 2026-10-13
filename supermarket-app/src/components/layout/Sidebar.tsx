@@ -93,7 +93,6 @@ const CLERK_NAV_GROUPS: NavGroup[] = [
   {
     group: "INVENTORY",
     items: [
-      { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
       { title: "Inventory Dashboard", href: "/inventory/dashboard", icon: LayoutGrid, badge: "New" },
       { title: "Inventory", href: "/inventory", icon: Boxes },
       { title: "Product Batches", href: "/inventory/batches", icon: PackagePlus },
@@ -137,7 +136,10 @@ export function Sidebar() {
       <div>
         <div className="h-16 flex items-center justify-between px-4 border-b border-slate-800">
           {!collapsed ? (
-            <Link href="/dashboard" className="flex items-center gap-2.5">
+            <Link
+              href={role === "STOCK_CLERK" ? "/inventory/dashboard" : "/dashboard"}
+              className="flex items-center gap-2.5"
+            >
               <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-emerald-500 flex items-center justify-center text-white shadow-lg shadow-blue-500/25">
                 <Sparkles className="w-5 h-5 text-white" />
               </div>
