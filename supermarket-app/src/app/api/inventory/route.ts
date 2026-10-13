@@ -89,7 +89,7 @@ export async function PATCH(req: Request) {
         "UPDATE inventory SET quantity_on_hand = ?, last_updated = NOW() WHERE inventory_id = ?",
         [new_quantity, invId]
       );
-    } else if (quantity_change !== undefined) {
+    } else if (quantity_change !== undefined && Number(quantity_change) !== 0) {
       await query(
         "UPDATE inventory SET quantity_on_hand = quantity_on_hand + ?, last_updated = NOW() WHERE inventory_id = ?",
         [quantity_change, invId]
@@ -99,6 +99,11 @@ export async function PATCH(req: Request) {
     if (reorder_level !== undefined) {
       await query(
         "UPDATE inventory SET reorder_level = ?, last_updated = NOW() WHERE inventory_id = ?",
+        [reorder_level, invId]
+      );
+      // Keep product-level default reorder level synchronized
+      await query(
+        "UPDATE products p JOIN inventory i ON p.product_id = i.product_id SET p.reorder_level = ?, p.updated_at = NOW() WHERE i.inventory_id = ?",
         [reorder_level, invId]
       );
     }

@@ -36,8 +36,9 @@ export default function InventoryPage() {
   // Stock Adjustment Modal
   const [adjustModalOpen, setAdjustModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
-  const [quantityChange, setQuantityChange] = useState<string>("10");
-  const [adjustmentReason, setAdjustmentReason] = useState("Restock audit count");
+  const [quantityChange, setQuantityChange] = useState<string>("0");
+  const [reorderLevel, setReorderLevel] = useState<string>("10");
+  const [adjustmentReason, setAdjustmentReason] = useState("Inventory recount / adjustment");
   const [isAdjusting, setIsAdjusting] = useState(false);
 
   // Add Batch Modal
@@ -65,8 +66,9 @@ export default function InventoryPage() {
       if (currentBranch) params.append("branchId", String(currentBranch.branch_id));
       if (lowStockOnly) params.append("lowStock", "true");
       if (search.trim()) params.append("search", search.trim());
+      params.append("_t", String(Date.now()));
 
-      const res = await fetch(`/api/inventory?${params.toString()}`);
+      const res = await fetch(`/api/inventory?${params.toString()}`, { cache: "no-store" });
       const data = await res.json();
       if (Array.isArray(data)) setInventory(data);
     } catch (err) {
@@ -81,8 +83,9 @@ export default function InventoryPage() {
     try {
       const params = new URLSearchParams();
       if (currentBranch) params.append("branchId", String(currentBranch.branch_id));
+      params.append("_t", String(Date.now()));
 
-      const res = await fetch(`/api/inventory/batches?${params.toString()}`);
+      const res = await fetch(`/api/inventory/batches?${params.toString()}`, { cache: "no-store" });
       const data = await res.json();
       if (Array.isArray(data)) setBatches(data);
     } catch (err) {
@@ -102,18 +105,29 @@ export default function InventoryPage() {
     if (!selectedItem) return;
     setIsAdjusting(true);
     try {
+      const payload: any = {
+        inventory_id: selectedItem.inventory_id,
+        reason: adjustmentReason || "Inventory recount / adjustment",
+      };
+
+      if (quantityChange !== "" && !isNaN(Number(quantityChange))) {
+        payload.quantity_change = Number(quantityChange);
+      } else {
+        payload.quantity_change = 0;
+      }
+
+      if (reorderLevel !== "" && !isNaN(Number(reorderLevel))) {
+        payload.reorder_level = Number(reorderLevel);
+      }
+
       const res = await fetch("/api/inventory", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          inventory_id: selectedItem.inventory_id,
-          quantity_change: Number(quantityChange),
-          reason: adjustmentReason,
-        }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        showToast(`Stock updated for ${selectedItem.product_name}!`, "success");
+        showToast(`Updated stock & reorder level for ${selectedItem.product_name}!`, "success");
         setAdjustModalOpen(false);
         fetchStock();
       } else {
@@ -310,11 +324,13 @@ export default function InventoryPage() {
                           <button
                             onClick={() => {
                               setSelectedItem(item);
-                              setQuantityChange("10");
+                              setQuantityChange("0");
+                              setReorderLevel(String(item.reorder_level ?? 10));
+                              setAdjustmentReason("Inventory recount / adjustment");
                               setAdjustModalOpen(true);
                             }}
                             className="p-1.5 rounded-lg bg-slate-800 hover:bg-blue-600 text-slate-300 hover:text-white transition-colors"
-                            title="Adjust Stock"
+                            title="Adjust Stock & Reorder Level"
                           >
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
@@ -397,14 +413,14 @@ export default function InventoryPage() {
         </div>
       )}
 
-      {/* MODAL: Adjust Stock */}
+      {/* MODAL: Adjust Stock & Reorder Level */}
       {adjustModalOpen && selectedItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <h3 className="font-bold text-sm text-white flex items-center gap-2">
                 <Edit2 className="w-4 h-4 text-blue-400" />
-                <span>Stock Quantity Adjustment</span>
+                <span>Adjust Stock & Reorder Level</span>
               </h3>
               <button
                 onClick={() => setAdjustModalOpen(false)}
@@ -414,21 +430,50 @@ export default function InventoryPage() {
               </button>
             </div>
 
-            <div className="bg-slate-950 p-3 rounded-xl border border-slate-800">
+            <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1">
               <div className="text-xs font-bold text-white">{selectedItem.product_name}</div>
-              <div className="text-[11px] text-slate-400 font-mono mt-0.5">
-                Current Stock: {selectedItem.quantity_on_hand} units in {selectedItem.branch_name}
+              <div className="flex justify-between text-[11px] text-slate-400 font-mono">
+                <span>Current Stock ({selectedItem.branch_name}):</span>
+                <span className="font-bold text-white">{selectedItem.quantity_on_hand} units</span>
               </div>
+              <div className="flex justify-between text-[11px] text-slate-400 font-mono">
+                <span>Current Reorder Level:</span>
+                <span className="font-bold text-amber-400">{selectedItem.reorder_level} units</span>
+              </div>
+              {quantityChange !== "" && !isNaN(Number(quantityChange)) && Number(quantityChange) !== 0 && (
+                <div className="flex justify-between text-[11px] font-mono pt-1 border-t border-slate-800/80">
+                  <span className="text-blue-400">Resulting Stock:</span>
+                  <span className="font-bold text-emerald-400">
+                    {Math.max(0, Number(selectedItem.quantity_on_hand) + Number(quantityChange))} units
+                  </span>
+                </div>
+              )}
             </div>
 
             <form onSubmit={handleAdjustStock} className="space-y-4">
               <div>
-                <label className="text-xs text-slate-300 block mb-1">Add/Deduct Quantity (+ or -)</label>
+                <label className="text-xs text-slate-300 block mb-1">
+                  Quantity Change <span className="text-slate-500 font-normal">(enter 0 or leave empty to keep current stock)</span>
+                </label>
                 <input
                   type="number"
+                  placeholder="e.g. +10, -5, or 0"
                   value={quantityChange}
                   onChange={(e) => setQuantityChange(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white font-mono text-sm font-bold"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white font-mono text-sm font-bold placeholder:text-slate-600 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-slate-300 block mb-1">
+                  Reorder Level Threshold <span className="text-slate-500 font-normal">(triggers Low Stock alert)</span>
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={reorderLevel}
+                  onChange={(e) => setReorderLevel(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-amber-300 font-mono text-sm font-bold focus:outline-none focus:border-amber-500"
                   required
                 />
               </div>
@@ -439,7 +484,7 @@ export default function InventoryPage() {
                   type="text"
                   value={adjustmentReason}
                   onChange={(e) => setAdjustmentReason(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus:outline-none focus:border-blue-500"
                   required
                 />
               </div>
@@ -457,7 +502,7 @@ export default function InventoryPage() {
                   disabled={isAdjusting}
                   className="w-2/3 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold"
                 >
-                  Confirm Adjustment
+                  Confirm Changes
                 </button>
               </div>
             </form>

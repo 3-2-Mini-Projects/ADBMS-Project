@@ -173,6 +173,18 @@ export async function PATCH(req: Request) {
       );
     }
 
+    if (body.reorder_level !== undefined) {
+      await connection.query(
+        "UPDATE products SET reorder_level = ?, updated_at = NOW() WHERE product_id = ?",
+        [body.reorder_level, product_id]
+      );
+      // Synchronize all branch inventory records for this product
+      await connection.query(
+        "UPDATE inventory SET reorder_level = ?, last_updated = NOW() WHERE product_id = ?",
+        [body.reorder_level, product_id]
+      );
+    }
+
     await connection.commit();
     return NextResponse.json({ success: true });
   } catch (err: any) {
