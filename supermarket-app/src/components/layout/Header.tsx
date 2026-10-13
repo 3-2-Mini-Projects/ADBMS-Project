@@ -1,10 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { useApp } from "@/lib/context";
 import {
   Store,
   UserCheck,
+  ShoppingCart,
   Database,
   ChevronDown,
   Sparkles,
@@ -68,6 +70,17 @@ export function Header() {
 
       {/* Right Controls */}
       <div className="flex items-center gap-3">
+        {/* POS Fast Button - Hidden for Stock Clerk */}
+        {currentEmployee?.role !== "STOCK_CLERK" && (
+          <Link
+            href="/pos"
+            className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-medium text-xs shadow-lg shadow-emerald-900/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
+          >
+            <ShoppingCart className="w-3.5 h-3.5" />
+            <span>Launch POS</span>
+          </Link>
+        )}
+
         {/* Employee & Role Switcher */}
         <div className="relative">
           <button
