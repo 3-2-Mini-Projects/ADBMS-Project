@@ -33,6 +33,9 @@ import {
   UserCircle,
   LogOut,
   LayoutGrid,
+  Award,
+  Ticket,
+  KeyRound,
 } from "lucide-react";
 
 interface NavItem {
@@ -119,13 +122,40 @@ const CLERK_NAV_GROUPS: NavGroup[] = [
   },
 ];
 
+const MARKETING_NAV_GROUPS: NavGroup[] = [
+  {
+    group: "MARKETING",
+    items: [
+      { title: "Dashboard", href: "/marketing/dashboard", icon: LayoutDashboard },
+      { title: "Customer Management", href: "/marketing/customers", icon: Users },
+      { title: "Loyalty Management", href: "/marketing/loyalty", icon: Award },
+      { title: "Promotion Management", href: "/marketing/promotions", icon: Tag },
+      { title: "Coupon Management", href: "/marketing/coupons", icon: Ticket },
+      { title: "Marketing Reports", href: "/marketing/reports", icon: BarChart3 },
+    ],
+  },
+  {
+    group: "ACCOUNT",
+    items: [
+      { title: "My Profile", href: "/profile", icon: UserCircle },
+      { title: "Change Password", href: "/change-password", icon: KeyRound },
+      { title: "Logout", href: "/logout", icon: LogOut },
+    ],
+  },
+];
+
 export function Sidebar() {
   const pathname = usePathname();
   const { currentEmployee, currentBranch } = useApp();
   const [collapsed, setCollapsed] = useState(false);
 
   const role = currentEmployee?.role ?? "ADMIN";
-  const navGroups = role === "STOCK_CLERK" ? CLERK_NAV_GROUPS : NAV_GROUPS;
+  const navGroups =
+    role === "STOCK_CLERK"
+      ? CLERK_NAV_GROUPS
+      : role === "MARKETING"
+      ? MARKETING_NAV_GROUPS
+      : NAV_GROUPS;
 
   return (
     <aside
@@ -137,7 +167,10 @@ export function Sidebar() {
       <div>
         <div className="h-16 flex items-center justify-between px-4 border-b border-slate-800">
           {!collapsed ? (
-            <Link href="/dashboard" className="flex items-center gap-2.5">
+            <Link
+              href={role === "MARKETING" ? "/marketing/dashboard" : "/dashboard"}
+              className="flex items-center gap-2.5"
+            >
               <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-emerald-500 flex items-center justify-center text-white shadow-lg shadow-blue-500/25">
                 <Sparkles className="w-5 h-5 text-white" />
               </div>
@@ -191,7 +224,18 @@ export function Sidebar() {
                 )}
                 {group.items.map((item) => {
                   const allowed = !item.permission || canAccess(role, item.permission);
-                  const active = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
+                  const active =
+                    pathname === item.href ||
+                    (item.href !== "/dashboard" &&
+                      item.href !== "/marketing/dashboard" &&
+                      pathname.startsWith(item.href)) ||
+                    (item.href === "/marketing/dashboard" &&
+                      (pathname === "/marketing/dashboard" ||
+                        pathname === "/marketing" ||
+                        (pathname === "/dashboard" && role === "MARKETING"))) ||
+                    (item.href === "/marketing/customers" && pathname.startsWith("/customers")) ||
+                    (item.href === "/marketing/promotions" && pathname.startsWith("/promotions")) ||
+                    (item.href === "/marketing/reports" && pathname.startsWith("/reports"));
 
                   if (!allowed && role === "CASHIER" && item.permission) {
                     // Filter restricted items for cashier
