@@ -1,0 +1,1344 @@
+{
+  "employees": [
+    {
+      "Field": "employee_id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "PRI",
+      "Default": null
+    },
+    {
+      "Field": "branch_id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "MUL",
+      "Default": null
+    },
+    {
+      "Field": "full_name",
+      "Type": "varchar(100)",
+      "Null": "NO",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "role",
+      "Type": "enum('CASHIER','MANAGER','STOCK_CLERK','CATALOG_MANAGER','MARKETING','HR','ADMIN')",
+      "Null": "NO",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "email",
+      "Type": "varchar(100)",
+      "Null": "NO",
+      "Key": "UNI",
+      "Default": null
+    },
+    {
+      "Field": "password_hash",
+      "Type": "varchar(255)",
+      "Null": "YES",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "phone",
+      "Type": "varchar(20)",
+      "Null": "YES",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "hire_date",
+      "Type": "date",
+      "Null": "NO",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "monthly_salary",
+      "Type": "decimal(10,2)",
+      "Null": "NO",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "is_active",
+      "Type": "tinyint(1)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "1"
+    },
+    {
+      "Field": "created_at",
+      "Type": "datetime",
+      "Null": "NO",
+      "Key": "",
+      "Default": "CURRENT_TIMESTAMP"
+    }
+  ],
+  "employees_sample": [
+    {
+      "employee_id": 1,
+      "branch_id": 1,
+      "full_name": "Nimal Perera",
+      "role": "MANAGER",
+      "email": "nimal@shop.lk",
+      "password_hash": null,
+      "phone": "0771110000",
+      "hire_date": "2018-01-09T18:30:00.000Z",
+      "monthly_salary": "150000.00",
+      "is_active": 1,
+      "created_at": "2026-10-11T01:58:39.000Z"
+    },
+    {
+      "employee_id": 2,
+      "branch_id": 1,
+      "full_name": "Kamala Silva",
+      "role": "CASHIER",
+      "email": "kamala@shop.lk",
+      "password_hash": null,
+      "phone": "0771110007",
+      "hire_date": "2020-01-31T18:30:00.000Z",
+      "monthly_salary": "60000.00",
+      "is_active": 1,
+      "created_at": "2026-10-11T01:58:39.000Z"
+    }
+  ],
+  "branches": [
+    {
+      "Field": "branch_id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "PRI",
+      "Default": null
+    },
+    {
+      "Field": "branch_code",
+      "Type": "varchar(10)",
+      "Null": "NO",
+      "Key": "UNI",
+      "Default": null
+    },
+    {
+      "Field": "name",
+      "Type": "varchar(100)",
+      "Null": "NO",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "city",
+      "Type": "varchar(60)",
+      "Null": "NO",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "region",
+      "Type": "varchar(60)",
+      "Null": "NO",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "address",
+      "Type": "varchar(200)",
+      "Null": "YES",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "phone",
+      "Type": "varchar(20)",
+      "Null": "YES",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "manager_id",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "MUL",
+      "Default": null
+    },
+    {
+      "Field": "opened_date",
+      "Type": "date",
+      "Null": "NO",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "is_active",
+      "Type": "tinyint(1)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "1"
+    }
+  ],
+  "branches_sample": [
+    {
+      "branch_id": 1,
+      "branch_code": "BR01",
+      "name": "Colombo Main",
+      "city": "Colombo",
+      "region": "Western",
+      "address": "12 Galle Road, Colombo 03",
+      "phone": "0112000001",
+      "manager_id": 1,
+      "opened_date": "2018-01-09T18:30:00.000Z",
+      "is_active": 1
+    },
+    {
+      "branch_id": 2,
+      "branch_code": "BR02",
+      "name": "Kandy Central",
+      "city": "Kandy",
+      "region": "Central",
+      "address": "45 Peradeniya Road, Kandy",
+      "phone": "0812000002",
+      "manager_id": 4,
+      "opened_date": "2019-03-14T18:30:00.000Z",
+      "is_active": 1
+    }
+  ],
+  "categories": [
+    {
+      "Field": "category_id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "PRI",
+      "Default": null
+    },
+    {
+      "Field": "name",
+      "Type": "varchar(80)",
+      "Null": "NO",
+      "Key": "MUL",
+      "Default": null
+    },
+    {
+      "Field": "parent_id",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "MUL",
+      "Default": null
+    },
+    {
+      "Field": "parent_key",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": null
+    }
+  ],
+  "categories_sample": [
+    {
+      "category_id": 1,
+      "name": "Food",
+      "parent_id": null,
+      "parent_key": 0
+    },
+    {
+      "category_id": 2,
+      "name": "Bakery",
+      "parent_id": null,
+      "parent_key": 0
+    }
+  ],
+  "suppliers": [
+    {
+      "Field": "supplier_id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "PRI",
+      "Default": null
+    },
+    {
+      "Field": "supplier_code",
+      "Type": "varchar(20)",
+      "Null": "NO",
+      "Key": "UNI",
+      "Default": null
+    },
+    {
+      "Field": "name",
+      "Type": "varchar(100)",
+      "Null": "NO",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "contact_name",
+      "Type": "varchar(100)",
+      "Null": "YES",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "phone",
+      "Type": "varchar(20)",
+      "Null": "YES",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "email",
+      "Type": "varchar(100)",
+      "Null": "YES",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "address",
+      "Type": "varchar(200)",
+      "Null": "YES",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "is_active",
+      "Type": "tinyint(1)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "1"
+    }
+  ],
+  "suppliers_sample": [
+    {
+      "supplier_id": 1,
+      "supplier_code": "SUP001",
+      "name": "Fresh Foods Ltd",
+      "contact_name": "Priya Nair",
+      "phone": "0112345678",
+      "email": "info@fresh.lk",
+      "address": "10 Dairy Lane, Colombo",
+      "is_active": 1
+    },
+    {
+      "supplier_id": 2,
+      "supplier_code": "SUP002",
+      "name": "Island Beverages",
+      "contact_name": "Kasun Raj",
+      "phone": "0112223344",
+      "email": "sales@island.lk",
+      "address": "22 Factory Road, Ja-Ela",
+      "is_active": 1
+    }
+  ],
+  "products": [
+    {
+      "Field": "product_id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "PRI",
+      "Default": null
+    },
+    {
+      "Field": "barcode",
+      "Type": "varchar(20)",
+      "Null": "NO",
+      "Key": "UNI",
+      "Default": null
+    },
+    {
+      "Field": "name",
+      "Type": "varchar(150)",
+      "Null": "NO",
+      "Key": "MUL",
+      "Default": null
+    },
+    {
+      "Field": "category_id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "MUL",
+      "Default": null
+    },
+    {
+      "Field": "supplier_id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "MUL",
+      "Default": null
+    },
+    {
+      "Field": "brand",
+      "Type": "varchar(80)",
+      "Null": "YES",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "unit_price",
+      "Type": "decimal(10,2)",
+      "Null": "NO",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "cost_price",
+      "Type": "decimal(10,2)",
+      "Null": "NO",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "tax_rate",
+      "Type": "decimal(5,2)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "0.00"
+    },
+    {
+      "Field": "reorder_level",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "",
+      "Default": "10"
+    },
+    {
+      "Field": "is_active",
+      "Type": "tinyint(1)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "1"
+    },
+    {
+      "Field": "created_at",
+      "Type": "datetime",
+      "Null": "NO",
+      "Key": "",
+      "Default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "Field": "updated_at",
+      "Type": "datetime",
+      "Null": "NO",
+      "Key": "",
+      "Default": "CURRENT_TIMESTAMP"
+    }
+  ],
+  "products_sample": [
+    {
+      "product_id": 1,
+      "barcode": "4790001",
+      "name": "Milk 1L",
+      "category_id": 5,
+      "supplier_id": 1,
+      "brand": "Anchor",
+      "unit_price": "350.00",
+      "cost_price": "280.00",
+      "tax_rate": "0.00",
+      "reorder_level": 10,
+      "is_active": 1,
+      "created_at": "2026-10-11T01:58:43.000Z",
+      "updated_at": "2026-10-11T01:58:43.000Z"
+    },
+    {
+      "product_id": 2,
+      "barcode": "4790002",
+      "name": "Orange Juice 1L",
+      "category_id": 4,
+      "supplier_id": 1,
+      "brand": "Elephant",
+      "unit_price": "480.00",
+      "cost_price": "380.00",
+      "tax_rate": "8.00",
+      "reorder_level": 10,
+      "is_active": 1,
+      "created_at": "2026-10-11T01:58:43.000Z",
+      "updated_at": "2026-10-11T01:58:43.000Z"
+    }
+  ],
+  "inventory": [
+    {
+      "Field": "inventory_id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "PRI",
+      "Default": null
+    },
+    {
+      "Field": "branch_id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "MUL",
+      "Default": null
+    },
+    {
+      "Field": "product_id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "MUL",
+      "Default": null
+    },
+    {
+      "Field": "quantity_on_hand",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "",
+      "Default": "0"
+    },
+    {
+      "Field": "reserved_qty",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "",
+      "Default": "0"
+    },
+    {
+      "Field": "reorder_level",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "",
+      "Default": "10"
+    },
+    {
+      "Field": "last_updated",
+      "Type": "datetime",
+      "Null": "NO",
+      "Key": "",
+      "Default": "CURRENT_TIMESTAMP"
+    }
+  ],
+  "inventory_sample": [
+    {
+      "inventory_id": 1,
+      "branch_id": 3,
+      "product_id": 11,
+      "quantity_on_hand": 87,
+      "reserved_qty": 0,
+      "reorder_level": 10,
+      "last_updated": "2026-10-11T01:58:46.000Z"
+    },
+    {
+      "inventory_id": 2,
+      "branch_id": 2,
+      "product_id": 11,
+      "quantity_on_hand": 87,
+      "reserved_qty": 0,
+      "reorder_level": 10,
+      "last_updated": "2026-10-11T01:58:46.000Z"
+    }
+  ],
+  "product_batches": [
+    {
+      "Field": "batch_id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "PRI",
+      "Default": null
+    },
+    {
+      "Field": "product_id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "MUL",
+      "Default": null
+    },
+    {
+      "Field": "branch_id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "MUL",
+      "Default": null
+    },
+    {
+      "Field": "batch_no",
+      "Type": "varchar(30)",
+      "Null": "NO",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "quantity",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "received_date",
+      "Type": "date",
+      "Null": "NO",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "expiry_date",
+      "Type": "date",
+      "Null": "YES",
+      "Key": "MUL",
+      "Default": null
+    }
+  ],
+  "product_batches_sample": [
+    {
+      "batch_id": 1,
+      "product_id": 1,
+      "branch_id": 1,
+      "batch_no": "MILK-A1",
+      "quantity": 60,
+      "received_date": "2026-10-07T18:30:00.000Z",
+      "expiry_date": "2026-10-21T18:30:00.000Z"
+    },
+    {
+      "batch_id": 2,
+      "product_id": 4,
+      "branch_id": 1,
+      "batch_no": "YOG-A1",
+      "quantity": 40,
+      "received_date": "2026-10-08T18:30:00.000Z",
+      "expiry_date": "2026-10-30T18:30:00.000Z"
+    }
+  ],
+  "sales": [
+    {
+      "Field": "sale_id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "PRI",
+      "Default": null
+    },
+    {
+      "Field": "branch_id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "MUL",
+      "Default": null
+    },
+    {
+      "Field": "cashier_id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "MUL",
+      "Default": null
+    },
+    {
+      "Field": "customer_id",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "MUL",
+      "Default": null
+    },
+    {
+      "Field": "promo_id",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "MUL",
+      "Default": null
+    },
+    {
+      "Field": "coupon_id",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "MUL",
+      "Default": null
+    },
+    {
+      "Field": "sale_date",
+      "Type": "datetime",
+      "Null": "NO",
+      "Key": "MUL",
+      "Default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "Field": "status",
+      "Type": "enum('OPEN','COMPLETED','CANCELLED')",
+      "Null": "NO",
+      "Key": "",
+      "Default": "OPEN"
+    },
+    {
+      "Field": "subtotal",
+      "Type": "decimal(12,2)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "0.00"
+    },
+    {
+      "Field": "discount_total",
+      "Type": "decimal(12,2)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "0.00"
+    },
+    {
+      "Field": "tax_total",
+      "Type": "decimal(12,2)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "0.00"
+    },
+    {
+      "Field": "total_amount",
+      "Type": "decimal(12,2)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "0.00"
+    }
+  ],
+  "sales_sample": [
+    {
+      "sale_id": 1,
+      "branch_id": 1,
+      "cashier_id": 2,
+      "customer_id": 1,
+      "promo_id": null,
+      "coupon_id": null,
+      "sale_date": "2026-10-06T04:45:00.000Z",
+      "status": "COMPLETED",
+      "subtotal": "1180.00",
+      "discount_total": "70.00",
+      "tax_total": "0.00",
+      "total_amount": "1110.00"
+    },
+    {
+      "sale_id": 2,
+      "branch_id": 1,
+      "cashier_id": 2,
+      "customer_id": null,
+      "promo_id": null,
+      "coupon_id": null,
+      "sale_date": "2026-10-07T12:10:00.000Z",
+      "status": "COMPLETED",
+      "subtotal": "720.00",
+      "discount_total": "0.00",
+      "tax_total": "0.00",
+      "total_amount": "720.00"
+    }
+  ],
+  "sale_items": [
+    {
+      "Field": "sale_item_id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "PRI",
+      "Default": null
+    },
+    {
+      "Field": "sale_id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "MUL",
+      "Default": null
+    },
+    {
+      "Field": "product_id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "MUL",
+      "Default": null
+    },
+    {
+      "Field": "quantity",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "unit_price",
+      "Type": "decimal(10,2)",
+      "Null": "NO",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "discount_amount",
+      "Type": "decimal(10,2)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "0.00"
+    },
+    {
+      "Field": "line_total",
+      "Type": "decimal(12,2)",
+      "Null": "NO",
+      "Key": "",
+      "Default": null
+    }
+  ],
+  "sale_items_sample": [
+    {
+      "sale_item_id": 1,
+      "sale_id": 1,
+      "product_id": 1,
+      "quantity": 2,
+      "unit_price": "350.00",
+      "discount_amount": "70.00",
+      "line_total": "630.00"
+    },
+    {
+      "sale_item_id": 2,
+      "sale_id": 1,
+      "product_id": 2,
+      "quantity": 1,
+      "unit_price": "480.00",
+      "discount_amount": "0.00",
+      "line_total": "480.00"
+    }
+  ],
+  "payments": [
+    {
+      "Field": "payment_id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "PRI",
+      "Default": null
+    },
+    {
+      "Field": "sale_id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "MUL",
+      "Default": null
+    },
+    {
+      "Field": "method",
+      "Type": "enum('CASH','CARD','MOBILE','POINTS')",
+      "Null": "NO",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "amount",
+      "Type": "decimal(12,2)",
+      "Null": "NO",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "reference",
+      "Type": "varchar(50)",
+      "Null": "YES",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "paid_at",
+      "Type": "datetime",
+      "Null": "NO",
+      "Key": "",
+      "Default": "CURRENT_TIMESTAMP"
+    }
+  ],
+  "payments_sample": [
+    {
+      "payment_id": 1,
+      "sale_id": 1,
+      "method": "CASH",
+      "amount": "1000.00",
+      "reference": null,
+      "paid_at": "2026-10-06T04:45:00.000Z"
+    },
+    {
+      "payment_id": 2,
+      "sale_id": 1,
+      "method": "CARD",
+      "amount": "110.00",
+      "reference": "VISA-4412",
+      "paid_at": "2026-10-06T04:45:00.000Z"
+    }
+  ],
+  "returns": [
+    {
+      "Field": "return_id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "PRI",
+      "Default": null
+    },
+    {
+      "Field": "sale_item_id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "MUL",
+      "Default": null
+    },
+    {
+      "Field": "quantity",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "reason",
+      "Type": "varchar(200)",
+      "Null": "YES",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "refund_amount",
+      "Type": "decimal(10,2)",
+      "Null": "NO",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "processed_by",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "MUL",
+      "Default": null
+    },
+    {
+      "Field": "return_date",
+      "Type": "datetime",
+      "Null": "NO",
+      "Key": "",
+      "Default": "CURRENT_TIMESTAMP"
+    }
+  ],
+  "returns_sample": [
+    {
+      "return_id": 1,
+      "sale_item_id": 3,
+      "quantity": 1,
+      "reason": "Stale bread",
+      "refund_amount": "180.00",
+      "processed_by": 2,
+      "return_date": "2026-10-08T12:30:00.000Z"
+    },
+    {
+      "return_id": 2,
+      "sale_item_id": 8,
+      "quantity": 1,
+      "reason": "Damaged cup",
+      "refund_amount": "85.50",
+      "processed_by": 3,
+      "return_date": "2026-10-10T04:30:00.000Z"
+    }
+  ],
+  "customers": [
+    {
+      "Field": "customer_id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "PRI",
+      "Default": null
+    },
+    {
+      "Field": "card_no",
+      "Type": "varchar(20)",
+      "Null": "NO",
+      "Key": "UNI",
+      "Default": null
+    },
+    {
+      "Field": "full_name",
+      "Type": "varchar(100)",
+      "Null": "NO",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "phone",
+      "Type": "varchar(20)",
+      "Null": "NO",
+      "Key": "UNI",
+      "Default": null
+    },
+    {
+      "Field": "email",
+      "Type": "varchar(100)",
+      "Null": "YES",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "city",
+      "Type": "varchar(60)",
+      "Null": "YES",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "join_date",
+      "Type": "date",
+      "Null": "NO",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "tier",
+      "Type": "enum('BRONZE','SILVER','GOLD','PLATINUM')",
+      "Null": "NO",
+      "Key": "",
+      "Default": "BRONZE"
+    },
+    {
+      "Field": "points_balance",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "",
+      "Default": "0"
+    },
+    {
+      "Field": "is_active",
+      "Type": "tinyint(1)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "1"
+    }
+  ],
+  "customers_sample": [
+    {
+      "customer_id": 1,
+      "card_no": "C0001",
+      "full_name": "Ayesha Khan",
+      "phone": "0771234567",
+      "email": "ayesha@mail.com",
+      "city": "Colombo",
+      "join_date": "2024-01-04T18:30:00.000Z",
+      "tier": "BRONZE",
+      "points_balance": 80,
+      "is_active": 1
+    },
+    {
+      "customer_id": 2,
+      "card_no": "C0002",
+      "full_name": "Nuwan Perera",
+      "phone": "0772000002",
+      "email": "nuwan@mail.com",
+      "city": "Kandy",
+      "join_date": "2024-02-09T18:30:00.000Z",
+      "tier": "BRONZE",
+      "points_balance": 286,
+      "is_active": 1
+    }
+  ],
+  "promotions": [
+    {
+      "Field": "promo_id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "PRI",
+      "Default": null
+    },
+    {
+      "Field": "name",
+      "Type": "varchar(100)",
+      "Null": "NO",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "discount_percent",
+      "Type": "decimal(5,2)",
+      "Null": "NO",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "start_date",
+      "Type": "date",
+      "Null": "NO",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "end_date",
+      "Type": "date",
+      "Null": "NO",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "product_id",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "MUL",
+      "Default": null
+    },
+    {
+      "Field": "category_id",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "MUL",
+      "Default": null
+    },
+    {
+      "Field": "is_active",
+      "Type": "tinyint(1)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "1"
+    }
+  ],
+  "promotions_sample": [
+    {
+      "promo_id": 1,
+      "name": "Dairy week",
+      "discount_percent": "10.00",
+      "start_date": "2026-09-26T18:30:00.000Z",
+      "end_date": "2026-11-09T18:30:00.000Z",
+      "product_id": null,
+      "category_id": 5,
+      "is_active": 1
+    },
+    {
+      "promo_id": 2,
+      "name": "Weekend snacks",
+      "discount_percent": "15.00",
+      "start_date": "2026-09-26T18:30:00.000Z",
+      "end_date": "2026-10-24T18:30:00.000Z",
+      "product_id": null,
+      "category_id": 6,
+      "is_active": 1
+    }
+  ],
+  "coupons": [
+    {
+      "Field": "coupon_id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "PRI",
+      "Default": null
+    },
+    {
+      "Field": "code",
+      "Type": "varchar(30)",
+      "Null": "NO",
+      "Key": "UNI",
+      "Default": null
+    },
+    {
+      "Field": "promo_id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "MUL",
+      "Default": null
+    },
+    {
+      "Field": "customer_id",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "MUL",
+      "Default": null
+    },
+    {
+      "Field": "expiry_date",
+      "Type": "date",
+      "Null": "NO",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "is_used",
+      "Type": "tinyint(1)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "0"
+    },
+    {
+      "Field": "used_at",
+      "Type": "datetime",
+      "Null": "YES",
+      "Key": "",
+      "Default": null
+    }
+  ],
+  "coupons_sample": [
+    {
+      "coupon_id": 1,
+      "code": "DAIRY10",
+      "promo_id": 1,
+      "customer_id": null,
+      "expiry_date": "2026-11-09T18:30:00.000Z",
+      "is_used": 0,
+      "used_at": null
+    },
+    {
+      "coupon_id": 2,
+      "code": "GOLD15",
+      "promo_id": 2,
+      "customer_id": 4,
+      "expiry_date": "2026-10-24T18:30:00.000Z",
+      "is_used": 1,
+      "used_at": "2026-10-08T06:35:00.000Z"
+    }
+  ],
+  "shifts": [
+    {
+      "Field": "shift_id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "PRI",
+      "Default": null
+    },
+    {
+      "Field": "employee_id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "MUL",
+      "Default": null
+    },
+    {
+      "Field": "branch_id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "MUL",
+      "Default": null
+    },
+    {
+      "Field": "shift_date",
+      "Type": "date",
+      "Null": "NO",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "start_time",
+      "Type": "time",
+      "Null": "NO",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "end_time",
+      "Type": "time",
+      "Null": "NO",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "clock_in",
+      "Type": "datetime",
+      "Null": "YES",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "clock_out",
+      "Type": "datetime",
+      "Null": "YES",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "status",
+      "Type": "enum('SCHEDULED','PRESENT','ABSENT','COMPLETED')",
+      "Null": "NO",
+      "Key": "",
+      "Default": "SCHEDULED"
+    }
+  ],
+  "shifts_sample": [
+    {
+      "shift_id": 1,
+      "employee_id": 2,
+      "branch_id": 1,
+      "shift_date": "2026-10-07T18:30:00.000Z",
+      "start_time": "08:00:00",
+      "end_time": "16:00:00",
+      "clock_in": "2026-10-08T02:32:00.000Z",
+      "clock_out": "2026-10-08T10:35:00.000Z",
+      "status": "COMPLETED"
+    },
+    {
+      "shift_id": 2,
+      "employee_id": 2,
+      "branch_id": 1,
+      "shift_date": "2026-10-08T18:30:00.000Z",
+      "start_time": "08:00:00",
+      "end_time": "16:00:00",
+      "clock_in": "2026-10-09T02:28:00.000Z",
+      "clock_out": "2026-10-09T10:30:00.000Z",
+      "status": "COMPLETED"
+    }
+  ],
+  "audit_log": [
+    {
+      "Field": "audit_id",
+      "Type": "bigint",
+      "Null": "NO",
+      "Key": "PRI",
+      "Default": null
+    },
+    {
+      "Field": "table_name",
+      "Type": "varchar(64)",
+      "Null": "NO",
+      "Key": "MUL",
+      "Default": null
+    },
+    {
+      "Field": "record_id",
+      "Type": "varchar(64)",
+      "Null": "NO",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "action",
+      "Type": "enum('INSERT','UPDATE','DELETE')",
+      "Null": "NO",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "old_value",
+      "Type": "json",
+      "Null": "YES",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "new_value",
+      "Type": "json",
+      "Null": "YES",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "changed_by",
+      "Type": "varchar(100)",
+      "Null": "YES",
+      "Key": "",
+      "Default": null
+    },
+    {
+      "Field": "changed_at",
+      "Type": "datetime",
+      "Null": "NO",
+      "Key": "",
+      "Default": "CURRENT_TIMESTAMP"
+    }
+  ],
+  "audit_log_sample": [
+    {
+      "audit_id": 1,
+      "table_name": "employees",
+      "record_id": "2",
+      "action": "UPDATE",
+      "old_value": {
+        "monthly_salary": 55000
+      },
+      "new_value": {
+        "monthly_salary": 60000
+      },
+      "changed_by": "hr_admin",
+      "changed_at": "2026-08-12T03:05:10.000Z"
+    },
+    {
+      "audit_id": 2,
+      "table_name": "products",
+      "record_id": "1",
+      "action": "UPDATE",
+      "old_value": {
+        "unit_price": 340
+      },
+      "new_value": {
+        "unit_price": 350
+      },
+      "changed_by": "catalog_manager",
+      "changed_at": "2026-09-11T03:05:10.000Z"
+    }
+  ]
+}
