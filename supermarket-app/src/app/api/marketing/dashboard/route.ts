@@ -41,6 +41,28 @@ export async function GET(req: Request) {
         END
     `);
 
+    // 2b. Detailed Customers per tier
+    let tierCustomers: any[] = [];
+    try {
+      tierCustomers = await query(`
+        SELECT 
+          customer_id,
+          card_no,
+          full_name,
+          phone,
+          email,
+          city,
+          tier,
+          points_balance,
+          join_date
+        FROM customers
+        WHERE is_active = 1
+        ORDER BY points_balance DESC, full_name ASC
+      `);
+    } catch {
+      tierCustomers = [];
+    }
+
     // 3. Promotions Overview
     const [promoSummary]: any = await query(`
       SELECT 
@@ -141,7 +163,7 @@ export async function GET(req: Request) {
         FROM customer_tier_history th
         JOIN customers c ON th.customer_id = c.customer_id
         ORDER BY th.changed_at DESC
-        LIMIT 5
+        LIMIT 100
       `);
     } catch {
       tierHistory = [];
@@ -194,6 +216,7 @@ export async function GET(req: Request) {
         points_redemption_count: pointsPayment?.points_redemption_count ?? 0,
       },
       tierBreakdown,
+      tierCustomers,
       activePromotions,
       recentLoyaltyActivity,
       tierHistory,
