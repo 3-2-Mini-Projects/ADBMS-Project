@@ -358,7 +358,19 @@ export default function InventoryPage() {
                     inventory.map((item) => (
                       <tr key={item.inventory_id} className={theme.rowHover}>
                         <td className={`py-3 px-4 font-mono ${theme.barcode}`}>{item.barcode}</td>
-                        <td className={`py-3 px-4 ${theme.productName}`}>{item.product_name}</td>
+                        <td className={`py-3 px-4 ${theme.productName}`}>
+                          <div className="font-semibold">{item.product_name}</div>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-[10px] text-slate-400 font-mono">
+                              Velocity: {Number((item as any).sales_velocity ?? 0).toFixed(2)}/day
+                            </span>
+                            {Number((item as any).suggested_reorder_qty) > 0 && (
+                              <span className="text-[9px] bg-amber-500/15 text-amber-400 border border-amber-500/30 px-1.5 py-0.2 rounded font-mono font-bold">
+                                Suggest: +{(item as any).suggested_reorder_qty}
+                              </span>
+                            )}
+                          </div>
+                        </td>
                         <td className={`py-3 px-4 ${theme.branchText}`}>{item.branch_name}</td>
                         <td className={`py-3 px-4 ${theme.categoryText}`}>{item.category_name || "—"}</td>
                         <td className="py-3 px-4 text-center">
@@ -515,6 +527,21 @@ export default function InventoryPage() {
                   </span>
                 </div>
               )}
+
+              <div className="p-2.5 bg-blue-500/10 border border-blue-500/20 rounded-xl space-y-1 text-[11px] mt-2">
+                <div className="font-semibold text-blue-400 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+                  <span>ADBMS Analytics (UDF Functions)</span>
+                </div>
+                <div className="flex justify-between text-slate-300 font-mono">
+                  <span>Sales Velocity (fn_product_sales_velocity):</span>
+                  <span className="font-bold">{Number((selectedItem as any).sales_velocity || 0).toFixed(2)} units/day</span>
+                </div>
+                <div className="flex justify-between text-slate-300 font-mono">
+                  <span>Suggested Reorder (fn_suggested_reorder_qty):</span>
+                  <span className="font-bold text-amber-400">+{Number((selectedItem as any).suggested_reorder_qty || 0)} units</span>
+                </div>
+              </div>
             </div>
 
             <form onSubmit={handleAdjustStock} className="space-y-4">
