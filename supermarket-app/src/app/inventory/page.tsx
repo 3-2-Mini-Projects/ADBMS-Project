@@ -53,6 +53,29 @@ export default function InventoryPage() {
   });
   const [isAddingBatch, setIsAddingBatch] = useState(false);
 
+  // Stored Procedure Audit Modal State
+  const [auditModalOpen, setAuditModalOpen] = useState(false);
+  const [auditType, setAuditType] = useState<"low_stock" | "expiring_batches">("low_stock");
+  const [auditResults, setAuditResults] = useState<any[]>([]);
+  const [loadingAudit, setLoadingAudit] = useState(false);
+
+  const handleRunAudit = async (type: "low_stock" | "expiring_batches") => {
+    setAuditType(type);
+    setAuditModalOpen(true);
+    setLoadingAudit(true);
+    try {
+      const branchParam = currentBranch ? `&branchId=${currentBranch.branch_id}` : "";
+      const res = await fetch(`/api/inventory/audit?type=${type}${branchParam}`);
+      const data = await res.json();
+      if (Array.isArray(data)) setAuditResults(data);
+      else setAuditResults([]);
+    } catch {
+      setAuditResults([]);
+    } finally {
+      setLoadingAudit(false);
+    }
+  };
+
   useEffect(() => {
     setNewBatch((prev) => ({
       ...prev,
@@ -320,6 +343,16 @@ export default function InventoryPage() {
             >
               <AlertTriangle className="w-4 h-4 text-amber-500" />
               <span>Low Stock Alerts Only</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleRunAudit("low_stock")}
+              className="px-3.5 py-2.5 rounded-xl border border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 shadow-sm"
+              title="Audit using Stored Procedure sp_check_low_stock"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+              <span>SP Audit (sp_check_low_stock)</span>
             </button>
           </div>
 
@@ -691,6 +724,123 @@ export default function InventoryPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Stored Procedure Audit Modal */}
+      {auditModalOpen && (
+        <div className={theme.modalOverlay}>
+          <div className={theme.modalCard}>
+            <div className={`flex items-center justify-between pb-3 border-b ${theme.modalHeaderBorder}`}>
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-teal-400" />
+                <div>
+                  <h3 className="font-bold text-sm text-white">
+                    {auditType === "low_stock"
+                      ? "Stored Procedure: sp_check_low_stock"
+                      : "Stored Procedure: sp_expiring_batches"}
+                  </h3>
+                  <div className="text-[11px] font-mono text-teal-400">
+                    CALL {auditType === "low_stock" ? "sp_check_low_stock(?)" : "sp_expiring_batches(?)"}
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setAuditModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-300 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="py-2">
+              <div className="text-xs text-slate-400 mb-3">
+                Live audit results executed directly inside MySQL engine for branch:{" "}
+                <strong className="text-slate-200">{currentBranch?.name || "All"}</strong>.
+              </div>
+
+              <div className="border border-slate-800 rounded-xl overflow-hidden text-xs bg-slate-900/60 max-h-72 overflow-y-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b border-slate-800 bg-slate-950/60 text-slate-400 text-[10px]">
+                      {auditType === "low_stock" ? (
+                        <>
+                          <th className="py-2 px-3">Product Name</th>
+                          <th className="py-2 px-3 text-right">On Hand</th>
+                          <th className="py-2 px-3 text-right">Reorder Level</th>
+                          <th className="py-2 px-3 text-center">Deficit</th>
+                        </>
+                      ) : (
+                        <>
+                          <th className="py-2 px-3">Batch No</th>
+                          <th className="py-2 px-3 text-right">Quantity</th>
+                          <th className="py-2 px-3">Expiry Date</th>
+                          <th className="py-2 px-3 text-center">Days Remaining</th>
+                        </>
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/40">
+                    {loadingAudit ? (
+                      <tr>
+                        <td colSpan={4} className="py-8 text-center text-slate-500">
+                          <Sparkles className="w-4 h-4 animate-spin mx-auto text-teal-400 mb-1" />
+                          Executing stored procedure on MySQL...
+                        </td>
+                      </tr>
+                    ) : auditResults.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="py-8 text-center text-slate-500">
+                          <CheckCircle2 className="w-5 h-5 mx-auto text-emerald-400 mb-1 opacity-70" />
+                          No issues detected by stored procedure audit.
+                        </td>
+                      </tr>
+                    ) : (
+                      auditResults.map((r, idx) => (
+                        <tr key={idx} className="hover:bg-slate-800/30">
+                          {auditType === "low_stock" ? (
+                            <>
+                              <td className="py-2 px-3 font-semibold text-white">{r.product_name}</td>
+                              <td className="py-2 px-3 text-right font-mono text-amber-400 font-bold">{r.quantity_on_hand}</td>
+                              <td className="py-2 px-3 text-right font-mono text-slate-400">{r.reorder_level}</td>
+                              <td className="py-2 px-3 text-center">
+                                <span className="text-[10px] bg-rose-500/10 text-rose-400 px-1.5 py-0.5 rounded font-mono font-bold">
+                                  -{Math.max(0, r.reorder_level - r.quantity_on_hand)} units
+                                </span>
+                              </td>
+                            </>
+                          ) : (
+                            <>
+                              <td className="py-2 px-3 font-mono font-bold text-white">{r.batch_no}</td>
+                              <td className="py-2 px-3 text-right font-mono text-slate-300">{r.quantity}</td>
+                              <td className="py-2 px-3 font-mono text-slate-400">
+                                {r.expiry_date ? new Date(r.expiry_date).toLocaleDateString() : "—"}
+                              </td>
+                              <td className="py-2 px-3 text-center">
+                                <span className="text-[10px] bg-amber-500/10 text-amber-400 px-1.5 py-0.5 rounded font-mono font-bold">
+                                  {r.days_to_expiry} days
+                                </span>
+                              </td>
+                            </>
+                          )}
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-3 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setAuditModalOpen(false)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
+              >
+                Close Audit View
+              </button>
+            </div>
           </div>
         </div>
       )}
