@@ -11,20 +11,49 @@ import {
   History,
   Users,
   Sparkles,
+  RefreshCw,
 } from "lucide-react";
 
 export default function LoyaltyManagementPage() {
-  const { currentBranch } = useApp();
+  const { currentBranch, showToast } = useApp();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [recalculating, setRecalculating] = useState(false);
 
-  useEffect(() => {
+  const loadData = () => {
+    setLoading(true);
     fetch(`/api/marketing/dashboard`)
       .then((r) => r.json())
       .then((d) => setData(d))
       .catch((err) => console.error("Error loading loyalty data:", err))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadData();
   }, []);
+
+  const handleRecalculateTiers = async () => {
+    setRecalculating(true);
+    try {
+      const res = await fetch("/api/marketing/actions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "recalculate_tiers" }),
+      });
+      const result = await res.json();
+      if (res.ok && result.success) {
+        showToast(result.message || "Customer tiers recalculated successfully!", "success");
+        loadData();
+      } else {
+        showToast(result.error || "Failed to recalculate tiers", "error");
+      }
+    } catch {
+      showToast("Error executing recalculate_tiers procedure", "error");
+    } finally {
+      setRecalculating(false);
+    }
+  };
 
   const tierBreakdown = data?.tierBreakdown || [];
   const recentLoyalty = data?.recentLoyaltyActivity || [];
@@ -33,14 +62,26 @@ export default function LoyaltyManagementPage() {
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-black text-white flex items-center gap-2.5">
-          <Award className="w-6 h-6 text-amber-400" />
-          <span>Loyalty Program & Points Management</span>
-        </h1>
-        <p className="text-xs text-slate-400 mt-1">
-          Membership tier policies, point earn/burn rules, tier thresholds, and transactional ledger tracking.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-black text-white flex items-center gap-2.5">
+            <Award className="w-6 h-6 text-amber-400" />
+            <span>Loyalty Program & Points Management</span>
+          </h1>
+          <p className="text-xs text-slate-400 mt-1">
+            Membership tier policies, point earn/burn rules, tier thresholds, and transactional ledger tracking.
+          </p>
+        </div>
+
+        <button
+          onClick={handleRecalculateTiers}
+          disabled={recalculating}
+          className="px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white text-xs font-semibold flex items-center gap-2 shadow-lg shadow-amber-950/40 border border-amber-500/30 transition-all disabled:opacity-50"
+          title="Executes stored procedure recalculate_tiers()"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${recalculating ? "animate-spin" : ""}`} />
+          <span>{recalculating ? "Recalculating..." : "Recalculate Tiers (recalculate_tiers)"}</span>
+        </button>
       </div>
 
       {/* Tier Cards */}

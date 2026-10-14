@@ -147,6 +147,70 @@ export default function MarketingReportsPage() {
           </table>
         </div>
       </div>
+
+      {/* Top Customers by Spending (from top_customers_vw) */}
+      <div className="rounded-2xl border border-slate-800 bg-slate-900/50 overflow-hidden shadow-xl">
+        <div className="p-4 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between">
+          <div>
+            <h2 className="text-sm font-bold text-white flex items-center gap-2">
+              <Users className="w-4 h-4 text-emerald-400" />
+              <span>Top Customers Leaderboard (top_customers_vw)</span>
+            </h2>
+            <p className="text-[11px] text-slate-400">
+              High-value loyalty customers ranked by cumulative completed sales and order volume.
+            </p>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="border-b border-slate-800 bg-slate-950/40 text-slate-400 font-semibold">
+                <th className="py-3 px-4">Customer</th>
+                <th className="py-3 px-4">Card No</th>
+                <th className="py-3 px-4 text-center">Tier</th>
+                <th className="py-3 px-4 text-center">Orders</th>
+                <th className="py-3 px-4 text-right">Points</th>
+                <th className="py-3 px-4 text-right">Total Spent</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800/60 font-mono">
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-slate-500 font-sans">
+                    Loading top customers...
+                  </td>
+                </tr>
+              ) : (reportData?.topCustomers ?? []).length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-slate-500 font-sans">
+                    No completed customer purchases yet.
+                  </td>
+                </tr>
+              ) : (
+                (reportData?.topCustomers ?? []).map((c: any) => (
+                  <tr key={c.customer_id} className="hover:bg-slate-800/30 transition-colors">
+                    <td className="py-3 px-4 text-white font-medium font-sans">{c.full_name}</td>
+                    <td className="py-3 px-4 text-amber-300">{c.card_no}</td>
+                    <td className="py-3 px-4 text-center">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 border border-slate-700 text-slate-300">
+                        {c.tier}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-center text-slate-300">{c.total_orders}</td>
+                    <td className="py-3 px-4 text-right text-emerald-400 font-bold">
+                      {Number(c.points_balance ?? 0).toLocaleString()} pts
+                    </td>
+                    <td className="py-3 px-4 text-right text-white font-bold">
+                      Rs. {Number(c.total_spent ?? 0).toFixed(2)}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }

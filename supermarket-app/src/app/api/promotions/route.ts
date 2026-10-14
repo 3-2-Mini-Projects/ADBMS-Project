@@ -65,14 +65,24 @@ export async function POST(req: Request) {
       );
       return NextResponse.json({ success: true, coupon_id: res.insertId });
     } else {
-      // create promotion
+      // create promotion using create_promotion procedure with fallback
       const { name, discount_percent, start_date, end_date, product_id, category_id } = body;
-      const res: any = await query(
-        `INSERT INTO promotions (name, discount_percent, start_date, end_date, product_id, category_id, is_active)
-         VALUES (?, ?, ?, ?, ?, ?, 1)`,
-        [name, discount_percent, start_date, end_date, product_id || null, category_id || null]
-      );
-      return NextResponse.json({ success: true, promo_id: res.insertId });
+      let promo_id: number;
+      try {
+        const procRes: any = await query(
+          `CALL create_promotion(?, ?, ?, ?, ?, ?)`,
+          [name, discount_percent, start_date, end_date, product_id || null, category_id || null]
+        );
+        promo_id = procRes?.[0]?.[0]?.promo_id || procRes?.insertId;
+      } catch {
+        const res: any = await query(
+          `INSERT INTO promotions (name, discount_percent, start_date, end_date, product_id, category_id, is_active)
+           VALUES (?, ?, ?, ?, ?, ?, 1)`,
+          [name, discount_percent, start_date, end_date, product_id || null, category_id || null]
+        );
+        promo_id = res.insertId;
+      }
+      return NextResponse.json({ success: true, promo_id });
     }
   } catch (err: any) {
     console.error("POST /api/promotions error:", err);
