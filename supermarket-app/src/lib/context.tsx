@@ -62,12 +62,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (Array.isArray(dataEmployees)) {
-        setEmployees(dataEmployees);
-        if (!currentEmployee && dataEmployees.length > 0) {
+        const allowedRoles = ["ADMIN", "STOCK_CLERK", "CATALOG_MANAGER", "MARKETING", "CASHIER"];
+        const validEmployees = dataEmployees.filter((e: Employee) => allowedRoles.includes(e.role));
+        setEmployees(validEmployees);
+        if (!currentEmployee && validEmployees.length > 0) {
           // Default to Stock Clerk
-          const stockClerk = dataEmployees.find(
+          const stockClerk = validEmployees.find(
             (e: Employee) => e.role === "STOCK_CLERK"
-          ) || dataEmployees[0];
+          ) || validEmployees[0];
           setCurrentEmployee(stockClerk);
         }
       }

@@ -71,8 +71,8 @@ export function Header() {
 
       {/* Right Controls */}
       <div className="flex items-center gap-3">
-        {/* POS Fast Button - Hidden for Stock Clerk */}
-        {currentEmployee?.role !== "STOCK_CLERK" && (
+        {/* POS Fast Button - Only for Admin and Cashier */}
+        {(currentEmployee?.role === "ADMIN" || currentEmployee?.role === "CASHIER") && (
           <Link
             href="/pos"
             className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-medium text-xs shadow-lg shadow-emerald-900/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
@@ -111,44 +111,52 @@ export function Header() {
                 <ShieldCheck className="w-3 h-3 text-slate-400" />
               </div>
               <div className="px-3 py-1 text-[10px] text-slate-500">
-                Switch users to test role-based UI permissions (Admin, Manager, Cashier, etc.)
+                Switch between the 5 system roles: Admin, Stock Clerk, Catalog Manager, Marketing, Cashier.
               </div>
               <div className="h-px bg-slate-800 my-1" />
-              {employees.map((e) => (
-                <button
-                  key={e.employee_id}
-                  onClick={() => {
-                    setCurrentEmployee(e);
-                    setEmployeeDropdownOpen(false);
-                  }}
-                  className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-slate-800 transition-colors ${
-                    currentEmployee?.employee_id === e.employee_id ? "bg-slate-800/90 font-semibold" : "text-slate-300"
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center text-slate-200 text-xs font-bold">
-                      {e.full_name[0]}
-                    </div>
-                    <div>
-                      <div className="text-slate-100">{e.full_name}</div>
-                      <div className="text-[10px] text-slate-400">{e.branch_name || "Branch"} • {e.email}</div>
-                    </div>
-                  </div>
-                  <span
-                    className={`text-[9px] font-mono px-1.5 py-0.5 rounded font-semibold ${
-                      e.role === "ADMIN"
-                        ? "bg-purple-900/60 text-purple-300 border border-purple-700/50"
-                        : e.role === "MANAGER"
-                        ? "bg-blue-900/60 text-blue-300 border border-blue-700/50"
-                        : e.role === "CASHIER"
-                        ? "bg-emerald-900/60 text-emerald-300 border border-emerald-700/50"
-                        : "bg-slate-800 text-slate-300 border border-slate-700"
+              {employees
+                .filter((e) =>
+                  ["ADMIN", "STOCK_CLERK", "CATALOG_MANAGER", "MARKETING", "CASHIER"].includes(e.role)
+                )
+                .map((e) => (
+                  <button
+                    key={e.employee_id}
+                    onClick={() => {
+                      setCurrentEmployee(e);
+                      setEmployeeDropdownOpen(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-slate-800 transition-colors ${
+                      currentEmployee?.employee_id === e.employee_id ? "bg-slate-800/90 font-semibold" : "text-slate-300"
                     }`}
                   >
-                    {e.role}
-                  </span>
-                </button>
-              ))}
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center text-slate-200 text-xs font-bold">
+                        {e.full_name[0]}
+                      </div>
+                      <div>
+                        <div className="text-slate-100">{e.full_name}</div>
+                        <div className="text-[10px] text-slate-400">{e.branch_name || "Branch"} • {e.email}</div>
+                      </div>
+                    </div>
+                    <span
+                      className={`text-[9px] font-mono px-1.5 py-0.5 rounded font-semibold ${
+                        e.role === "ADMIN"
+                          ? "bg-purple-900/60 text-purple-300 border border-purple-700/50"
+                          : e.role === "STOCK_CLERK"
+                          ? "bg-amber-900/60 text-amber-300 border border-amber-700/50"
+                          : e.role === "CATALOG_MANAGER"
+                          ? "bg-indigo-900/60 text-indigo-300 border border-indigo-700/50"
+                          : e.role === "MARKETING"
+                          ? "bg-rose-900/60 text-rose-300 border border-rose-700/50"
+                          : e.role === "CASHIER"
+                          ? "bg-emerald-900/60 text-emerald-300 border border-emerald-700/50"
+                          : "bg-slate-800 text-slate-300 border border-slate-700"
+                      }`}
+                    >
+                      {e.role}
+                    </span>
+                  </button>
+                ))}
             </div>
           )}
         </div>
