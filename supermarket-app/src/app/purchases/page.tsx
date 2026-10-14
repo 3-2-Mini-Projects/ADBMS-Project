@@ -45,6 +45,19 @@ export default function PurchasesPage() {
   const [selectedPO, setSelectedPO] = useState<PurchaseOrder | null>(null);
   const [batchExpiryDate, setBatchExpiryDate] = useState("");
   const [isReceiving, setIsReceiving] = useState(false);
+  const [poDetails, setPoDetails] = useState<any[]>([]);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+
+  useEffect(() => {
+    if (selectedPO) {
+      setLoadingDetails(true);
+      fetch(`/api/purchases/${selectedPO.po_id}`)
+        .then((r) => r.json())
+        .then((d) => Array.isArray(d) && setPoDetails(d))
+        .catch(() => setPoDetails([]))
+        .finally(() => setLoadingDetails(false));
+    }
+  }, [selectedPO]);
 
   useEffect(() => {
     setBatchExpiryDate(
@@ -416,6 +429,55 @@ export default function PurchasesPage() {
               <div>Receiving Branch: <strong className={theme.modalInfoStrong}>{selectedPO.branch_name}</strong></div>
               <div className={theme.modalInfoDesc}>
                 Receiving will add order quantities directly to branch inventory and register FIFO batch codes automatically.
+              </div>
+            </div>
+
+            {/* Items Breakdown via vw_purchase_order_details */}
+            <div className="border border-slate-800 rounded-xl overflow-hidden text-xs bg-slate-900/60 my-2">
+              <div className="bg-slate-800/60 px-3 py-1.5 font-semibold text-slate-300 flex justify-between items-center text-[11px]">
+                <span className="flex items-center gap-1.5 text-teal-400">
+                  <Sparkles className="w-3 h-3" />
+                  <span>Items to Receive (vw_purchase_order_details)</span>
+                </span>
+                <span className="text-slate-400">{poDetails.length} items</span>
+              </div>
+              <div className="max-h-36 overflow-y-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b border-slate-800 text-[10px] text-slate-400">
+                      <th className="py-1 px-3">Product</th>
+                      <th className="py-1 px-3 text-right">Qty</th>
+                      <th className="py-1 px-3 text-right">Unit Cost</th>
+                      <th className="py-1 px-3 text-right">Line Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {loadingDetails ? (
+                      <tr>
+                        <td colSpan={4} className="py-3 text-center text-slate-500 text-[11px]">
+                          Loading items from database view...
+                        </td>
+                      </tr>
+                    ) : poDetails.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="py-3 text-center text-slate-500 text-[11px]">
+                          No items found for this order.
+                        </td>
+                      </tr>
+                    ) : (
+                      poDetails.map((it, idx) => (
+                        <tr key={idx} className="border-b border-slate-800/40 text-[11px]">
+                          <td className="py-1.5 px-3 text-slate-200">{it.product_name}</td>
+                          <td className="py-1.5 px-3 text-right font-mono text-slate-300 font-bold">{it.ordered_qty}</td>
+                          <td className="py-1.5 px-3 text-right font-mono text-slate-400">Rs. {Number(it.unit_cost).toFixed(2)}</td>
+                          <td className="py-1.5 px-3 text-right font-mono text-teal-400 font-semibold">
+                            Rs. {Number(it.line_cost).toFixed(2)}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
 
