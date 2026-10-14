@@ -47,8 +47,26 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Name and phone are required" }, { status: 400 });
     }
 
-    // Auto-generate card number
-    const card_no = `C${Date.now().toString().slice(-5)}`;
+    // Auto-generate sequential card number like C0001, C0002, ..., C0006 -> C0007
+    let card_no = body.card_no?.trim();
+    if (!card_no) {
+      const [maxCardRow]: any = await query(`
+        SELECT MAX(CAST(SUBSTRING(card_no, 2) AS UNSIGNED)) AS max_num
+        FROM customers
+        WHERE card_no REGEXP '^C[0-9]+$' 
+          AND CAST(SUBSTRING(card_no, 2) AS UNSIGNED) < 10000
+      `);
+
+      let nextNum = 1;
+      if (maxCardRow?.max_num && Number(maxCardRow.max_num) > 0) {
+        nextNum = Number(maxCardRow.max_num) + 1;
+      } else {
+        const [countRow]: any = await query(`SELECT COUNT(*) AS total FROM customers`);
+        nextNum = Number(countRow?.total ?? 0) + 1;
+      }
+
+      card_no = `C${String(nextNum).padStart(4, "0")}`;
+    }
 
     let customer_id: number;
     try {
@@ -80,7 +98,7 @@ export async function POST(req: Request) {
 export async function PUT(req: Request) {
   try {
     const body = await req.json();
-    const { customer_id, full_name, phone, email, city, tier, points_balance, join_date, is_active } = body;
+    const { customer_id, card_no, full_name, phone, email, city, tier, points_balance, join_date, is_active } = body;
 
     if (!customer_id || !full_name || !phone) {
       return NextResponse.json({ error: "Customer ID, full name and phone number are required" }, { status: 400 });
@@ -94,7 +112,8 @@ export async function PUT(req: Request) {
 
     await query(
       `UPDATE customers
-       SET full_name = ?,
+       SET card_no = COALESCE(?, card_no),
+           full_name = ?,
            phone = ?,
            email = ?,
            city = ?,
@@ -104,6 +123,7 @@ export async function PUT(req: Request) {
            is_active = COALESCE(?, is_active)
        WHERE customer_id = ?`,
       [
+        card_no || null,
         full_name,
         phone,
         email || null,

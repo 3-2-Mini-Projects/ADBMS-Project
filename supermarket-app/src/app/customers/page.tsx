@@ -412,6 +412,11 @@ export default function CustomersPage() {
             </div>
 
             <form onSubmit={handleAddCustomer} className="space-y-4">
+              <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between text-xs font-mono">
+                <span className="text-slate-400">Card Number:</span>
+                <span className="text-amber-400 font-bold">Sequential Auto-Assign (e.g. C0007+)</span>
+              </div>
+
               <div>
                 <label className="text-xs text-slate-300 block mb-1">Full Name</label>
                 <input
@@ -490,7 +495,7 @@ export default function CustomersPage() {
                   <span>Edit Customer Details</span>
                 </h3>
                 <div className="text-[11px] text-slate-400 font-mono mt-0.5">
-                  Card No: <span className="text-amber-400 font-bold">{editingCustomer.card_no}</span>
+                  Update customer card number, personal details, tier, and joining date.
                 </div>
               </div>
               <button
@@ -505,7 +510,19 @@ export default function CustomersPage() {
             </div>
 
             <form onSubmit={handleUpdateCustomer} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="text-xs text-slate-300 block mb-1">Card Number</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingCustomer.card_no}
+                    onChange={(e) => setEditingCustomer({ ...editingCustomer, card_no: e.target.value.toUpperCase() })}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 font-mono text-xs text-amber-300 font-bold focus:border-amber-500"
+                    placeholder="e.g. C0007"
+                  />
+                </div>
+
                 <div>
                   <label className="text-xs text-slate-300 block mb-1">Full Name</label>
                   <input
