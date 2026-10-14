@@ -173,7 +173,7 @@ export async function GET(req: Request) {
         FROM loyalty_transactions lt
         JOIN customers c ON lt.customer_id = c.customer_id
         ORDER BY lt.created_at DESC
-        LIMIT 6
+        LIMIT 50
       `);
     } catch {
       recentLoyaltyActivity = [];
