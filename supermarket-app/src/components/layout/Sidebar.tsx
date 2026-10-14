@@ -143,6 +143,59 @@ const MARKETING_NAV_GROUPS: NavGroup[] = [
   },
 ];
 
+const CATALOG_NAV_GROUPS: NavGroup[] = [
+  {
+    group: "CATALOG MANAGEMENT",
+    items: [
+      { title: "Products", href: "/products", icon: Package },
+      { title: "Categories", href: "/categories", icon: Layers },
+      { title: "Suppliers", href: "/suppliers", icon: Truck },
+    ],
+  },
+  {
+    group: "INVENTORY OVERVIEW",
+    items: [
+      { title: "Inventory Dashboard", href: "/inventory/dashboard", icon: LayoutGrid },
+      { title: "Inventory Stock", href: "/inventory", icon: Boxes },
+      { title: "Product Batches", href: "/inventory/batches", icon: PackagePlus },
+      { title: "Stock Alerts", href: "/inventory/stock-alerts", icon: AlertTriangle },
+    ],
+  },
+  {
+    group: "ACCOUNT",
+    items: [
+      { title: "My Profile", href: "/profile", icon: UserCircle },
+      { title: "Settings", href: "/settings", icon: Settings },
+      { title: "Logout", href: "/logout", icon: LogOut },
+    ],
+  },
+];
+
+const CASHIER_NAV_GROUPS: NavGroup[] = [
+  {
+    group: "POINT OF SALE",
+    items: [
+      { title: "POS Checkout", href: "/pos", icon: ShoppingCart, badge: "Live", highlight: true },
+      { title: "Sales History", href: "/sales", icon: Receipt },
+      { title: "Returns & Refunds", href: "/returns", icon: RotateCcw },
+    ],
+  },
+  {
+    group: "CUSTOMERS & SHIFTS",
+    items: [
+      { title: "Customers & Loyalty", href: "/customers", icon: Users },
+      { title: "Shifts & Attendance", href: "/shifts", icon: Clock },
+    ],
+  },
+  {
+    group: "ACCOUNT",
+    items: [
+      { title: "My Profile", href: "/profile", icon: UserCircle },
+      { title: "Logout", href: "/logout", icon: LogOut },
+    ],
+  },
+];
+
 export function Sidebar() {
   const pathname = usePathname();
   const { currentEmployee, currentBranch } = useApp();
@@ -152,8 +205,12 @@ export function Sidebar() {
   const navGroups =
     role === "STOCK_CLERK"
       ? CLERK_NAV_GROUPS
+      : role === "CATALOG_MANAGER"
+      ? CATALOG_NAV_GROUPS
       : role === "MARKETING"
       ? MARKETING_NAV_GROUPS
+      : role === "CASHIER"
+      ? CASHIER_NAV_GROUPS
       : NAV_GROUPS;
 
   return (
