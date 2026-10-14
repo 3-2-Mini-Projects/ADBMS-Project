@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useApp } from "@/lib/context";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   DollarSign,
   ShoppingCart,
@@ -22,9 +23,16 @@ import {
 } from "lucide-react";
 
 export function DashboardView() {
-  const { currentBranch } = useApp();
+  const { currentBranch, currentEmployee } = useApp();
+  const router = useRouter();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (currentEmployee?.role === "STOCK_CLERK") {
+      router.replace("/inventory/dashboard");
+    }
+  }, [currentEmployee, router]);
 
   const fetchStats = async () => {
     try {
