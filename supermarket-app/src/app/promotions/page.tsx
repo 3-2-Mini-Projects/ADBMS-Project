@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
+import Link from "next/link";
 import { useApp } from "@/lib/context";
-import { Promotion, Coupon } from "@/lib/types";
+import { Promotion } from "@/lib/types";
 import {
   Tag,
   Plus,
@@ -25,6 +26,8 @@ import {
   ShieldCheck,
   AlertTriangle,
   Flame,
+  ArrowRight,
+  Store,
 } from "lucide-react";
 
 interface ActivePromoVwRow {
@@ -46,19 +49,18 @@ export default function PromotionsPage() {
   const { showToast } = useApp();
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [activePromotions, setActivePromotions] = useState<ActivePromoVwRow[]>([]);
-  const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Tab State: 'all' | 'active_vw' | 'coupons' | 'sql_functions'
-  const [activeTab, setActiveTab] = useState<"all" | "active_vw" | "coupons" | "sql_functions">("all");
+  // Tab State: 'all' | 'active_vw' | 'matrix' | 'sql_functions'
+  const [activeTab, setActiveTab] = useState<"all" | "active_vw" | "matrix" | "sql_functions">("all");
 
   // Filters & Search
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "SCHEDULED" | "EXPIRED">("ALL");
 
-  // Create Promo Modal
+  // Create Promo Modal (CALL create_promotion)
   const [promoModalOpen, setPromoModalOpen] = useState(false);
   const [creatingPromo, setCreatingPromo] = useState(false);
   const [newPromo, setNewPromo] = useState({
@@ -70,33 +72,17 @@ export default function PromotionsPage() {
     target_id: "",
   });
 
-  // Issue Coupon Modal
-  const [couponModalOpen, setCouponModalOpen] = useState(false);
-  const [issuingCoupon, setIssuingCoupon] = useState(false);
-  const [newCoupon, setNewCoupon] = useState({
-    code: "",
-    promo_id: "",
-    expiry_date: "",
-  });
-
-  // Calculator Modal (get_discount function)
+  // Calculator Modal (SELECT get_discount(p_amount, promo_id))
   const [calcModalOpen, setCalcModalOpen] = useState(false);
   const [calcPromoId, setCalcPromoId] = useState<number | "">("");
   const [calcAmount, setCalcAmount] = useState<string>("5000");
   const [calcResult, setCalcResult] = useState<any>(null);
   const [calculatingDiscount, setCalculatingDiscount] = useState(false);
 
-  // Coupon Testing (proc_apply_coupon procedure)
-  const [testSaleId, setTestSaleId] = useState<string>("");
-  const [testCouponCode, setTestCouponCode] = useState<string>("");
-  const [testingCoupon, setTestingCoupon] = useState(false);
-  const [testCouponResult, setTestCouponResult] = useState<{ success?: boolean; message?: string; error?: string } | null>(null);
-
   useEffect(() => {
     const today = new Date().toISOString().split("T")[0];
     const twoWeeks = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
     setNewPromo((prev) => ({ ...prev, start_date: today, end_date: twoWeeks }));
-    setNewCoupon((prev) => ({ ...prev, expiry_date: twoWeeks }));
   }, []);
 
   const fetchData = async () => {
@@ -106,7 +92,6 @@ export default function PromotionsPage() {
       const data = await res.json();
       if (data.promotions) setPromotions(data.promotions);
       if (data.activePromotions) setActivePromotions(data.activePromotions);
-      if (data.coupons) setCoupons(data.coupons);
     } catch (err) {
       console.error("Error fetching promotions:", err);
     } finally {
@@ -164,41 +149,6 @@ export default function PromotionsPage() {
     }
   };
 
-  // Handle Issue Coupon
-  const handleCreateCoupon = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIssuingCoupon(true);
-    try {
-      const res = await fetch("/api/promotions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "create_coupon",
-          code: newCoupon.code.toUpperCase().trim(),
-          promo_id: Number(newCoupon.promo_id),
-          expiry_date: newCoupon.expiry_date,
-        }),
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        showToast(data.message || `Coupon code ${newCoupon.code.toUpperCase()} issued!`, "success");
-        setCouponModalOpen(false);
-        setNewCoupon({
-          code: "",
-          promo_id: "",
-          expiry_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-        });
-        await fetchData();
-      } else {
-        showToast(data.error || "Failed to create coupon", "error");
-      }
-    } catch {
-      showToast("Error issuing coupon", "error");
-    } finally {
-      setIssuingCoupon(false);
-    }
-  };
-
   // Toggle Promotion Active/Inactive
   const handleToggleActive = async (promo_id: number, current_active: number) => {
     const nextState = current_active === 1 ? 0 : 1;
@@ -222,9 +172,7 @@ export default function PromotionsPage() {
 
   // Delete Promotion
   const handleDeletePromo = async (promo_id: number, name: string) => {
-    if (!confirm(`Are you sure you want to delete promotion "${name}"? Linked coupons will also be removed.`)) {
-      return;
-    }
+    if (!confirm(`Are you sure you want to delete promotion "${name}"?`)) return;
     try {
       const res = await fetch(`/api/promotions?promo_id=${promo_id}`, { method: "DELETE" });
       const data = await res.json();
@@ -236,23 +184,6 @@ export default function PromotionsPage() {
       }
     } catch {
       showToast("Error deleting promotion", "error");
-    }
-  };
-
-  // Delete Coupon
-  const handleDeleteCoupon = async (coupon_id: number, code: string) => {
-    if (!confirm(`Are you sure you want to delete coupon code "${code}"?`)) return;
-    try {
-      const res = await fetch(`/api/promotions?coupon_id=${coupon_id}`, { method: "DELETE" });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        showToast(data.message || "Coupon deleted successfully", "success");
-        await fetchData();
-      } else {
-        showToast(data.error || "Failed to delete coupon", "error");
-      }
-    } catch {
-      showToast("Error deleting coupon", "error");
     }
   };
 
@@ -281,48 +212,10 @@ export default function PromotionsPage() {
     }
   };
 
-  // Quick open calculator modal for specific promo
   const openCalculator = (promo_id: number) => {
     setCalcPromoId(promo_id);
     setCalcResult(null);
     setCalcModalOpen(true);
-  };
-
-  // Test Coupon via proc_apply_coupon
-  const handleTestApplyCoupon = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!testSaleId || !testCouponCode) {
-      showToast("Sale ID and Coupon Code are required.", "error");
-      return;
-    }
-
-    setTestingCoupon(true);
-    setTestCouponResult(null);
-    try {
-      const res = await fetch("/api/promotions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "test_apply_coupon",
-          sale_id: Number(testSaleId),
-          code: testCouponCode.trim(),
-        }),
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setTestCouponResult({ success: true, message: data.message });
-        showToast(data.message, "success");
-        await fetchData();
-      } else {
-        setTestCouponResult({ success: false, error: data.error });
-        showToast(data.error || "Failed to apply coupon", "error");
-      }
-    } catch (err: any) {
-      setTestCouponResult({ success: false, error: "Network or procedure error" });
-      showToast("Error executing proc_apply_coupon procedure", "error");
-    } finally {
-      setTestingCoupon(false);
-    }
   };
 
   // Filtered promotions
@@ -345,7 +238,8 @@ export default function PromotionsPage() {
   const activeCount = promotions.filter((p) => (p as any).status === "ACTIVE").length;
   const scheduledCount = promotions.filter((p) => (p as any).status === "SCHEDULED").length;
   const expiredCount = promotions.filter((p) => (p as any).status === "EXPIRED").length;
-  const availableCoupons = coupons.filter((c) => c.is_used === 0).length;
+  const categoryWideCount = promotions.filter((p) => p.category_id != null).length;
+  const productSpecificCount = promotions.filter((p) => p.product_id != null).length;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
@@ -354,12 +248,11 @@ export default function PromotionsPage() {
         <div>
           <h1 className="text-2xl font-black text-white flex items-center gap-2.5">
             <Tag className="w-6 h-6 text-purple-400" />
-            <span>Promotion & Campaign Management</span>
+            <span>Campaign & Promotion Management</span>
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Built with MySQL stored procedure <code className="text-purple-300 font-mono">create_promotion()</code>,{" "}
-            view <code className="text-emerald-300 font-mono">active_promotions_vw</code>, and function{" "}
-            <code className="text-amber-300 font-mono">get_discount()</code>.
+            Configure promotional discount policies, product/category scopes, and real-time active view{" "}
+            <code className="text-emerald-300 font-mono">active_promotions_vw</code>.
           </p>
         </div>
 
@@ -370,18 +263,10 @@ export default function PromotionsPage() {
               setCalcModalOpen(true);
             }}
             className="px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold text-xs flex items-center gap-2 shadow-lg shadow-emerald-950/40 border border-emerald-500/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
-            title="Test get_discount() function calculation"
+            title="Execute get_discount() function calculation"
           >
             <Calculator className="w-4 h-4" />
             <span>Discount Calculator (get_discount)</span>
-          </button>
-
-          <button
-            onClick={() => setCouponModalOpen(true)}
-            className="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs flex items-center gap-2 transition-all border border-slate-700 hover:scale-[1.02] active:scale-[0.98]"
-          >
-            <Ticket className="w-4 h-4 text-amber-400" />
-            <span>Issue Coupon Code</span>
           </button>
 
           <button
@@ -395,6 +280,35 @@ export default function PromotionsPage() {
         </div>
       </div>
 
+      {/* Cross-Link Banner to Dedicated Coupon Management */}
+      <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-950/40 via-slate-900 to-slate-900 border border-amber-800/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
+            <Ticket className="w-5 h-5" />
+          </div>
+          <div>
+            <h4 className="text-sm font-bold text-white flex items-center gap-2">
+              <span>Checkout Voucher & Coupon Management</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-mono">
+                Dedicated Page
+              </span>
+            </h4>
+            <p className="text-xs text-slate-400">
+              Manage single or batch coupon codes, assign to loyalty customers, and test validation via{" "}
+              <code className="text-amber-300 font-mono">proc_apply_coupon()</code>.
+            </p>
+          </div>
+        </div>
+
+        <Link
+          href="/marketing/coupons"
+          className="px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs flex items-center gap-2 transition-all shrink-0 self-start sm:self-auto shadow-md shadow-amber-950/40"
+        >
+          <span>Open Coupon Management</span>
+          <ArrowRight className="w-3.5 h-3.5" />
+        </Link>
+      </div>
+
       {/* KPI Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl space-y-1">
@@ -405,7 +319,7 @@ export default function PromotionsPage() {
 
         <div className="p-4 rounded-2xl bg-slate-900 border border-emerald-900/40 shadow-xl space-y-1">
           <span className="text-emerald-400 text-xs font-semibold flex items-center gap-1">
-            <Flame className="w-3.5 h-3.5" /> Active Today (VW)
+            <Flame className="w-3.5 h-3.5" /> Active Today
           </span>
           <div className="text-2xl font-black text-emerald-400 font-mono">{activeCount}</div>
           <span className="text-[10px] text-emerald-500 font-mono">active_promotions_vw</span>
@@ -417,12 +331,10 @@ export default function PromotionsPage() {
           <span className="text-[10px] text-blue-500 font-mono">Start date in future</span>
         </div>
 
-        <div className="p-4 rounded-2xl bg-slate-900 border border-amber-900/40 shadow-xl space-y-1">
-          <span className="text-amber-400 text-xs font-semibold flex items-center gap-1">
-            <Ticket className="w-3.5 h-3.5" /> Available Coupons
-          </span>
-          <div className="text-2xl font-black text-amber-400 font-mono">{availableCoupons}</div>
-          <span className="text-[10px] text-amber-500 font-mono">{coupons.length} total issued</span>
+        <div className="p-4 rounded-2xl bg-slate-900 border border-purple-900/40 shadow-xl space-y-1">
+          <span className="text-purple-400 text-xs font-semibold">Category Campaigns</span>
+          <div className="text-2xl font-black text-purple-400 font-mono">{categoryWideCount}</div>
+          <span className="text-[10px] text-purple-500 font-mono">{productSpecificCount} product-specific</span>
         </div>
       </div>
 
@@ -432,10 +344,11 @@ export default function PromotionsPage() {
           <div className="flex items-center gap-2 overflow-x-auto">
             <button
               onClick={() => setActiveTab("all")}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${activeTab === "all"
-                ? "bg-purple-500/10 text-purple-400 border border-purple-500/30 shadow-sm"
-                : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-                }`}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
+                activeTab === "all"
+                  ? "bg-purple-500/10 text-purple-400 border border-purple-500/30 shadow-sm"
+                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+              }`}
             >
               <Percent className="w-3.5 h-3.5" />
               <span>All Promotions ({promotions.length})</span>
@@ -443,10 +356,11 @@ export default function PromotionsPage() {
 
             <button
               onClick={() => setActiveTab("active_vw")}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${activeTab === "active_vw"
-                ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 shadow-sm"
-                : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-                }`}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
+                activeTab === "active_vw"
+                  ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 shadow-sm"
+                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+              }`}
             >
               <Flame className="w-3.5 h-3.5 text-emerald-400" />
               <span>Active View (active_promotions_vw)</span>
@@ -456,25 +370,27 @@ export default function PromotionsPage() {
             </button>
 
             <button
-              onClick={() => setActiveTab("coupons")}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${activeTab === "coupons"
-                ? "bg-amber-500/10 text-amber-400 border border-amber-500/30 shadow-sm"
-                : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-                }`}
+              onClick={() => setActiveTab("matrix")}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
+                activeTab === "matrix"
+                  ? "bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 shadow-sm"
+                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+              }`}
             >
-              <Ticket className="w-3.5 h-3.5 text-amber-400" />
-              <span>Checkout Coupons ({coupons.length})</span>
+              <Layers className="w-3.5 h-3.5" />
+              <span>Scope Matrix (Categories & Products)</span>
             </button>
 
             <button
               onClick={() => setActiveTab("sql_functions")}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${activeTab === "sql_functions"
-                ? "bg-blue-500/10 text-blue-400 border border-blue-500/30 shadow-sm"
-                : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-                }`}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
+                activeTab === "sql_functions"
+                  ? "bg-blue-500/10 text-blue-400 border border-blue-500/30 shadow-sm"
+                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+              }`}
             >
               <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
-              <span>ADBMS SQL Functions & Procedures</span>
+              <span>ADBMS SQL Functions (get_discount, etc.)</span>
             </button>
           </div>
 
@@ -514,10 +430,11 @@ export default function PromotionsPage() {
                   <button
                     key={s}
                     onClick={() => setStatusFilter(s)}
-                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${statusFilter === s
-                      ? "bg-purple-500 text-white shadow-md"
-                      : "bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white"
-                      }`}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${
+                      statusFilter === s
+                        ? "bg-purple-500 text-white shadow-md"
+                        : "bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white"
+                    }`}
                   >
                     {s}
                   </button>
@@ -550,7 +467,7 @@ export default function PromotionsPage() {
                   ) : filteredPromotions.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="py-12 text-center text-slate-500 font-sans">
-                        No promotions found matching the filter criteria.
+                        No promotions found matching your filter criteria.
                       </td>
                     </tr>
                   ) : (
@@ -595,12 +512,13 @@ export default function PromotionsPage() {
                           </td>
                           <td className="py-3 px-4 text-center">
                             <span
-                              className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold ${status === "ACTIVE"
-                                ? "bg-emerald-950 text-emerald-300 border border-emerald-800/50"
-                                : status === "SCHEDULED"
+                              className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold ${
+                                status === "ACTIVE"
+                                  ? "bg-emerald-950 text-emerald-300 border border-emerald-800/50"
+                                  : status === "SCHEDULED"
                                   ? "bg-blue-950 text-blue-300 border border-blue-800/50"
                                   : "bg-slate-800 text-slate-400"
-                                }`}
+                              }`}
                             >
                               {status}
                             </span>
@@ -619,10 +537,11 @@ export default function PromotionsPage() {
                               {/* Toggle active */}
                               <button
                                 onClick={() => handleToggleActive(pr.promo_id, pr.is_active)}
-                                className={`p-1.5 rounded-lg text-xs transition-colors ${pr.is_active === 1
-                                  ? "text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300"
-                                  : "text-slate-500 hover:bg-slate-800 hover:text-slate-300"
-                                  }`}
+                                className={`p-1.5 rounded-lg text-xs transition-colors ${
+                                  pr.is_active === 1
+                                    ? "text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300"
+                                    : "text-slate-500 hover:bg-slate-800 hover:text-slate-300"
+                                }`}
                                 title={pr.is_active === 1 ? "Deactivate Promotion" : "Activate Promotion"}
                               >
                                 <Power className="w-3.5 h-3.5" />
@@ -653,7 +572,6 @@ export default function PromotionsPage() {
         {/* ========================================================================= */}
         {activeTab === "active_vw" && (
           <div className="space-y-4">
-            {/* View Explanation Box */}
             <div className="p-4 bg-emerald-950/20 border-b border-emerald-800/30 flex items-center justify-between text-xs">
               <div className="flex items-center gap-2">
                 <Flame className="w-4 h-4 text-emerald-400" />
@@ -668,7 +586,6 @@ export default function PromotionsPage() {
               <span className="font-mono font-bold text-emerald-400">{activePromotions.length} active</span>
             </div>
 
-            {/* Active Promotions Table */}
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
@@ -751,92 +668,80 @@ export default function PromotionsPage() {
         )}
 
         {/* ========================================================================= */}
-        {/* TAB 3: Checkout Coupons (coupons) */}
+        {/* TAB 3: Scope Matrix (Categories & Products) */}
         {/* ========================================================================= */}
-        {activeTab === "coupons" && (
-          <div className="space-y-4">
-            <div className="p-4 border-b border-slate-800/60 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-900/50">
-              <div className="flex items-center gap-2">
-                <Ticket className="w-4 h-4 text-amber-400" />
-                <span className="text-xs font-bold text-white">Checkout Coupon Codes</span>
-                <span className="text-[11px] text-slate-400">({coupons.length} issued)</span>
+        {activeTab === "matrix" && (
+          <div className="p-6 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Category-Wide Discounts */}
+              <div className="p-5 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-3">
+                <div className="flex items-center gap-2 pb-2 border-b border-slate-800 text-indigo-400 font-bold text-sm">
+                  <Layers className="w-4 h-4" />
+                  <span>Category-Wide Discount Campaigns</span>
+                </div>
+                <div className="space-y-2">
+                  {promotions.filter((p) => p.category_id != null).length === 0 ? (
+                    <p className="text-xs text-slate-500">No category-level campaigns active.</p>
+                  ) : (
+                    promotions
+                      .filter((p) => p.category_id != null)
+                      .map((p) => (
+                        <div
+                          key={p.promo_id}
+                          className="p-3 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between text-xs"
+                        >
+                          <div>
+                            <span className="font-bold text-white block">{p.category_name}</span>
+                            <span className="text-slate-400 text-[11px]">{p.name}</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-emerald-400 font-bold text-sm font-mono">
+                              {Number(p.discount_percent)}% OFF
+                            </span>
+                            <span className="text-[10px] text-slate-500 block">
+                              Until {new Date(p.end_date).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
+                      ))
+                  )}
+                </div>
               </div>
 
-              <button
-                onClick={() => setCouponModalOpen(true)}
-                className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs flex items-center gap-1.5 transition-all shadow-md shadow-amber-950/40"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Issue New Coupon</span>
-              </button>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-slate-800 bg-slate-950/40 text-slate-400 font-semibold">
-                    <th className="py-3 px-4 font-mono">Coupon Code</th>
-                    <th className="py-3 px-4">Linked Campaign</th>
-                    <th className="py-3 px-4 text-center">Discount %</th>
-                    <th className="py-3 px-4">Customer Binding</th>
-                    <th className="py-3 px-4">Expiry Date</th>
-                    <th className="py-3 px-4 text-center">Status</th>
-                    <th className="py-3 px-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60 font-mono">
-                  {coupons.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="py-12 text-center text-slate-500 font-sans">
-                        No coupons recorded yet. Click &quot;Issue New Coupon&quot; to generate one.
-                      </td>
-                    </tr>
+              {/* Product-Specific Discounts */}
+              <div className="p-5 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-3">
+                <div className="flex items-center gap-2 pb-2 border-b border-slate-800 text-blue-400 font-bold text-sm">
+                  <Package className="w-4 h-4" />
+                  <span>Product-Specific Discount Campaigns</span>
+                </div>
+                <div className="space-y-2">
+                  {promotions.filter((p) => p.product_id != null).length === 0 ? (
+                    <p className="text-xs text-slate-500">No product-specific campaigns active.</p>
                   ) : (
-                    coupons.map((cp) => (
-                      <tr key={cp.coupon_id} className="hover:bg-slate-800/30 transition-colors">
-                        <td className="py-3 px-4 font-bold text-amber-400 text-sm tracking-wider font-mono">
-                          {cp.code}
-                        </td>
-                        <td className="py-3 px-4 text-white font-sans font-medium">
-                          {cp.promo_name || "Special Offer"}
-                        </td>
-                        <td className="py-3 px-4 text-center font-bold text-emerald-400">
-                          {Number(cp.discount_percent || 10)}%
-                        </td>
-                        <td className="py-3 px-4 text-slate-400 font-sans">
-                          {cp.customer_name ? (
-                            <span className="text-slate-200">{cp.customer_name}</span>
-                          ) : (
-                            <span className="text-slate-500">Universal (Any customer)</span>
-                          )}
-                        </td>
-                        <td className="py-3 px-4 text-slate-400 text-[11px]">
-                          {cp.expiry_date ? new Date(cp.expiry_date).toLocaleDateString() : "No expiry"}
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          <span
-                            className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${cp.is_used === 1
-                              ? "bg-slate-800 text-slate-400"
-                              : "bg-emerald-950 text-emerald-300 border border-emerald-800/50"
-                              }`}
-                          >
-                            {cp.is_used === 1 ? "ALREADY REDEEMED" : "AVAILABLE"}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-right font-sans">
-                          <button
-                            onClick={() => handleDeleteCoupon(cp.coupon_id, cp.code)}
-                            className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
-                            title="Delete Coupon"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))
+                    promotions
+                      .filter((p) => p.product_id != null)
+                      .map((p) => (
+                        <div
+                          key={p.promo_id}
+                          className="p-3 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between text-xs"
+                        >
+                          <div>
+                            <span className="font-bold text-white block">{p.product_name}</span>
+                            <span className="text-slate-400 text-[11px]">{p.name}</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-emerald-400 font-bold text-sm font-mono">
+                              {Number(p.discount_percent)}% OFF
+                            </span>
+                            <span className="text-[10px] text-slate-500 block">
+                              Until {new Date(p.end_date).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
+                      ))
                   )}
-                </tbody>
-              </table>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -929,75 +834,42 @@ export default function PromotionsPage() {
                 )}
               </div>
 
-              {/* Box 2: proc_apply_coupon procedure tester */}
-              <div className="p-5 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-4">
-                <div className="flex items-center gap-2 pb-3 border-b border-slate-800">
-                  <Ticket className="w-5 h-5 text-amber-400" />
-                  <div>
-                    <h3 className="font-bold text-white text-sm">Procedure: proc_apply_coupon(p_sale_id, p_code)</h3>
-                    <p className="text-[11px] text-slate-400">Applies validated coupon to open checkout sale</p>
-                  </div>
+              {/* Box 2: ADBMS Engine Trigger & Stored Procedure Documentation */}
+              <div className="p-5 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-3 text-xs">
+                <div className="flex items-center gap-2 pb-2 border-b border-slate-800 text-purple-400 font-bold">
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>Database Objects Enforcing Campaign Rules</span>
                 </div>
-
-                <form onSubmit={handleTestApplyCoupon} className="space-y-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">Open Sale ID</label>
-                    <input
-                      type="number"
-                      placeholder="e.g. 1"
-                      value={testSaleId}
-                      onChange={(e) => setTestSaleId(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white font-mono"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">Coupon Code</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. FESTIVE20"
-                      value={testCouponCode}
-                      onChange={(e) => setTestCouponCode(e.target.value.toUpperCase())}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs font-mono text-amber-300 font-bold"
-                      required
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={testingCoupon}
-                    className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white text-xs font-bold transition-all flex items-center justify-center gap-2"
-                  >
-                    {testingCoupon ? (
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <ShieldCheck className="w-3.5 h-3.5" />
-                    )}
-                    <span>Execute proc_apply_coupon()</span>
-                  </button>
-                </form>
-
-                {testCouponResult && (
-                  <div
-                    className={`p-3.5 rounded-xl text-xs space-y-1 animate-in fade-in ${testCouponResult.success
-                      ? "bg-emerald-950/30 border border-emerald-800/40 text-emerald-300"
-                      : "bg-rose-950/30 border border-rose-800/40 text-rose-300"
-                      }`}
-                  >
-                    <div className="font-bold flex items-center gap-1.5">
-                      {testCouponResult.success ? (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                      ) : (
-                        <AlertTriangle className="w-4 h-4 text-rose-400" />
-                      )}
-                      <span>{testCouponResult.success ? "Procedure Success" : "SQL Error / Validation Trigger"}</span>
-                    </div>
-                    <p className="text-[11px] text-slate-300">
-                      {testCouponResult.message || testCouponResult.error}
-                    </p>
-                  </div>
-                )}
+                <div className="space-y-2 text-slate-300 text-[11px]">
+                  <p>
+                    All promotional policies are backed by stored objects defined in{" "}
+                    <code className="text-purple-300 font-mono">marketingmanager.sql</code>:
+                  </p>
+                  <ul className="list-disc pl-5 space-y-2 text-slate-400">
+                    <li>
+                      <strong className="text-white font-mono">create_promotion</strong>: Stored procedure handling
+                      insertion into <code className="font-mono">promotions</code> with parameters{" "}
+                      <code className="font-mono">(name, discount, start, end, product_id, category_id)</code>.
+                    </li>
+                    <li>
+                      <strong className="text-white font-mono">active_promotions_vw</strong>: Real-time SQL view
+                      dynamically filtering active records where{" "}
+                      <code className="font-mono text-emerald-400">
+                        is_active = 1 AND CURDATE() BETWEEN start_date AND end_date
+                      </code>
+                      .
+                    </li>
+                    <li>
+                      <strong className="text-white font-mono">before_promotions_insert</strong>: Trigger automatically
+                      preventing invalid discounts (<code className="font-mono">&gt; 100% or &lt;= 0%</code>) or end date
+                      preceding start date.
+                    </li>
+                    <li>
+                      <strong className="text-white font-mono">evt_daily_expire_promotions</strong>: MySQL scheduled event
+                      deactivating expired campaigns automatically every night.
+                    </li>
+                  </ul>
+                </div>
               </div>
             </div>
           </div>
@@ -1148,98 +1020,7 @@ export default function PromotionsPage() {
       )}
 
       {/* ========================================================================= */}
-      {/* MODAL 2: Issue Coupon */}
-      {/* ========================================================================= */}
-      {couponModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <div className="flex items-center gap-2">
-                <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
-                  <Ticket className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-sm text-white">Issue Checkout Coupon</h3>
-                  <p className="text-[11px] text-slate-400">Links coupon code to a campaign promotion</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setCouponModalOpen(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateCoupon} className="space-y-4">
-              <div>
-                <label className="text-xs text-slate-300 block mb-1">
-                  Coupon Code (Uppercase) <span className="text-rose-400">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. FESTIVE25"
-                  value={newCoupon.code}
-                  onChange={(e) => setNewCoupon({ ...newCoupon, code: e.target.value.toUpperCase() })}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 font-mono text-sm text-amber-300 font-bold focus:outline-none focus:border-amber-500"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs text-slate-300 block mb-1">
-                  Link to Promotion <span className="text-rose-400">*</span>
-                </label>
-                <select
-                  required
-                  value={newCoupon.promo_id}
-                  onChange={(e) => setNewCoupon({ ...newCoupon, promo_id: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-amber-500"
-                >
-                  <option value="">-- Select Promotion --</option>
-                  {promotions.map((p) => (
-                    <option key={p.promo_id} value={p.promo_id}>
-                      {p.name} ({Number(p.discount_percent)}%) - {(p as any).status}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-xs text-slate-300 block mb-1">Expiry Date</label>
-                <input
-                  type="date"
-                  required
-                  value={newCoupon.expiry_date}
-                  onChange={(e) => setNewCoupon({ ...newCoupon, expiry_date: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 font-mono text-xs text-white focus:outline-none focus:border-amber-500"
-                />
-              </div>
-
-              <div className="flex items-center gap-3 pt-2 border-t border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setCouponModalOpen(false)}
-                  className="w-1/3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={issuingCoupon}
-                  className="w-2/3 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white text-xs font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  {issuingCoupon ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Ticket className="w-3.5 h-3.5" />}
-                  <span>{issuingCoupon ? "Issuing..." : "Save & Issue Coupon"}</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* MODAL 3: Discount Calculator (get_discount SQL function) */}
+      {/* MODAL 2: Discount Calculator (get_discount SQL function) */}
       {/* ========================================================================= */}
       {calcModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
