@@ -159,6 +159,20 @@ export default function PurchasesPage() {
     }
   };
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("tab") === "pending") {
+        setStatusFilter("PENDING");
+      }
+    }
+  }, []);
+
+  const isPendingStatus = (st: string) => {
+    const s = (st || "").toUpperCase();
+    return s !== "RECEIVED" && s !== "CANCELLED";
+  };
+
   const filteredOrders = orders.filter((po) => {
     const sName = po.supplier_name || "";
     const bName = po.branch_name || "";
@@ -167,7 +181,9 @@ export default function PurchasesPage() {
       sName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       bName.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus =
-      statusFilter === "ALL" || po.status.toUpperCase() === statusFilter;
+      statusFilter === "ALL" ||
+      (statusFilter === "PENDING" && isPendingStatus(po.status)) ||
+      (statusFilter === "RECEIVED" && po.status.toUpperCase() === "RECEIVED");
     return matchesSearch && matchesStatus;
   });
 
@@ -209,10 +225,14 @@ export default function PurchasesPage() {
     badgePending: isClerk
       ? "bg-amber-50 text-amber-700 border border-amber-200"
       : "bg-amber-950/60 text-amber-400 border border-amber-800/60",
+    badgeCancelled: isClerk
+      ? "bg-rose-50 text-rose-700 border border-rose-200"
+      : "bg-rose-950/60 text-rose-400 border border-rose-800/60",
     badgeOther: isClerk
       ? "bg-blue-50 text-blue-700 border border-blue-200"
       : "bg-blue-950/60 text-blue-400 border border-blue-800/60",
-    fulfilledText: isClerk ? "text-emerald-700" : "text-emerald-400",
+    fulfilledText: isClerk ? "text-emerald-700 font-semibold" : "text-emerald-400 font-semibold",
+    cancelledText: isClerk ? "text-slate-400 italic" : "text-slate-500 italic",
     emptyText: isClerk ? "text-slate-500" : "text-slate-500",
     modalOverlay: isClerk
       ? "fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200"
@@ -305,7 +325,7 @@ export default function PurchasesPage() {
               statusFilter === "PENDING" ? theme.filterBtnActive : theme.filterBtnInactive
             }`}
           >
-            Pending ({orders.filter((o) => o.status.toUpperCase() === "PENDING").length})
+            Pending ({orders.filter((o) => isPendingStatus(o.status)).length})
           </button>
           <button
             onClick={() => setStatusFilter("RECEIVED")}
@@ -362,17 +382,22 @@ export default function PurchasesPage() {
                       {po.expected_date ? new Date(po.expected_date).toLocaleDateString() : "—"}
                     </td>
                     <td className={`py-3.5 px-4 text-center ${theme.itemCount}`}>
-                      {(po as any).items_count || 1} lines
+                      {(po as any).items_count ?? 0} lines
                     </td>
                     <td className={`py-3.5 px-4 text-right ${theme.costText}`}>
-                      Rs. {Number(po.total_cost).toFixed(2)}
+                      Rs. {Number((po as any).calculated_total_cost || po.total_cost || 0).toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
                     </td>
                     <td className="py-3.5 px-4 text-center">
                       <span
                         className={`text-[10px] font-mono px-2.5 py-1 rounded-full font-bold ${
                           po.status.toUpperCase() === "RECEIVED"
                             ? theme.badgeReceived
-                            : po.status.toUpperCase() === "PENDING"
+                            : po.status.toUpperCase() === "CANCELLED"
+                            ? theme.badgeCancelled
+                            : isPendingStatus(po.status)
                             ? theme.badgePending
                             : theme.badgeOther
                         }`}
@@ -381,7 +406,16 @@ export default function PurchasesPage() {
                       </span>
                     </td>
                     <td className="py-3.5 px-4 text-center">
-                      {po.status.toUpperCase() !== "RECEIVED" ? (
+                      {po.status.toUpperCase() === "RECEIVED" ? (
+                        <span className={`text-[11px] font-medium flex items-center justify-center gap-1 ${theme.fulfilledText}`}>
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>Fulfilled</span>
+                        </span>
+                      ) : po.status.toUpperCase() === "CANCELLED" ? (
+                        <span className={`text-[11px] font-medium ${theme.cancelledText}`}>
+                          Cancelled
+                        </span>
+                      ) : (
                         <button
                           onClick={() => {
                             setSelectedPO(po);
@@ -392,11 +426,6 @@ export default function PurchasesPage() {
                           <PackageCheck className="w-3.5 h-3.5" />
                           <span>Receive Goods</span>
                         </button>
-                      ) : (
-                        <span className={`text-[11px] font-medium flex items-center justify-center gap-1 ${theme.fulfilledText}`}>
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>Fulfilled</span>
-                        </span>
                       )}
                     </td>
                   </tr>

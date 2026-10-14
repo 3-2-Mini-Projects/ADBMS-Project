@@ -13,6 +13,7 @@ import {
   Building2,
   ShieldCheck,
 } from "lucide-react";
+import { StockAlertBell } from "./StockAlertBell";
 
 export function Header() {
   const { currentBranch, setCurrentBranch, branches, currentEmployee, setCurrentEmployee, employees } = useApp();
@@ -80,6 +81,9 @@ export function Header() {
             <span>Launch POS</span>
           </Link>
         )}
+
+        {/* Real-Time Stock Alert Bell */}
+        <StockAlertBell />
 
         {/* Employee & Role Switcher */}
         <div className="relative">
