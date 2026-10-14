@@ -106,24 +106,55 @@ export async function GET(req: Request) {
       WHERE method = 'POINTS'
     `);
 
-    // 7. Active Campaign Promotions List
-    const activePromotions = await query(`
-      SELECT 
-        pr.promo_id,
-        pr.name,
-        pr.discount_percent,
-        pr.start_date,
-        pr.end_date,
-        p.name AS product_name,
-        c.name AS category_name,
-        DATEDIFF(pr.end_date, CURRENT_DATE) AS days_left
-      FROM promotions pr
-      LEFT JOIN products p ON pr.product_id = p.product_id
-      LEFT JOIN categories c ON pr.category_id = c.category_id
-      WHERE pr.is_active = 1 AND CURRENT_DATE BETWEEN pr.start_date AND pr.end_date
-      ORDER BY pr.end_date ASC
-      LIMIT 5
-    `);
+    // 7. Active Campaign Promotions List (using active_promotions_vw)
+    let activePromotions: any[] = [];
+    try {
+      activePromotions = await query(`
+        SELECT 
+          promo_id,
+          promotion_name AS name,
+          discount_percent,
+          start_date,
+          end_date,
+          product_name,
+          category_name,
+          DATEDIFF(end_date, CURRENT_DATE) AS days_left
+        FROM active_promotions_vw
+        ORDER BY end_date ASC
+        LIMIT 5
+      `);
+    } catch {
+      activePromotions = await query(`
+        SELECT 
+          pr.promo_id,
+          pr.name,
+          pr.discount_percent,
+          pr.start_date,
+          pr.end_date,
+          p.name AS product_name,
+          c.name AS category_name,
+          DATEDIFF(pr.end_date, CURRENT_DATE) AS days_left
+        FROM promotions pr
+        LEFT JOIN products p ON pr.product_id = p.product_id
+        LEFT JOIN categories c ON pr.category_id = c.category_id
+        WHERE pr.is_active = 1 AND CURRENT_DATE BETWEEN pr.start_date AND pr.end_date
+        ORDER BY pr.end_date ASC
+        LIMIT 5
+      `);
+    }
+
+    // 7b. Top Customers from top_customers_vw
+    let topCustomers: any[] = [];
+    try {
+      topCustomers = await query(`
+        SELECT customer_id, card_no, full_name, tier, total_spent, total_orders, points_balance
+        FROM top_customers_vw
+        ORDER BY total_spent DESC
+        LIMIT 5
+      `);
+    } catch {
+      topCustomers = [];
+    }
 
     // 8. Recent Loyalty Points Transactions
     let recentLoyaltyActivity: any[] = [];
@@ -142,7 +173,7 @@ export async function GET(req: Request) {
         FROM loyalty_transactions lt
         JOIN customers c ON lt.customer_id = c.customer_id
         ORDER BY lt.created_at DESC
-        LIMIT 6
+        LIMIT 50
       `);
     } catch {
       recentLoyaltyActivity = [];
@@ -217,6 +248,7 @@ export async function GET(req: Request) {
       },
       tierBreakdown,
       tierCustomers,
+      topCustomers,
       activePromotions,
       recentLoyaltyActivity,
       tierHistory,

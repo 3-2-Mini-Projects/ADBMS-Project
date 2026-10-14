@@ -47,22 +47,101 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Name and phone are required" }, { status: 400 });
     }
 
-    // Auto-generate card number
-    const card_no = `C${Date.now().toString().slice(-5)}`;
+    // Auto-generate sequential card number like C0001, C0002, ..., C0006 -> C0007
+    let card_no = body.card_no?.trim();
+    if (!card_no) {
+      const [maxCardRow]: any = await query(`
+        SELECT MAX(CAST(SUBSTRING(card_no, 2) AS UNSIGNED)) AS max_num
+        FROM customers
+        WHERE card_no REGEXP '^C[0-9]+$' 
+          AND CAST(SUBSTRING(card_no, 2) AS UNSIGNED) < 10000
+      `);
 
-    const result: any = await query(
-      `INSERT INTO customers (card_no, full_name, phone, email, city, join_date, tier, points_balance, is_active)
-       VALUES (?, ?, ?, ?, ?, CURDATE(), 'BRONZE', 0, 1)`,
-      [card_no, full_name, phone, email || null, city || null]
-    );
+      let nextNum = 1;
+      if (maxCardRow?.max_num && Number(maxCardRow.max_num) > 0) {
+        nextNum = Number(maxCardRow.max_num) + 1;
+      } else {
+        const [countRow]: any = await query(`SELECT COUNT(*) AS total FROM customers`);
+        nextNum = Number(countRow?.total ?? 0) + 1;
+      }
+
+      card_no = `C${String(nextNum).padStart(4, "0")}`;
+    }
+
+    let customer_id: number;
+    try {
+      const procRes: any = await query(
+        `CALL register_customer(?, ?, ?, ?, ?)`,
+        [card_no, full_name, phone, email || null, city || "Colombo"]
+      );
+      customer_id = procRes?.[0]?.[0]?.customer_id || procRes?.insertId;
+    } catch {
+      const result: any = await query(
+        `INSERT INTO customers (card_no, full_name, phone, email, city, join_date, tier, points_balance, is_active)
+         VALUES (?, ?, ?, ?, ?, CURDATE(), 'BRONZE', 0, 1)`,
+        [card_no, full_name, phone, email || null, city || null]
+      );
+      customer_id = result.insertId;
+    }
 
     return NextResponse.json({
       success: true,
-      customer_id: result.insertId,
+      customer_id,
       card_no,
     });
   } catch (err: any) {
     console.error("POST /api/customers error:", err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
+export async function PUT(req: Request) {
+  try {
+    const body = await req.json();
+    const { customer_id, card_no, full_name, phone, email, city, tier, points_balance, join_date, is_active } = body;
+
+    if (!customer_id || !full_name || !phone) {
+      return NextResponse.json({ error: "Customer ID, full name and phone number are required" }, { status: 400 });
+    }
+
+    // Format join_date if provided (YYYY-MM-DD)
+    let formattedJoinDate: string | null = null;
+    if (join_date) {
+      formattedJoinDate = new Date(join_date).toISOString().slice(0, 10);
+    }
+
+    await query(
+      `UPDATE customers
+       SET card_no = COALESCE(?, card_no),
+           full_name = ?,
+           phone = ?,
+           email = ?,
+           city = ?,
+           tier = COALESCE(?, tier),
+           points_balance = COALESCE(?, points_balance),
+           join_date = COALESCE(?, join_date),
+           is_active = COALESCE(?, is_active)
+       WHERE customer_id = ?`,
+      [
+        card_no || null,
+        full_name,
+        phone,
+        email || null,
+        city || null,
+        tier || null,
+        points_balance !== undefined ? points_balance : null,
+        formattedJoinDate,
+        is_active !== undefined ? is_active : null,
+        customer_id,
+      ]
+    );
+
+    return NextResponse.json({
+      success: true,
+      message: "Customer updated successfully",
+    });
+  } catch (err: any) {
+    console.error("PUT /api/customers error:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
