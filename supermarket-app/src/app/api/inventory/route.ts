@@ -28,7 +28,9 @@ export async function GET(req: Request) {
         unit_price,
         cost_price,
         last_updated,
-        stock_status
+        stock_status,
+        fn_product_sales_velocity(branch_id, product_id) AS sales_velocity,
+        fn_suggested_reorder_qty(branch_id, product_id, 4, 1) AS suggested_reorder_qty
       FROM vw_branch_inventory
       WHERE 1=1
     `;
