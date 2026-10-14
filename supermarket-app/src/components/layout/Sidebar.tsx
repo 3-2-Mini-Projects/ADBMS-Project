@@ -108,7 +108,7 @@ const CLERK_NAV_GROUPS: NavGroup[] = [
     items: [
       { title: "Purchase Orders", href: "/purchases", icon: FileSpreadsheet },
       { title: "Create Purchase Order", href: "/purchases/new", icon: ClipboardCheck },
-      { title: "Receive Stock", href: "/purchases", icon: PackagePlus },
+      { title: "Receive Stock", href: "/purchases?tab=pending", icon: PackagePlus },
     ],
   },
   {
@@ -251,7 +251,7 @@ export function Sidebar() {
 
                   return (
                     <Link
-                      key={item.href}
+                      key={`${item.href}-${item.title}`}
                       href={item.href}
                       className={`group relative flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
                         active
