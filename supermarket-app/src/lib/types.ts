@@ -1,11 +1,9 @@
 export type UserRole =
   | 'ADMIN'
-  | 'MANAGER'
-  | 'CASHIER'
   | 'STOCK_CLERK'
   | 'CATALOG_MANAGER'
   | 'MARKETING'
-  | 'HR';
+  | 'CASHIER';
 
 export interface Branch {
   branch_id: number;
