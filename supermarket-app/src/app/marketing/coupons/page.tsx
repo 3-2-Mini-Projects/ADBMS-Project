@@ -309,10 +309,6 @@ export default function MarketingCouponsPage() {
             <Ticket className="w-6 h-6 text-amber-400" />
             <span>Coupon Management & Redemption Tracking</span>
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
-            Issue unique voucher codes, assign to loyalty customers, and validate at checkout via stored procedure{" "}
-            <code className="text-amber-400 font-mono">proc_apply_coupon()</code>.
-          </p>
         </div>
 
         {/* Action Buttons */}

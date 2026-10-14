@@ -52,9 +52,6 @@ export default function MarketingReportsPage() {
             <BarChart3 className="w-6 h-6 text-blue-400" />
             <span>Marketing Analytics & Campaign Reports</span>
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
-            Historical discount trends, campaign revenue return, and membership points redemption reporting from daily_sales_vw and database ledgers.
-          </p>
         </div>
 
         <button

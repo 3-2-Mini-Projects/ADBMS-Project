@@ -250,10 +250,6 @@ export default function PromotionsPage() {
             <Tag className="w-6 h-6 text-purple-400" />
             <span>Campaign & Promotion Management</span>
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
-            Configure promotional discount policies, product/category scopes, and real-time active view{" "}
-            <code className="text-emerald-300 font-mono">active_promotions_vw</code>.
-          </p>
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap">
