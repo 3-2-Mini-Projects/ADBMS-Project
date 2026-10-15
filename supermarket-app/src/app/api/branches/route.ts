@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
+import { authorizeRequest } from "@/lib/auth";
 
 export async function GET() {
   try {
@@ -29,6 +30,11 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const auth = await authorizeRequest("manage_branches");
+  if (auth.error) {
+    return auth.error;
+  }
+
   try {
     const body = await req.json();
     const { branch_code, name, city, region, address, phone, manager_id, opened_date } = body;

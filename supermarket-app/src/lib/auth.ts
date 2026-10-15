@@ -187,11 +187,25 @@ export async function authorizeRequest(
   return { session };
 }
 
+export async function requireAdmin(): Promise<AuthResult> {
+  return authorizeRequest(undefined, ["ADMIN"]);
+}
+
+export type SecurityEventType =
+  | "LOGIN_SUCCESS"
+  | "LOGIN_FAILURE"
+  | "LOGOUT"
+  | "ACCOUNT_ACTIVATED"
+  | "EMPLOYEE_CREATED"
+  | "EMPLOYEE_UPDATED"
+  | "FORBIDDEN_ATTEMPT";
+
 export async function logAuthEvent(params: {
-  event: "LOGIN_SUCCESS" | "LOGIN_FAILURE" | "LOGOUT" | "FORBIDDEN_ATTEMPT";
+  event: SecurityEventType;
   employee_id?: number | null;
   email?: string;
   role?: string;
+  action?: "INSERT" | "UPDATE" | "DELETE";
   details?: Record<string, unknown>;
 }): Promise<void> {
   try {
@@ -206,8 +220,8 @@ export async function logAuthEvent(params: {
 
     await query(
       `INSERT INTO audit_log (table_name, record_id, action, new_value, changed_by, changed_at)
-       VALUES ('employees', ?, 'UPDATE', ?, ?, NOW())`,
-      [recordId, payload, changedBy]
+       VALUES ('employees', ?, ?, ?, ?, NOW())`,
+      [recordId, params.action || "UPDATE", payload, changedBy]
     );
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";

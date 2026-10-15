@@ -47,7 +47,7 @@ export async function POST(req: Request) {
       [normalizedEmail]
     );
 
-    if (!employee || employee.is_active !== 1 || !employee.password_hash) {
+    if (!employee || employee.is_active !== 1) {
       await logAuthEvent({
         event: "LOGIN_FAILURE",
         email: normalizedEmail,
@@ -56,6 +56,23 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: GENERIC_AUTH_ERROR }, { status: 401 });
     }
 
+    if (!employee.password_hash) {
+      await logAuthEvent({
+        event: "LOGIN_FAILURE",
+        employee_id: employee.employee_id,
+        email: normalizedEmail,
+        role: employee.role,
+        details: { reason: "ACCOUNT_PENDING_ACTIVATION" },
+      });
+      return NextResponse.json(
+        {
+          error:
+            "This account has not been activated yet. Please use your activation invitation to set your password.",
+          requires_activation: true,
+        },
+        { status: 401 }
+      );
+    }
     const isMatch = await bcrypt.compare(password, employee.password_hash);
     if (!isMatch) {
       await logAuthEvent({

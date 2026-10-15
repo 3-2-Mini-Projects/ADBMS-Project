@@ -1,11 +1,23 @@
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
+import { authenticateRequest, authorizeRequest } from "@/lib/auth";
 
 export async function GET(req: Request) {
+  const auth = await authenticateRequest();
+  if (auth.error) {
+    return auth.error;
+  }
+  const { session } = auth;
+
   try {
     const { searchParams } = new URL(req.url);
-    const branchId = searchParams.get("branchId");
-    const employeeId = searchParams.get("employeeId");
+    const branchIdParam = searchParams.get("branchId");
+    const employeeIdParam = searchParams.get("employeeId");
+
+    // Confine non-management staff to own branch / own shifts
+    const isManagerial = session.role === "ADMIN" || session.role === "HR" || session.role === "MANAGER";
+    const branchId = isManagerial ? branchIdParam : String(session.branch_id);
+    const employeeId = isManagerial ? employeeIdParam : String(session.employee_id);
 
     let sql = `
       SELECT 
@@ -49,14 +61,20 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const auth = await authorizeRequest("manage_employees");
+  if (auth.error) {
+    return auth.error;
+  }
+  const { session } = auth;
+
   try {
     const body = await req.json();
     const { employee_id, branch_id, shift_date, start_time, end_time } = body;
-
+    const effectiveBranchId = session.role === "ADMIN" ? (branch_id || session.branch_id) : session.branch_id;
     const res: any = await query(
       `INSERT INTO shifts (employee_id, branch_id, shift_date, start_time, end_time, status)
        VALUES (?, ?, ?, ?, ?, 'SCHEDULED')`,
-      [employee_id, branch_id, shift_date, start_time, end_time]
+      [employee_id, effectiveBranchId, shift_date, start_time, end_time]
     );
 
     return NextResponse.json({ success: true, shift_id: res.insertId });
@@ -67,6 +85,11 @@ export async function POST(req: Request) {
 }
 
 export async function PATCH(req: Request) {
+  const auth = await authenticateRequest();
+  if (auth.error) {
+    return auth.error;
+  }
+
   try {
     const body = await req.json();
     const { shift_id, action } = body; // action: 'clock_in' | 'clock_out'

@@ -27,7 +27,7 @@ export function Header() {
     switchRole,
   } = useApp();
   const pathname = usePathname();
-  if (pathname === "/login") {
+  if (pathname === "/login" || pathname === "/activate-account") {
     return null;
   }
   const [branchDropdownOpen, setBranchDropdownOpen] = useState(false);

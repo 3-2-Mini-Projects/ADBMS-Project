@@ -102,3 +102,23 @@ export const ROLE_PERMISSIONS: Record<UserRole, Record<PermissionKey, boolean>> 
 export function canAccess(role: UserRole, permission: PermissionKey): boolean {
   return ROLE_PERMISSIONS[role]?.[permission] ?? false;
 }
+
+export function getRoleDefaultPath(role?: UserRole | null): string {
+  switch (role) {
+    case "ADMIN":
+    case "MANAGER":
+      return "/dashboard";
+    case "CASHIER":
+      return "/pos";
+    case "STOCK_CLERK":
+      return "/inventory";
+    case "CATALOG_MANAGER":
+      return "/products";
+    case "MARKETING":
+      return "/promotions";
+    case "HR":
+      return "/employees";
+    default:
+      return "/dashboard";
+  }
+}

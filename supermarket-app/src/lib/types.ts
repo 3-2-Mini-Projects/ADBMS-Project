@@ -32,6 +32,7 @@ export interface Employee {
   hire_date: string;
   monthly_salary: string | number;
   is_active: number;
+  is_activated?: number | boolean;
   created_at: string;
 }
 

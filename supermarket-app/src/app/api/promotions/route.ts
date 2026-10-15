@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
+import { authorizeRequest } from "@/lib/auth";
 
 export async function GET() {
   try {
@@ -52,6 +53,11 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const auth = await authorizeRequest("manage_promotions");
+  if (auth.error) {
+    return auth.error;
+  }
+
   try {
     const body = await req.json();
     const { action } = body;
@@ -81,6 +87,11 @@ export async function POST(req: Request) {
 }
 
 export async function PATCH(req: Request) {
+  const auth = await authorizeRequest("manage_promotions");
+  if (auth.error) {
+    return auth.error;
+  }
+
   try {
     const body = await req.json();
     const { promo_id, is_active } = body;

@@ -1,260 +1,578 @@
-# AGENTS.md — Supermarket ADBMS Login and Authentication Development
+# AGENTS.md — Supermarket ADBMS Employee Registration and Login
 
-## 1. Mission
+## 1. Project Objective
 
-Implement login and authentication for the existing Supermarket ADBMS Next.js application incrementally. Reuse the existing repository structure, MySQL schema, database helper, app context, layout, pages, and APIs whenever possible.
+Implement a secure employee registration and authentication system for the existing Supermarket ADBMS application.
 
-**Mandatory database rule: use direct SQL queries through the existing MySQL helper. Do not use an ORM.** Do not introduce Prisma, Drizzle, Sequelize, TypeORM, MikroORM, or similar tools.
+The application uses Next.js, TypeScript, React, and MySQL. Database operations must use direct SQL queries through the existing database connection helper.
 
-Complete one step at a time. After each step, summarize the files changed, commands/checks run, results, and remaining concerns. Stop and wait for the developer's confirmation before starting the next step.
+**Do not use an ORM.** Do not introduce Prisma, Drizzle, Sequelize, TypeORM, or another ORM.
 
-## 2. Important distinction: role UI vs authentication
+The required workflow is:
 
-The current application already changes visible navigation/sections when a role is selected in a dropdown. Preserve that behavior where useful, but do not treat the dropdown as authentication or as a security boundary.
+1. The system has a default administrator account.
+2. The administrator logs in.
+3. The administrator adds employees and assigns their roles.
+4. New employees are stored in the existing `employees` table.
+5. Employees who have not set a password activate their accounts.
+6. During first-time activation, employees enter a new password and confirm it.
+7. The server validates the activation request and stores a secure password hash.
+8. After activation, employees can log in using their email and password.
+9. The application loads the employee's role and displays the appropriate sections.
+10. The server enforces permissions independently of the frontend.
 
-- **Authentication** verifies the identity of the employee who signed in.
-- **Authorization** checks which actions and data that authenticated employee may access.
-- **UI role filtering** only controls what is displayed and must not be relied on to protect API endpoints.
+Implement this process incrementally. Complete and test each step before moving to the next.
 
-After authentication is implemented, the server-verified employee role must be the source of truth for permissions. Do not allow a user to gain permissions by changing the dropdown, browser state, request body, or URL.
+---
 
-## 3. Project context to verify before coding
+## 2. Mandatory Development Rules
 
-Known from prior repository/schema inspection; verify current files and branch because they may have changed:
+- Use direct MySQL SQL queries only.
+- Reuse the existing `src/lib/db.ts` helper where appropriate.
+- Use parameterized queries with `?` placeholders for input values.
+- Inspect existing pages, API routes, types, database tables, and SQL scripts before creating anything.
+- Reuse the existing `employees` table.
+- Do not create a duplicate users table.
+- Do not rerun the entire database setup script.
+- Do not make schema changes without explaining the reason and receiving approval.
+- Do not modify unrelated features.
+- Do not remove the existing role-dropdown functionality without understanding how it is used.
+- Do not treat frontend role selection as authentication or authorization.
+- Do not store plain-text passwords.
+- Do not expose database credentials, password hashes, activation tokens, or session secrets.
+- Do not make database writes or destructive changes without approval.
+- Do not claim that a feature works until it has been tested.
 
-- Next.js App Router project under `supermarket-app`, using TypeScript, React, `mysql2`, and `lucide-react`.
-- Existing database helper: `src/lib/db.ts`.
-- Existing employee types: `src/lib/types.ts`.
-- Existing app context: `src/lib/context.tsx`.
-- Existing root layout: `src/app/layout.tsx`.
-- Existing employee API: `src/app/api/employees/route.ts`.
-- Existing shift API: `src/app/api/shifts/route.ts`.
-- The supplied SQL script uses database `supermarket_oltp` and has an `employees` table with `email`, `password_hash`, `role`, and `is_active`.
-- Some seeded employees may have `password_hash = NULL`; do not assume those accounts can sign in.
-- No login page or authentication API was present on the inspected branch at the time of prior inspection. Recheck the current branch before creating files.
+## 3. Existing Project Inspection
 
-Do not assume the live database name, schema, seed values, role names, or helper signatures without confirming them. Do not rerun the setup SQL or create a duplicate users table.
+Before implementation, inspect the current repository and branch.
 
-## 4. Non-negotiable implementation rules
+Review:
 
-1. Use SQL directly via the existing `mysql2/promise` helper.
-2. Parameterize all user-supplied SQL values with placeholders such as `?`.
-3. Never concatenate user input into SQL.
-4. Use a strict allowlist for any dynamic SQL identifiers.
-5. Do not add an ORM or a second database access layer that duplicates the existing helper.
-6. Inspect existing pages/routes before adding new ones; extend rather than duplicate.
-7. Do not make repository writes, run database writes, install dependencies, or change schema without the developer's explicit approval.
-8. Never put secrets, credentials, plain-text passwords, password hashes, session tokens, or `.env` contents in source control or logs.
-9. Do not claim checks passed unless they were actually run.
-10. Do not change unrelated functionality or perform broad refactors.
+- `package.json`
+- `src/lib/db.ts`
+- `src/lib/types.ts`
+- `src/lib/context.tsx`
+- `src/app/layout.tsx`
+- The existing dashboard page
+- The existing employee management page
+- `src/app/api/employees/route.ts`
+- Existing authentication-related pages and API routes, if any
+- The supplied SQL setup script
+- Existing audit logging tables and routes
 
-## 5. Recommended authentication structure
+Verify the actual current schema before relying on table or column names.
 
-Use this as a target structure, not permission to create duplicates before inspection:
+The previously reviewed SQL script contains an `employees` table with fields including:
+
+- `employee_id`
+- `email`
+- `password_hash`
+- `role`
+- `is_active`
+
+Verify all actual fields and constraints before using them.
+
+Existing employee records may have a `NULL` password hash. Do not assume those employees can log in before activating their accounts.
+
+Do not expose `.env` secrets while inspecting configuration.
+
+---
+
+## 4. User Roles and Permissions
+
+The administrator is responsible for creating employee accounts and assigning roles.
+
+Inspect the existing TypeScript role definitions and database constraints before implementing role selection.
+
+The previously observed role values include:
+
+- `ADMIN`
+- `MANAGER`
+- `CASHIER`
+- `STOCK_CLERK`
+- `CATALOG_MANAGER`
+- `MARKETING`
+- `HR`
+
+Use only roles supported by the current project.
+
+### Administrator permissions
+
+The administrator should be able to:
+
+- Log in to the system.
+- Access the employee management section.
+- Add employee records.
+- Assign an allowed role to each employee.
+- Set or confirm the employee's branch where required by the existing schema.
+- View employee activation status.
+- Review employee information.
+- Perform permitted employee updates.
+
+Only an authenticated administrator should be allowed to create employee records or assign privileged roles.
+
+An ordinary employee must not be able to create another administrator account.
+
+### Employee permissions
+
+Employees should be able to:
+
+- Activate their own account through the approved first-time setup process.
+- Set and confirm a password.
+- Log in after successful activation.
+- Access application sections permitted by their assigned role.
+- Log out securely.
+
+Employees must not be allowed to change their own role by modifying client-side data or API requests.
+
+---
+
+## 5. Required Authentication Flow
+
+### Phase A — Administrator login
+
+1. Display the login page.
+2. The administrator enters their email and password.
+3. The server retrieves the employee record using parameterized SQL.
+4. Verify the password against the stored password hash.
+5. Verify that the employee is active.
+6. Verify that the account has the administrator role.
+7. Create a secure session.
+8. Redirect the administrator to the dashboard.
+
+The default administrator account must be provisioned through a secure, documented setup process. Do not create a publicly accessible endpoint that allows anyone to become an administrator.
+
+### Phase B — Administrator creates an employee
+
+1. The administrator opens Employee Management.
+2. The administrator enters the required employee details.
+3. The administrator selects an allowed role.
+4. The server validates the request and administrator permissions.
+5. The server checks required fields and unique employee identifiers.
+6. The server inserts the employee into the existing `employees` table.
+7. The new employee is initially unactivated for password login.
+8. The system provides a secure account activation method.
+9. The employee is shown in the employee list with an appropriate activation status.
+
+Use the existing employee creation API where possible.
+
+Do not create a second employee table.
+
+### Phase C — Employee first-time password setup
+
+Provide a first-time activation page, for example:
+
+`/activate-account`
+
+The employee should be able to enter:
+
+- Email address, if required by the chosen activation design
+- Activation token or one-time invitation code
+- New password
+- Confirm password
+
+The exact fields should match the secure activation design chosen during implementation.
+
+The employee enters the new password twice.
+
+The frontend may check that the two password values match, but the server must perform the same validation independently.
+
+The server must then:
+
+1. Validate the activation token or code.
+2. Verify that the activation is valid, unused, and not expired.
+3. Verify that the employee record exists and is active.
+4. Verify that the employee has not already completed password activation.
+5. Verify that the password meets the agreed password policy.
+6. Verify that the password and confirmation match.
+7. Hash the password using a maintained password-hashing library.
+8. Store the hash in `employees.password_hash`.
+9. Mark the activation credential as used.
+10. Complete these related changes atomically where the schema supports it.
+11. Return a safe success response.
+12. Direct the employee to the login page.
+
+Do not permit password setup merely because someone knows an employee's email address or employee ID.
+
+### Phase D — Employee login after activation
+
+1. The employee opens the login page.
+2. The employee enters their email and password.
+3. The server retrieves the matching employee record.
+4. If the password hash is missing, direct the user to the approved activation process without revealing sensitive account information.
+5. Verify the password hash.
+6. Verify that the employee is active.
+7. Create a secure session.
+8. Load the employee's actual role from trusted server-side data.
+9. Display the appropriate dashboard and navigation.
+10. Enforce the same role restrictions on server-side API routes.
+
+### Phase E — Logout
+
+1. The employee selects Logout.
+2. The server invalidates or clears the session according to the chosen session design.
+3. The browser's session cookie is cleared.
+4. Protected API requests without a valid session are rejected.
+5. The user returns to the login page.
+
+---
+
+## 6. Account Activation Security
+
+Account activation is a critical security requirement.
+
+A database record existing for an employee does not, by itself, prove that the person requesting a password belongs to that employee.
+
+Use one of these approved approaches:
+
+### Preferred approach: secure invitation
+
+- An authenticated administrator creates an employee.
+- The system generates a cryptographically secure, one-time activation token.
+- The employee receives the invitation through an approved delivery method.
+- The token expires after a limited period and cannot be reused.
+- Store only a secure hash of the activation token where the design supports it.
+- Do not log or expose the raw token.
+- Validate the token before allowing password setup.
+
+### Alternative: administrator-issued activation code
+
+If email delivery is not available, use an administrator-issued, one-time activation code with an appropriate expiry and secure verification.
+
+The delivery process must ensure that the code reaches the intended employee.
+
+### Schema requirements
+
+Inspect the current schema before implementing activation.
+
+If secure activation requires additional database fields or a separate activation-token table, explain:
+
+- Why the existing schema is insufficient.
+- Which columns or table would be added.
+- How tokens expire and become unusable.
+- How token consumption is protected against concurrent requests.
+
+Obtain approval before making the schema change.
+
+Do not store a reusable plaintext activation token in the database.
+
+---
+
+## 7. Recommended File Structure
+
+Adapt this structure to the existing repository. Inspect existing files first and avoid duplicate routes.
 
 ```text
-src/app/
-  login/
-    page.tsx
-  api/
-    auth/
-      login/
-        route.ts
-      logout/
-        route.ts
-      me/
-        route.ts
-src/lib/
-  db.ts          # existing SQL helper; reuse
-  auth.ts        # session verification and auth helpers, if appropriate
+supermarket-app/
+├── src/
+│   ├── app/
+│   │   ├── login/
+│   │   │   └── page.tsx
+│   │   ├── activate-account/
+│   │   │   └── page.tsx
+│   │   ├── api/
+│   │   │   ├── auth/
+│   │   │   │   ├── login/
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── logout/
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── me/
+│   │   │   │   │   └── route.ts
+│   │   │   │   └── activate/
+│   │   │   │       └── route.ts
+│   │   │   └── employees/
+│   │   │       └── route.ts
+│   │   └── ...
+│   └── lib/
+│       ├── db.ts
+│       ├── auth.ts
+│       └── types.ts
+└── AGENTS.md
 ```
 
-- `login/page.tsx`: login form and safe feedback.
-- `api/auth/login/route.ts`: validate input, query employee with parameterized SQL, verify password, reject inactive/invalid accounts, and establish a secure session.
-- `api/auth/logout/route.ts`: clear the session.
-- `api/auth/me/route.ts`: return a minimal safe profile for the current session, if the app needs a client endpoint.
-- `src/lib/auth.ts`: shared server-only session and authorization helpers, if appropriate for the project's Next.js version.
+The paths are suggestions. Reuse the existing employee API and any authentication files already present.
 
-Confirm the installed Next.js version and its supported cookie/session APIs before implementing. Keep server-only secrets and functions out of client bundles.
+---
 
-## 6. Security requirements
+## 8. Direct SQL Requirements
 
-- Use a maintained password hashing library such as bcrypt/bcryptjs or Argon2, selected based on compatibility with the current runtime and dependencies. Explain the choice before installing anything.
-- Never store or compare plain-text passwords. Verify the submitted password against `employees.password_hash` using the chosen library.
-- Check `is_active` before allowing a session.
-- Use generic credential failure responses so the endpoint does not disclose whether an email exists.
-- Establish sessions using a maintained, cryptographically secure session approach appropriate for Next.js. Do not invent home-grown cryptography or use unsigned client-controlled role data.
-- Use an `HttpOnly` cookie, `Secure` in production, appropriate `SameSite` policy, and an explicit expiration. Evaluate CSRF protections for state-changing endpoints.
-- Keep session lifetime and logout behavior consistent.
-- Enforce authentication and role/branch authorization in server-side API routes and server components where applicable.
-- Never trust a role, employee ID, or branch ID supplied by the client as proof of authority.
-- Validate and normalize input on the server, including email and password length limits.
-- Avoid logging passwords, password hashes, cookies, session tokens, or full sensitive request bodies.
-- Do not create an unauthenticated production endpoint that can set an arbitrary employee or administrator password.
-- If login throttling or lockout is considered, first inspect existing infrastructure and requirements; do not invent schema changes without approval.
+Use the existing MySQL connection helper.
 
-## 7. SQL conventions
+Example employee lookup:
 
-Use the existing helper and its actual signature. Example only:
-
-```ts
-const employee = await queryOne<Employee>(
-  `SELECT employee_id, email, password_hash, role, is_active, branch_id
-     FROM employees
-    WHERE email = ?
-    LIMIT 1`,
-  [normalizedEmail]
-);
+```sql
+SELECT employee_id, email, password_hash, role, is_active
+FROM employees
+WHERE email = ?
+LIMIT 1;
 ```
 
-Confirm that every selected column exists in the actual schema and type definitions before using it. If `branch_id` or another field is absent, remove it or establish the correct schema first; do not guess.
+Example employee insertion:
 
-- Query only required columns.
-- Use transactions for multi-query writes that must be atomic.
-- Release acquired connections in `finally` blocks.
-- Handle database errors safely and log only non-sensitive server-side diagnostic information.
-- Do not assume a password hash exists for seeded accounts.
+```sql
+INSERT INTO employees (
+    branch_id,
+    full_name,
+    email,
+    role,
+    is_active,
+    password_hash
+)
+VALUES (?, ?, ?, ?, ?, ?);
+```
 
-## 8. Step-by-step implementation plan
+This insertion is illustrative only. Verify the actual column names, required fields, defaults, and constraints in the current schema before using it.
 
-### Step 0 — Baseline inspection (no edits)
+Use `NULL` for the initial password hash only if the existing schema permits it and this is consistent with the chosen activation design.
 
-1. Confirm current branch and working tree changes.
-2. Inspect `package.json`, available scripts, `src/lib/db.ts`, `src/lib/types.ts`, `src/lib/context.tsx`, `src/app/layout.tsx`, sidebar/navigation, and existing API routes/pages.
-3. Search for existing login, session, password, middleware, and authorization code before creating anything.
-4. Review the supplied SQL script for exact employee column names and types.
-5. Confirm environment variable names without printing secret values.
-6. Run existing lint/type/build checks if available and record baseline failures.
+Do not assume that all employee fields shown in these examples exist or are optional.
 
-**Done when:** current structure and baseline are documented. No files or database rows changed.
+### SQL safety rules
 
-### Step 1 — Authentication design and dependencies
+- Use parameterized SQL for all user-provided values.
+- Never concatenate submitted values into SQL.
+- Validate role values against a server-side allowlist.
+- Verify email uniqueness and handle duplicate records safely.
+- Do not allow the client to supply an unrestricted administrator role.
+- Use transactions for related writes that must succeed or fail together.
+- Use conditional updates or row locking as appropriate to prevent activation-token reuse.
+- Handle unique-constraint and database errors safely.
+- Never print password hashes, activation tokens, or session secrets in logs.
 
-1. Confirm the current schema supports employee login through `email`, `password_hash`, `role`, and `is_active`.
-2. Select the smallest compatible set of maintained password/session dependencies.
-3. Explain security and compatibility tradeoffs before adding dependencies.
-4. Decide how an initial password hash will be safely provisioned for a known employee.
-5. Do not create a users table or modify the schema unless inspection proves it necessary and the developer approves.
+---
 
-**Done when:** design and any proposed dependency changes are approved. No password or database write yet.
+## 9. Password Requirements
 
-### Step 2 — Secure initial password provisioning
+- Use a maintained password-hashing library, such as Argon2id or bcrypt, after reviewing compatibility with the existing project.
+- Never store plain-text passwords.
+- Never log passwords.
+- Do not send password hashes to the frontend.
+- Enforce a documented password policy on the server.
+- Require the new password and confirmation to match.
+- Do not store password confirmation in the database.
+- Use a generic error message for invalid login credentials.
+- Reject inactive accounts.
+- Do not reveal whether a particular email exists through unauthenticated activation or login responses.
 
-1. Confirm the target employee using a non-secret identifier, such as their email.
-2. Propose a local-only password-hash generation procedure that does not print or commit the password.
-3. Explain the exact database update before running it.
-4. Obtain explicit approval before executing any database write.
-5. Verify only that the intended row was updated; never display the password or hash.
+Password hashing must happen on the server.
 
-Never add a public setup endpoint for initial admin credentials.
+---
 
-### Step 3 — Login API and session creation
+## 10. Session Management and Authorization
 
-1. Add the login route only after confirming it does not already exist.
-2. Validate request shape, email, and password on the server.
-3. Use a parameterized SQL query against the existing `employees` table.
-4. Verify the password hash and reject missing hashes, invalid credentials, and inactive employees.
-5. Create a secure session and set the cookie with appropriate flags and expiration.
-6. Return only safe employee fields; never return `password_hash`.
-7. Add safe error handling and focused tests/manual cases.
+Choose a maintained session implementation compatible with the existing Next.js version.
 
-**Verification:** valid active account succeeds; wrong password, unknown email, null hash, and inactive account fail with safe responses; SQL injection input is treated as data; secrets are not logged.
+Session cookies should be configured with:
 
-### Step 4 — Login page
+- `HttpOnly`
+- `Secure` in production
+- `SameSite=Lax` or stricter where compatible
+- An appropriate expiration
+- A suitable path and scope
 
-1. Follow the project's existing styling and components.
-2. Add email/password fields, submission state, validation feedback, and generic credential errors.
-3. Submit to the login API; do not implement password verification in the browser.
-4. Avoid logging or retaining passwords unnecessarily.
-5. Redirect to the appropriate existing app page after success.
-6. Ensure logged-out users are directed to login where appropriate.
+Do not store session secrets or long-lived authentication tokens in local storage.
 
-**Verification:** form submission works; errors are clear but do not disclose account existence; loading state prevents accidental duplicate submissions.
+Create reusable server-side helpers for:
 
-### Step 5 — Current-user endpoint and app context
+- Reading the current session
+- Requiring an authenticated employee
+- Requiring the administrator role
+- Checking the employee's assigned role
+- Enforcing branch restrictions where applicable
 
-1. Add a current-user endpoint only if needed by the existing client architecture.
-2. Resolve the employee from the verified session on the server.
-3. Replace automatic selection of an ADMIN/MANAGER employee with the authenticated employee.
-4. Treat the role dropdown as display/testing UI only, or remove/disable it in production as appropriate to requirements.
-5. Handle loading, logged-out, and expired-session states.
-6. Return only safe profile fields to the client.
+Protect all relevant API routes, including employee creation and role assignment.
 
-**Verification:** refreshing preserves a valid session; logout/expiration clears authenticated UI; a client cannot select another employee to impersonate them.
+The frontend may hide navigation items based on role, but the server must independently authorize every protected operation.
 
-### Step 6 — Logout
+Do not trust a role supplied by the browser.
 
-1. Clear/invalidate the session using the selected session strategy.
-2. Expire the cookie with matching cookie attributes.
-3. Reset client auth state and navigate to login.
-4. Ensure protected APIs reject the old session after logout.
+---
 
-**Verification:** logout succeeds; the previous session cannot access protected APIs afterward.
+## 11. Login Audit Logging
 
-### Step 7 — Server-side authorization
+Inspect the existing audit-related schema and APIs before creating any new logging table.
 
-1. Implement reusable server-only helpers for session lookup and role checks.
-2. Protect each existing API route and protected page/server action as appropriate.
-3. Define role permissions from verified project requirements and existing role types; do not guess permissions.
-4. Enforce branch scope where the schema and business rules require it.
-5. Keep sidebar filtering for usability, but never rely on it for security.
+If the existing schema supports it, record appropriate security events such as:
 
-**Verification:** test allowed and denied roles, direct API calls, modified client role values, and cross-branch access where relevant.
+- Successful login
+- Failed login
+- Successful account activation
+- Logout
+- Administrator employee creation
+- Employee role assignment
+- Account deactivation
 
-### Step 8 — Login audit logging (only if requested/required)
+Record only the fields supported by the actual schema and appropriate to the security requirements.
 
-Distinguish **application authentication logs** from **audit records**. Inspect existing `audit_log` and `error_log` tables and their schema first. Reuse them if they are intended for these events; do not create a duplicate table without approval.
+Never log:
 
-Potential events, subject to requirements and schema support:
+- Plain-text passwords
+- Password hashes
+- Raw activation tokens
+- Session cookies
+- Session secrets
+- Database credentials
 
-- successful login,
-- failed login,
-- logout,
-- rejected authorization attempt,
-- unexpected authentication service error.
+Do not allow ordinary employees to edit or delete security audit history unless explicitly authorized by the requirements.
 
-Rules:
+Keep application error logs separate from user-visible error messages.
 
-- Never store passwords, password hashes, cookies, session tokens, or complete sensitive request bodies in logs.
-- Record only necessary fields supported by the existing schema, such as event type, timestamp, actor ID when known, and a safe result/status.
-- Avoid recording excessive personal data or raw stack traces in user-facing pages.
-- Do not let audit logging failures accidentally reveal secrets or silently undermine critical security behavior; define and test the intended failure policy.
-- Never allow ordinary users to modify audit history unless requirements explicitly permit it.
+---
+
+## 12. Step-by-Step Implementation Plan
+
+Complete only the current step. Report the files changed and tests performed, then wait for developer confirmation.
+
+### Step 0 — Inspect the current project
+
+- Review the current branch and working-tree status.
+- Inspect the package scripts and installed dependencies.
+- Inspect the database helper and TypeScript types.
+- Inspect the employee page and API.
+- Review the existing SQL script.
+- Confirm current database column names and constraints.
+- Check for existing login, session, activation, and audit implementations.
+- Record existing lint, type-check, build, and test failures.
+- Make no code changes.
+
+### Step 1 — Agree on the activation design
+
+- Confirm how the default administrator is provisioned.
+- Confirm which employee fields are required.
+- Decide how activation tokens or codes will be delivered.
+- Decide token expiry and one-time-use behavior.
+- Identify any schema additions required.
+- Explain proposed dependencies and schema changes.
+- Ask for approval before installing dependencies or changing the schema.
+
+### Step 2 — Implement administrator authentication
+
+- Securely verify administrator credentials.
+- Verify active status and administrator role.
+- Establish a secure session.
+- Test successful and failed logins.
+- Do not allow an unauthenticated user to establish an administrator session.
+
+### Step 3 — Implement employee creation
+
+- Reuse the existing employee page and API.
+- Protect employee creation with server-side administrator authorization.
+- Validate required employee fields.
+- Validate the selected role against an allowlist.
+- Insert the employee using parameterized SQL.
+- Provide a safe initial activation status.
+- Generate the approved activation invitation.
+- Test duplicate emails, invalid roles, and unauthorized requests.
+
+### Step 4 — Implement first-time password activation
+
+- Add the activation page and API.
+- Validate the activation token or code on the server.
+- Verify expiry, one-time use, employee status, and password confirmation.
+- Hash the password on the server.
+- Update the existing employee record.
+- Invalidate the activation credential atomically where supported.
+- Test expired, invalid, reused, and valid activation credentials.
+
+### Step 5 — Implement employee login
+
+- Verify employee credentials.
+- Reject inactive employees and invalid passwords.
+- Handle employees without password hashes safely.
+- Create the secure session.
+- Load the actual employee role from server-side data.
+- Test successful and failed login scenarios.
+
+### Step 6 — Connect the frontend and app context
+
+- Add or reuse the login page.
+- Add the first-time activation page.
+- Load the authenticated employee through the server session.
+- Replace automatic employee selection as the source of identity.
+- Preserve appropriate role-based navigation.
+- Handle loading, logged-out, and expired-session states.
+- Test refresh, direct URL access, and logout behavior.
+
+### Step 7 — Protect existing APIs
+
+- Add reusable authentication and authorization helpers.
+- Protect employee, shift, and other relevant APIs.
+- Enforce roles and branch restrictions server-side.
+- Test allowed and denied requests for each relevant role.
+- Ensure changing the dropdown cannot grant permissions.
+
+### Step 8 — Implement audit logging
+
+- Reuse the existing audit schema where possible.
+- Record approved authentication and employee-management events.
+- Exclude secrets and password information.
+- Restrict access to audit information.
+- Test expected audit events.
 
 ### Step 9 — Final verification
 
-Run available project checks based on `package.json`, such as lint, type-check, build, and tests. Do not assume script names exist.
-
 Test:
 
-- valid active employee login,
-- invalid password and unknown email,
-- missing/null password hash,
-- inactive employee,
-- logout and old-session rejection,
-- session expiration,
-- unauthorized role and direct API request,
-- branch restrictions where applicable,
-- input validation and SQL injection resistance,
-- safe error messages and absence of secrets in logs,
-- existing role-dependent UI still works.
+- Administrator login
+- Unauthorized administrator access
+- Employee creation
+- Invalid employee role
+- Duplicate employee email
+- Valid first-time activation
+- Password confirmation mismatch
+- Invalid activation token
+- Expired activation token
+- Reused activation token
+- Login before activation
+- Login after activation
+- Incorrect password
+- Inactive employee
+- Session expiration
+- Logout
+- Role-based navigation
+- Direct requests to protected APIs
+- SQL injection attempts through inputs
+- Appropriate audit records
 
-Summarize files changed, commands run, results, known issues, and manual checks still required.
+Run the relevant project lint, type-check, build, and test scripts.
 
-## 9. Required response format for every step
+Document the results and remaining limitations.
 
-For each step, report:
+---
 
-1. **Goal** — what this step accomplishes.
-2. **Inspect** — exact files/schema objects to examine.
-3. **Changes** — minimal changes and exact paths.
-4. **SQL** — parameterized SQL and confirmed schema assumptions.
-5. **Run** — exact commands based on available project scripts.
-6. **Verify** — expected success and failure cases.
-7. **Stop point** — wait for developer confirmation before the next step.
+## 13. Required Response Format for the Coding Agent
 
-When the repository, schema, runtime, role rules, or expected behavior is unclear, ask one focused question rather than guessing.
+For every step, provide:
 
-## 10. Definition of done
+1. **Goal** — what the current step accomplishes.
+2. **Inspection** — exact files and database objects reviewed.
+3. **Plan** — the smallest required changes.
+4. **Implementation** — code changes with file paths.
+5. **SQL** — parameterized queries and verified schema assumptions.
+6. **Commands** — exact commands to run.
+7. **Tests** — expected results for successful and failed cases.
+8. **Security review** — authentication, authorization, and data-handling implications.
+9. **Stop point** — wait for developer confirmation before proceeding.
 
-A step is complete only when its implementation matches the inspected repository and schema, SQL is parameterized, no ORM was introduced, security checks are server-side where required, relevant checks were run or clearly marked as not run, and the developer knows how to verify the result.
+Do not skip steps or silently implement future phases.
+
+## 14. Definition of Done
+
+The development process is complete when:
+
+- The administrator can securely log in.
+- Only authorized administrators can create employees and assign roles.
+- New employee records are stored in the existing `employees` table.
+- Employees can securely activate their accounts and set a password with confirmation.
+- Activation credentials expire and cannot be reused.
+- Employees can log in after successful activation.
+- The application loads the authenticated employee's actual role.
+- Server-side APIs enforce authentication and authorization.
+- Logout invalidates the session.
+- Relevant security events are logged without secrets.
+- Direct SQL is used throughout.
+- No ORM has been introduced.
+- Tests and remaining limitations are documented.
+
+When the existing schema or requirements are unclear, inspect the source and ask one focused question rather than guessing.

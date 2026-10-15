@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
+import { authorizeRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -64,9 +65,17 @@ export async function GET(req: Request) {
 }
 
 export async function PATCH(req: Request) {
+  const auth = await authorizeRequest("manage_inventory");
+  if (auth.error) {
+    return auth.error;
+  }
+  const { session } = auth;
+
   try {
     const body = await req.json();
-    const { inventory_id, branch_id, product_id, quantity_change, new_quantity, reorder_level, reason, changed_by } = body;
+    const { inventory_id, branch_id: reqBranchId, product_id, quantity_change, new_quantity, reorder_level, reason } = body;
+    const branch_id = session.role === "ADMIN" ? (reqBranchId || session.branch_id) : session.branch_id;
+    const changed_by = `employee_${session.employee_id}`;
 
     if (!inventory_id && (!branch_id || !product_id)) {
       return NextResponse.json({ error: "inventory_id or branch_id and product_id required" }, { status: 400 });
