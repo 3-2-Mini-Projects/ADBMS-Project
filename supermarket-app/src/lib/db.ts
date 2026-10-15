@@ -8,11 +8,14 @@ const pool = mysql.createPool({
   database: process.env.DB_NAME,
   waitForConnections: true,
   connectionLimit: 10,
+  connectTimeout: 20000,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 10000,
   ssl: { rejectUnauthorized: false },
 });
 
 export async function query<T = any>(sql: string, params?: any[]): Promise<T[]> {
-  const [rows] = await pool.execute(sql, params);
+  const [rows] = await pool.query(sql, params);
   return rows as T[];
 }
 

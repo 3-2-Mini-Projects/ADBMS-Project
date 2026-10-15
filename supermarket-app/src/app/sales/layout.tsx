@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -13,6 +13,17 @@ const SALES_TABS = [
 
 export default function SalesLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const [todayStr, setTodayStr] = useState<string>("");
+
+  useEffect(() => {
+    setTodayStr(
+      new Date().toLocaleDateString("en-LK", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      })
+    );
+  }, []);
 
   return (
     <div className="app-layout">
@@ -171,7 +182,7 @@ export default function SalesLayout({ children }: { children: React.ReactNode })
               Live Data
             </div>
             <div style={{ fontSize: 12, color: "var(--text-muted)", fontFamily: "'JetBrains Mono', monospace" }}>
-              {new Date().toLocaleDateString("en-LK", { year: "numeric", month: "short", day: "numeric" })}
+              {todayStr}
             </div>
           </div>
         </header>

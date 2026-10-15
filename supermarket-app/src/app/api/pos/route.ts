@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
 
-export const dynamic = "force-dynamic";
-
 // POST /api/pos  — Create a new sale with items & payments
 export async function POST(req: Request) {
   try {

@@ -25,17 +25,23 @@ export default function SalesReportPage() {
   const [loading, setLoading] = useState(true);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [branchId, setBranchId] = useState("");
-  const [startDate, setStartDate] = useState(() => {
-    const d = new Date(); d.setDate(d.getDate() - 30);
-    return d.toISOString().slice(0, 10);
-  });
-  const [endDate, setEndDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  useEffect(() => {
+    const today = new Date();
+    const past = new Date();
+    past.setDate(past.getDate() - 30);
+    setStartDate(past.toISOString().slice(0, 10));
+    setEndDate(today.toISOString().slice(0, 10));
+  }, []);
 
   useEffect(() => {
     fetch("/api/branches").then(r => r.json()).then(data => { if (Array.isArray(data)) setBranches(data); });
   }, []);
 
   const fetchReport = useCallback(async () => {
+    if (!startDate || !endDate) return;
     setLoading(true);
     try {
       const p = new URLSearchParams({ startDate, endDate });
