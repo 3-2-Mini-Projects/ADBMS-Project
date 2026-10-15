@@ -7,42 +7,41 @@ export async function GET(req: Request) {
     const branchId = searchParams.get("branchId");
     const status = searchParams.get("status");
 
+    // ADBMS Stock Clerk View: vw_purchase_order_summary
     let sql = `
       SELECT 
-        po.po_id,
-        po.po_number,
-        po.supplier_id,
-        s.name AS supplier_name,
-        po.branch_id,
-        b.name AS branch_name,
-        po.order_date,
-        po.expected_date,
-        po.status,
-        po.total_cost,
-        po.created_by,
-        e.full_name AS creator_name,
-        COUNT(poi.po_item_id) AS items_count
-      FROM purchase_orders po
-      JOIN suppliers s ON po.supplier_id = s.supplier_id
-      JOIN branches b ON po.branch_id = b.branch_id
-      LEFT JOIN employees e ON po.created_by = e.employee_id
-      LEFT JOIN purchase_order_items poi ON po.po_id = poi.po_id
+        po_id,
+        po_number,
+        supplier_id,
+        supplier_name,
+        branch_id,
+        branch_name,
+        order_date,
+        expected_date,
+        received_date,
+        status,
+        total_cost,
+        created_by,
+        creator_name,
+        items_count,
+        total_ordered_qty,
+        calculated_total_cost
+      FROM vw_purchase_order_summary
       WHERE 1=1
     `;
     const params: any[] = [];
 
     if (branchId) {
-      sql += ` AND po.branch_id = ?`;
+      sql += ` AND branch_id = ?`;
       params.push(branchId);
     }
 
     if (status) {
-      sql += ` AND po.status = ?`;
+      sql += ` AND status = ?`;
       params.push(status);
     }
 
-    sql += ` GROUP BY po.po_id, po.po_number, po.supplier_id, s.name, po.branch_id, b.name, po.order_date, po.expected_date, po.status, po.total_cost, po.created_by, e.full_name`;
-    sql += ` ORDER BY po.po_id DESC`;
+    sql += ` ORDER BY po_id DESC`;
 
     const orders = await query(sql, params);
     return NextResponse.json(orders);
@@ -64,7 +63,6 @@ export async function POST(req: Request) {
 
     await connection.beginTransaction();
 
-    const poNumber = `PO-${Date.now().toString().slice(-6)}`;
     let totalCost = 0;
 
     for (const item of items) {
@@ -72,19 +70,19 @@ export async function POST(req: Request) {
     }
 
     const [poRes]: any = await connection.query(
-      `INSERT INTO purchase_orders (po_number, supplier_id, branch_id, order_date, expected_date, status, total_cost, created_by)
-       VALUES (?, ?, ?, NOW(), ?, 'PENDING', ?, ?)`,
-      [poNumber, supplier_id, branch_id, expected_date || null, totalCost.toFixed(2), created_by || 1]
+      `INSERT INTO purchase_orders (supplier_id, branch_id, order_date, expected_date, status, total_cost, created_by)
+       VALUES (?, ?, NOW(), ?, 'PENDING', ?, ?)`,
+      [supplier_id, branch_id, expected_date || null, totalCost.toFixed(2), created_by || 1]
     );
 
     const poId = poRes.insertId;
+    const poNumber = `PO-${String(poId).padStart(5, '0')}`;
 
     for (const item of items) {
-      const lineTotal = Number(item.quantity) * Number(item.unit_cost);
       await connection.query(
-        `INSERT INTO purchase_order_items (po_id, product_id, quantity, unit_cost, line_total)
-         VALUES (?, ?, ?, ?, ?)`,
-        [poId, item.product_id, item.quantity, item.unit_cost, lineTotal.toFixed(2)]
+        `INSERT INTO purchase_order_items (po_id, product_id, quantity, unit_cost)
+         VALUES (?, ?, ?, ?)`,
+        [poId, item.product_id, item.quantity, item.unit_cost]
       );
     }
 

@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   ShieldAlert,
 } from "lucide-react";
+import { StockAlertBell } from "./StockAlertBell";
 
 export function Header() {
   const {
@@ -116,6 +117,9 @@ export function Header() {
             <span>Launch POS</span>
           </Link>
         )}
+
+        {/* Real-Time Stock Alert Bell */}
+        <StockAlertBell />
 
         {/* Employee & Role Switcher */}
         <div className="relative">

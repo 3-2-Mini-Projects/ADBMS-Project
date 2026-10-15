@@ -14,6 +14,8 @@ const poolConfig: mysql.PoolOptions = {
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 10000,
   decimalNumbers: false,
   ssl: {
     rejectUnauthorized: false,
@@ -27,8 +29,16 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 export async function query<T = any>(sql: string, params: any[] = []): Promise<T[]> {
-  const [rows] = await pool.query(sql, params);
-  return rows as T[];
+  try {
+    const [rows] = await pool.query(sql, params);
+    return rows as T[];
+  } catch (err: any) {
+    if (err.code === "ECONNRESET" || err.code === "PROTOCOL_CONNECTION_LOST" || err.message?.includes("ECONNRESET")) {
+      const [rows] = await pool.query(sql, params);
+      return rows as T[];
+    }
+    throw err;
+  }
 }
 
 export async function queryOne<T = any>(sql: string, params: any[] = []): Promise<T | null> {

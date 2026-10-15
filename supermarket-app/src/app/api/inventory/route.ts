@@ -10,50 +10,47 @@ export async function GET(req: Request) {
     const lowStock = searchParams.get("lowStock") === "true";
     const search = searchParams.get("search");
 
+    // ADBMS Stock Clerk View: vw_branch_inventory
     let sql = `
       SELECT 
-        i.inventory_id,
-        i.branch_id,
-        b.name AS branch_name,
-        i.product_id,
-        p.barcode,
-        p.name AS product_name,
-        p.brand,
-        c.name AS category_name,
-        i.quantity_on_hand,
-        i.reserved_qty,
-        i.reorder_level,
-        p.unit_price,
-        p.cost_price,
-        i.last_updated,
-        CASE
-          WHEN i.quantity_on_hand <= 0 THEN 'OUT_OF_STOCK'
-          WHEN i.quantity_on_hand <= i.reorder_level THEN 'LOW_STOCK'
-          ELSE 'NORMAL'
-        END AS stock_status
-      FROM inventory i
-      JOIN products p ON i.product_id = p.product_id
-      JOIN branches b ON i.branch_id = b.branch_id
-      LEFT JOIN categories c ON p.category_id = c.category_id
+        inventory_id,
+        branch_id,
+        branch_name,
+        product_id,
+        barcode,
+        product_name,
+        brand,
+        category_name,
+        supplier_name,
+        quantity_on_hand,
+        reserved_qty,
+        reorder_level,
+        unit_price,
+        cost_price,
+        last_updated,
+        stock_status,
+        fn_product_sales_velocity(branch_id, product_id) AS sales_velocity,
+        fn_suggested_reorder_qty(branch_id, product_id, 4, 1) AS suggested_reorder_qty
+      FROM vw_branch_inventory
       WHERE 1=1
     `;
     const params: any[] = [];
 
     if (branchId) {
-      sql += ` AND i.branch_id = ?`;
+      sql += ` AND branch_id = ?`;
       params.push(branchId);
     }
 
     if (lowStock) {
-      sql += ` AND i.quantity_on_hand <= i.reorder_level`;
+      sql += ` AND stock_status IN ('LOW_STOCK', 'OUT_OF_STOCK')`;
     }
 
     if (search) {
-      sql += ` AND (p.barcode = ? OR p.name LIKE ? OR p.brand LIKE ?)`;
+      sql += ` AND (barcode = ? OR product_name LIKE ? OR brand LIKE ?)`;
       params.push(search, `%${search}%`, `%${search}%`);
     }
 
-    sql += ` ORDER BY stock_status DESC, p.name ASC`;
+    sql += ` ORDER BY stock_status DESC, product_name ASC`;
 
     const inventory = await query(sql, params);
     return NextResponse.json(inventory);
@@ -90,10 +87,15 @@ export async function PATCH(req: Request) {
         [new_quantity, invId]
       );
     } else if (quantity_change !== undefined && Number(quantity_change) !== 0) {
-      await query(
-        "UPDATE inventory SET quantity_on_hand = quantity_on_hand + ?, last_updated = NOW() WHERE inventory_id = ?",
-        [quantity_change, invId]
-      );
+      if (Number(quantity_change) > 0 && branch_id && product_id) {
+        // ADBMS Stock Clerk Stored Procedure: sp_update_inventory
+        await query("CALL sp_update_inventory(?, ?, ?)", [branch_id, product_id, Number(quantity_change)]);
+      } else {
+        await query(
+          "UPDATE inventory SET quantity_on_hand = quantity_on_hand + ?, last_updated = NOW() WHERE inventory_id = ?",
+          [quantity_change, invId]
+        );
+      }
     }
 
     if (reorder_level !== undefined) {
