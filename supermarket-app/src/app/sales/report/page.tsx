@@ -23,6 +23,7 @@ interface Branch { branch_id: number; name: string; }
 export default function SalesReportPage() {
   const [data, setData] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [branchId, setBranchId] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -37,18 +38,30 @@ export default function SalesReportPage() {
   }, []);
 
   useEffect(() => {
-    fetch("/api/branches").then(r => r.json()).then(data => { if (Array.isArray(data)) setBranches(data); });
+    fetch("/api/branches")
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setBranches(data); })
+      .catch(() => {});
   }, []);
 
   const fetchReport = useCallback(async () => {
     if (!startDate || !endDate) return;
     setLoading(true);
+    setError(null);
     try {
       const p = new URLSearchParams({ startDate, endDate });
       if (branchId) p.set("branchId", branchId);
       const res = await fetch(`/api/sales/report?${p}`);
       const d = await res.json();
-      setData(d);
+      if (!res.ok || d.error || !d.summary) {
+        setError(d.error || "Failed to load sales report data");
+        setData(null);
+      } else {
+        setData(d);
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to load report");
+      setData(null);
     } finally {
       setLoading(false);
     }
@@ -96,22 +109,42 @@ export default function SalesReportPage() {
         </div>
       </div>
 
+      {error && (
+        <div style={{
+          padding: "14px 18px",
+          background: "rgba(244, 63, 94, 0.12)",
+          border: "1px solid rgba(244, 63, 94, 0.3)",
+          borderRadius: 10,
+          color: "var(--accent-rose)",
+          fontSize: 13,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12
+        }}>
+          <span>⚠️ {error}</span>
+          <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px", borderColor: "rgba(244, 63, 94, 0.4)" }} onClick={fetchReport}>
+            Retry
+          </button>
+        </div>
+      )}
+
       {loading ? (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: 80 }}>
           <div style={{ width: 36, height: 36, border: "4px solid var(--border)", borderTopColor: "var(--accent-blue)", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
         </div>
-      ) : data ? (
+      ) : data && data.summary ? (
         <>
           {/* KPI Cards */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
             {[
-              { icon: "💰", label: "Total Revenue", val: fmtShort(data.summary.revenue), color: "var(--accent-emerald)" },
-              { icon: "🧾", label: "Total Sales", val: data.summary.total_sales, color: "var(--accent-blue)" },
-              { icon: "✅", label: "Completed", val: data.summary.completed, color: "var(--accent-emerald)" },
-              { icon: "❌", label: "Cancelled", val: data.summary.cancelled, color: "var(--accent-rose)" },
-              { icon: "📈", label: "Avg Ticket", val: fmtShort(data.summary.avg_sale), color: "var(--accent-cyan)" },
-              { icon: "🏷️", label: "Total Discounts", val: fmtShort(data.summary.total_discounts), color: "var(--accent-amber)" },
-              { icon: "🏛️", label: "Tax Collected", val: fmtShort(data.summary.total_tax), color: "var(--accent-purple)" },
+              { icon: "💰", label: "Total Revenue", val: fmtShort(data.summary.revenue ?? 0), color: "var(--accent-emerald)" },
+              { icon: "🧾", label: "Total Sales", val: data.summary.total_sales ?? 0, color: "var(--accent-blue)" },
+              { icon: "✅", label: "Completed", val: data.summary.completed ?? 0, color: "var(--accent-emerald)" },
+              { icon: "❌", label: "Cancelled", val: data.summary.cancelled ?? 0, color: "var(--accent-rose)" },
+              { icon: "📈", label: "Avg Ticket", val: fmtShort(data.summary.avg_sale ?? 0), color: "var(--accent-cyan)" },
+              { icon: "🏷️", label: "Total Discounts", val: fmtShort(data.summary.total_discounts ?? 0), color: "var(--accent-amber)" },
+              { icon: "🏛️", label: "Tax Collected", val: fmtShort(data.summary.total_tax ?? 0), color: "var(--accent-purple)" },
             ].map(card => (
               <div key={card.label} className="stat-card" style={{ textAlign: "center" }}>
                 <div style={{ fontSize: 24, marginBottom: 6 }}>{card.icon}</div>
@@ -122,7 +155,7 @@ export default function SalesReportPage() {
           </div>
 
           {/* Daily trend chart */}
-          {data.daily.length > 0 && (
+          {Array.isArray(data.daily) && data.daily.length > 0 && (
             <div className="glass-card" style={{ borderRadius: 14, padding: "20px 24px" }}>
               <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 16, color: "var(--text-primary)" }}>📅 Daily Revenue Trend</div>
               <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 120, overflowX: "auto", paddingBottom: 4 }}>
@@ -168,7 +201,7 @@ export default function SalesReportPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.topProducts.map((p, i) => (
+                  {(data.topProducts || []).map((p, i) => (
                     <tr key={p.barcode}>
                       <td style={{ color: i < 3 ? "var(--accent-amber)" : "var(--text-muted)", fontWeight: 700, fontSize: 11 }}>{i + 1}</td>
                       <td>
@@ -189,8 +222,8 @@ export default function SalesReportPage() {
               <div className="glass-card" style={{ borderRadius: 14, overflow: "hidden" }}>
                 <div style={{ padding: "14px 18px", borderBottom: "1px solid var(--border)", fontWeight: 700, fontSize: 13 }}>💳 Payment Breakdown</div>
                 <div style={{ padding: "12px 18px", display: "flex", flexDirection: "column", gap: 8 }}>
-                  {data.paymentBreakdown.map(pm => {
-                    const grandTotal = data.paymentBreakdown.reduce((a, x) => a + Number(x.total), 0);
+                  {(data.paymentBreakdown || []).map(pm => {
+                    const grandTotal = (data.paymentBreakdown || []).reduce((a, x) => a + Number(x.total), 0);
                     const pct = grandTotal > 0 ? (Number(pm.total) / grandTotal * 100) : 0;
                     return (
                       <div key={pm.method}>
@@ -219,7 +252,7 @@ export default function SalesReportPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {data.byBranch.map(b => (
+                    {(data.byBranch || []).map(b => (
                       <tr key={b.branch_name}>
                         <td style={{ fontWeight: 600, fontSize: 12 }}>{b.branch_name}</td>
                         <td className="mono" style={{ textAlign: "center" }}>{b.sales_count}</td>

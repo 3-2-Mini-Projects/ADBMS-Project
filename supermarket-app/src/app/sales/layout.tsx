@@ -181,7 +181,10 @@ export default function SalesLayout({ children }: { children: React.ReactNode })
               <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--accent-emerald)", display: "inline-block", animation: "pulse-dot 1.4s ease-in-out infinite" }} />
               Live Data
             </div>
-            <div style={{ fontSize: 12, color: "var(--text-muted)", fontFamily: "'JetBrains Mono', monospace" }}>
+            <div
+              style={{ fontSize: 12, color: "var(--text-muted)", fontFamily: "'JetBrains Mono', monospace" }}
+              suppressHydrationWarning
+            >
               {todayStr}
             </div>
           </div>
