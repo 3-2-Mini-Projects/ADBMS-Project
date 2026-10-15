@@ -1,51 +1,106 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useApp } from "@/lib/context";
-import { LogOut, ShieldCheck, ArrowRight, RotateCcw } from "lucide-react";
+import { LogOut, ArrowRight, Loader2, UserCheck, Shield } from "lucide-react";
 
 export default function LogoutPage() {
-  const { currentEmployee, switchRole } = useApp();
-  const isAdmin = currentEmployee?.role === "ADMIN";
+  const router = useRouter();
+  const { currentEmployee, setCurrentEmployee, showToast, refreshAppData } = useApp();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      setCurrentEmployee(null);
+      await refreshAppData().catch(() => {});
+      showToast("You have been signed out successfully.", "info");
+      router.push("/login");
+      router.refresh();
+    } catch {
+      showToast("Network error while signing out. Cookie cleared.", "warning");
+      setCurrentEmployee(null);
+      router.push("/login");
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
 
   return (
-    <div className="max-w-md mx-auto my-12 p-8 rounded-2xl bg-slate-900/90 border border-slate-800 text-center space-y-5 shadow-2xl animate-in zoom-in-95 duration-300">
-      <div className="w-14 h-14 mx-auto rounded-2xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400">
-        <LogOut className="w-7 h-7" />
+    <div className="max-w-md mx-auto my-16 p-8 rounded-3xl bg-slate-900/90 border border-slate-800 text-center space-y-6 shadow-2xl backdrop-blur-xl animate-in zoom-in-95 duration-200">
+      <div className="w-16 h-16 mx-auto rounded-2xl bg-red-950/40 border border-red-800/40 flex items-center justify-center text-red-400 shadow-lg shadow-red-950/50">
+        <LogOut className="w-8 h-8" />
       </div>
+
       <div>
-        <h1 className="text-2xl font-bold text-white">Session Management</h1>
-        <p className="text-xs text-slate-400 mt-1.5">
-          Active Session: <strong className="text-slate-200">{currentEmployee?.full_name ?? "Administrator"}</strong> ({currentEmployee?.role ?? "ADMIN"})
+        <h1 className="text-2xl font-bold text-white tracking-tight">
+          Session Sign Out
+        </h1>
+        <p className="text-xs text-slate-400 mt-2">
+          End your authenticated session for the Supermarket ADBMS platform.
         </p>
       </div>
 
-      <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 text-xs text-slate-300 text-left space-y-2">
-        <div className="font-semibold text-purple-300 flex items-center gap-1.5">
-          <ShieldCheck className="w-4 h-4 text-purple-400" />
-          <span>Role Switch Simulation</span>
+      {currentEmployee ? (
+        <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800/80 text-left space-y-2">
+          <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+            <Shield className="w-3.5 h-3.5 text-blue-400" />
+            <span>Active Authenticated Employee</span>
+          </div>
+          <div className="text-sm font-semibold text-white">
+            {currentEmployee.full_name}
+          </div>
+          <div className="text-xs text-slate-400 font-mono">
+            {currentEmployee.email} • Role:{" "}
+            <span className="text-blue-400 font-semibold">{currentEmployee.role}</span>
+          </div>
         </div>
-        <p className="text-[11px] text-slate-400">
-          In this ADBMS demonstration, sessions are managed via the role switcher in the header. You can switch to another staff view or return to the Admin Console.
-        </p>
-      </div>
+      ) : (
+        <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/60 text-xs text-slate-400">
+          No active authenticated session detected.
+        </div>
+      )}
 
       <div className="flex flex-col sm:flex-row gap-3 pt-2">
-        <Link
-          href="/dashboard"
-          className="flex-1 px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold shadow-lg shadow-purple-900/40 transition-all flex items-center justify-center gap-1.5"
-        >
-          <span>Return to Dashboard</span>
-          <ArrowRight className="w-3.5 h-3.5" />
-        </Link>
-        <button
-          onClick={() => switchRole("CASHIER")}
-          className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-all flex items-center justify-center gap-1.5"
-        >
-          <RotateCcw className="w-3.5 h-3.5" />
-          <span>Switch to Cashier</span>
-        </button>
+        {currentEmployee ? (
+          <>
+            <button
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-semibold shadow-lg shadow-red-900/40 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {isLoggingOut ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Signing Out...</span>
+                </>
+              ) : (
+                <>
+                  <LogOut className="w-4 h-4" />
+                  <span>Confirm Sign Out</span>
+                </>
+              )}
+            </button>
+            <Link
+              href="/dashboard"
+              className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-all flex items-center justify-center gap-1.5"
+            >
+              <span>Cancel</span>
+            </Link>
+          </>
+        ) : (
+          <Link
+            href="/login"
+            className="w-full px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-lg shadow-blue-900/40 transition-all flex items-center justify-center gap-2"
+          >
+            <UserCheck className="w-4 h-4" />
+            <span>Sign In to Your Account</span>
+            <ArrowRight className="w-3.5 h-3.5 ml-1" />
+          </Link>
+        )}
       </div>
     </div>
   );

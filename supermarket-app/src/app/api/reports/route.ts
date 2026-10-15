@@ -1,13 +1,24 @@
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
+import { authorizeRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
   try {
+    const auth = await authorizeRequest("view_reports");
+    if (auth.error) {
+      return auth.error;
+    }
+    const { session } = auth;
+
     const { searchParams } = new URL(req.url);
     const reportType = searchParams.get("type") || "all";
-    const branchId = searchParams.get("branchId");
+    const requestedBranch = searchParams.get("branchId");
+    const branchId =
+      session.role === "ADMIN"
+        ? requestedBranch
+        : String(session.branch_id);
 
     const reports: any = {};
 

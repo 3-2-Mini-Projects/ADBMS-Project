@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { pool, query } from "@/lib/db";
+import { authorizeRequest } from "@/lib/auth";
 
 export async function GET(req: Request) {
   try {
@@ -49,11 +50,16 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const auth = await authorizeRequest("process_returns");
+  if (auth.error) {
+    return auth.error;
+  }
+  const processed_by = auth.session.employee_id;
+
   const connection = await pool.getConnection();
   try {
     const body = await req.json();
-    const { sale_item_id, quantity, reason, processed_by, restock } = body;
-
+    const { sale_item_id, quantity, reason, restock } = body;
     if (!sale_item_id || !quantity || quantity <= 0) {
       return NextResponse.json({ error: "Valid sale_item_id and quantity are required" }, { status: 400 });
     }

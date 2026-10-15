@@ -1,16 +1,23 @@
 import { NextResponse } from "next/server";
 import { pool } from "@/lib/db";
+import { authorizeRequest } from "@/lib/auth";
 
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = await authorizeRequest("receive_purchases");
+  if (auth.error) {
+    return auth.error;
+  }
+  const { session } = auth;
+  const received_by = session.employee_id;
+
   const connection = await pool.getConnection();
   try {
     const { id } = await params;
     const body = await req.json().catch(() => ({}));
-    const { expiry_date, received_by } = body;
-
+    const { expiry_date } = body;
     await connection.beginTransaction();
 
     const [poRows]: any = await connection.query(
@@ -25,6 +32,10 @@ export async function POST(
     const po = poRows[0];
     if (po.status === "RECEIVED") {
       throw new Error("Purchase order has already been received");
+    }
+
+    if (session.role !== "ADMIN" && po.branch_id !== session.branch_id) {
+      throw new Error("Forbidden: Cross-branch order receiving is not permitted");
     }
 
     // Get all items in this PO

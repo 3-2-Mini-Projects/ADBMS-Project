@@ -152,6 +152,10 @@ export function Sidebar() {
   const { currentEmployee, currentBranch } = useApp();
   const [collapsed, setCollapsed] = useState(false);
 
+  if (pathname === "/login") {
+    return null;
+  }
+
   const role = currentEmployee?.role ?? "ADMIN";
   const isAdmin = role === "ADMIN";
   const navGroups =

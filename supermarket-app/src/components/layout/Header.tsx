@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useApp } from "@/lib/context";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   Store,
   UserCheck,
@@ -25,6 +26,10 @@ export function Header() {
     employees,
     switchRole,
   } = useApp();
+  const pathname = usePathname();
+  if (pathname === "/login") {
+    return null;
+  }
   const [branchDropdownOpen, setBranchDropdownOpen] = useState(false);
   const [employeeDropdownOpen, setEmployeeDropdownOpen] = useState(false);
 
@@ -117,43 +122,51 @@ export function Header() {
           </Link>
         )}
 
-        {/* Employee & Role Switcher */}
-        <div className="relative">
-          <button
-            onClick={() => {
-              setEmployeeDropdownOpen(!employeeDropdownOpen);
-              setBranchDropdownOpen(false);
-            }}
-            className={`flex items-center gap-2.5 px-3 py-1.5 rounded-lg border transition-all text-xs text-slate-200 ${
-              isAdmin
-                ? "bg-purple-950/40 hover:bg-purple-900/50 border-purple-700/60 ring-1 ring-purple-600/30"
-                : "bg-slate-800/80 hover:bg-slate-700/80 border-slate-700/60"
-            }`}
+        {/* Authenticated Staff Card / Sign In Button */}
+        {!currentEmployee ? (
+          <Link
+            href="/login"
+            className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs shadow-md shadow-blue-900/30 transition-all hover:scale-[1.02]"
           >
-            <div
-              className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold ${
+            <UserCheck className="w-3.5 h-3.5" />
+            <span>Sign In</span>
+          </Link>
+        ) : (
+          <div className="relative">
+            <button
+              onClick={() => {
+                setEmployeeDropdownOpen(!employeeDropdownOpen);
+                setBranchDropdownOpen(false);
+              }}
+              className={`flex items-center gap-2.5 px-3 py-1.5 rounded-lg border transition-all text-xs text-slate-200 ${
                 isAdmin
-                  ? "bg-gradient-to-tr from-purple-600 to-indigo-600 shadow-md shadow-purple-900/50"
-                  : "bg-gradient-to-tr from-blue-600 to-indigo-500"
+                  ? "bg-purple-950/40 hover:bg-purple-900/50 border-purple-700/60 ring-1 ring-purple-600/30"
+                  : "bg-slate-800/80 hover:bg-slate-700/80 border-slate-700/60"
               }`}
             >
-              {currentEmployee?.full_name ? currentEmployee.full_name[0] : "U"}
-            </div>
-            <div className="text-left hidden sm:block">
-              <div className="text-white font-semibold leading-none">{currentEmployee?.full_name ?? "Select Staff"}</div>
-              <div className={`text-[10px] font-mono mt-0.5 ${isAdmin ? "text-purple-400 font-bold" : "text-blue-400"}`}>
-                {currentEmployee?.role ?? "ROLE"}
+              <div
+                className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold ${
+                  isAdmin
+                    ? "bg-gradient-to-tr from-purple-600 to-indigo-600 shadow-md shadow-purple-900/50"
+                    : "bg-gradient-to-tr from-blue-600 to-indigo-500"
+                }`}
+              >
+                {currentEmployee?.full_name ? currentEmployee.full_name[0] : "U"}
               </div>
-            </div>
-            <ChevronDown className="w-3 h-3 text-slate-400" />
-          </button>
-
+              <div className="text-left hidden sm:block">
+                <div className="text-white font-semibold leading-none">{currentEmployee?.full_name}</div>
+                <div className={`text-[10px] font-mono mt-0.5 ${isAdmin ? "text-purple-400 font-bold" : "text-blue-400"}`}>
+                  {currentEmployee?.role}
+                </div>
+              </div>
+              <ChevronDown className="w-3 h-3 text-slate-400" />
+            </button>
           {employeeDropdownOpen && (
             <div className="absolute right-0 mt-2 w-80 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden z-50 animate-in fade-in zoom-in-95">
               {/* Direct Role Selector Grid */}
               <div className="px-3 pt-3 pb-2.5 bg-slate-950 border-b border-slate-800">
                 <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between">
-                  <span>Switch Role Directly</span>
+                  <span>Role View Preview (UI Filter Only)</span>
                   <ShieldCheck className="w-3.5 h-3.5 text-purple-400" />
                 </div>
                 <div className="grid grid-cols-2 gap-1.5">
@@ -219,61 +232,23 @@ export function Header() {
                 </div>
               </div>
 
-              {/* Staff Member List */}
-              <div className="py-2 max-h-72 overflow-y-auto">
-                <div className="px-3 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                  Select Staff Member
+              {/* Authenticated Session Info & Logout */}
+              <div className="p-3 bg-slate-950 border-t border-slate-800 space-y-2">
+                <div className="text-[10px] text-slate-400">
+                  Signed in as <strong className="text-slate-200">{currentEmployee.email}</strong>
                 </div>
-                {employees.map((e) => (
-                  <button
-                    key={e.employee_id}
-                    onClick={() => {
-                      setCurrentEmployee(e);
-                      setEmployeeDropdownOpen(false);
-                    }}
-                    className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-slate-800 transition-colors ${
-                      currentEmployee?.employee_id === e.employee_id ? "bg-slate-800/90 font-semibold" : "text-slate-300"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <div
-                        className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
-                          e.role === "ADMIN"
-                            ? "bg-purple-700 text-white"
-                            : "bg-slate-700 text-slate-200"
-                        }`}
-                      >
-                        {e.full_name[0]}
-                      </div>
-                      <div>
-                        <div className="text-slate-100 flex items-center gap-1.5">
-                          <span>{e.full_name}</span>
-                          {e.role === "ADMIN" && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
-                          )}
-                        </div>
-                        <div className="text-[10px] text-slate-400">{e.branch_name || "Branch"} • {e.email}</div>
-                      </div>
-                    </div>
-                    <span
-                      className={`text-[9px] font-mono px-1.5 py-0.5 rounded font-semibold ${
-                        e.role === "ADMIN"
-                          ? "bg-purple-900/60 text-purple-300 border border-purple-700/50"
-                          : e.role === "MANAGER"
-                          ? "bg-blue-900/60 text-blue-300 border border-blue-700/50"
-                          : e.role === "CASHIER"
-                          ? "bg-emerald-900/60 text-emerald-300 border border-emerald-700/50"
-                          : "bg-slate-800 text-slate-300 border border-slate-700"
-                      }`}
-                    >
-                      {e.role}
-                    </span>
-                  </button>
-                ))}
+                <Link
+                  href="/logout"
+                  onClick={() => setEmployeeDropdownOpen(false)}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg bg-red-950/50 hover:bg-red-900/60 border border-red-800/50 text-red-300 text-xs font-semibold transition-all"
+                >
+                  <span>Sign Out</span>
+                </Link>
               </div>
             </div>
           )}
         </div>
+        )}
       </div>
     </header>
   );
