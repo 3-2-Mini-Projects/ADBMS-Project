@@ -115,7 +115,8 @@ export interface ProductBatch {
   received_date: string;
   expiry_date?: string | null;
   days_to_expiry?: number;
-  expiry_status?: 'EXPIRED' | 'NEAR_EXPIRY' | 'GOOD';
+  expiry_status?: 'EXPIRED' | 'NEAR_EXPIRY' | 'EXPIRING_SOON' | 'GOOD' | 'NORMAL';
+  status?: 'EXPIRED' | 'NEAR_EXPIRY' | 'EXPIRING_SOON' | 'GOOD' | 'NORMAL';
 }
 
 export interface StockAlert {

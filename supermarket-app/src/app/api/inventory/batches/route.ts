@@ -12,27 +12,21 @@ export async function GET(req: Request) {
     const status = searchParams.get("status"); // GOOD | NEAR_EXPIRY | EXPIRED
     const summary = searchParams.get("summary") === "true";
 
-    // ---------- SUMMARY MODE ----------
+    // ---------- SUMMARY MODE (Directly from View) ----------
     if (summary) {
       let sqlSum = `
         SELECT
           COUNT(*) AS total,
-          SUM(CASE WHEN pb.expiry_date IS NULL OR pb.expiry_date >= CURRENT_DATE THEN 1 ELSE 0 END) AS active,
-          SUM(CASE
-                WHEN pb.expiry_date IS NOT NULL
-                  AND pb.expiry_date >= CURRENT_DATE
-                  AND DATEDIFF(pb.expiry_date, CURRENT_DATE) <= 14
-                THEN 1 ELSE 0 END) AS expiring_soon,
-          SUM(CASE WHEN pb.expiry_date IS NOT NULL AND pb.expiry_date < CURRENT_DATE THEN 1 ELSE 0 END) AS expired
-        FROM product_batches pb
-        JOIN products p ON pb.product_id = p.product_id
-        JOIN branches b ON pb.branch_id = b.branch_id
+          COALESCE(SUM(CASE WHEN status != 'EXPIRED' THEN 1 ELSE 0 END), 0) AS active,
+          COALESCE(SUM(CASE WHEN status = 'NEAR_EXPIRY' THEN 1 ELSE 0 END), 0) AS expiring_soon,
+          COALESCE(SUM(CASE WHEN status = 'EXPIRED' THEN 1 ELSE 0 END), 0) AS expired
+        FROM vw_batch_expiry_status
         WHERE 1=1
       `;
       const sumParams: any[] = [];
 
       if (branchId) {
-        sqlSum += ` AND pb.branch_id = ?`;
+        sqlSum += ` AND branch_id = ?`;
         sumParams.push(branchId);
       }
 
@@ -40,58 +34,31 @@ export async function GET(req: Request) {
       return NextResponse.json(rows[0] ?? { total: 0, active: 0, expiring_soon: 0, expired: 0 });
     }
 
-    // ---------- ROWS MODE ----------
-    let sql = `
-      SELECT
-        pb.batch_id,
-        pb.product_id,
-        p.name AS product_name,
-        p.barcode,
-        pb.branch_id,
-        b.name AS branch_name,
-        pb.batch_no,
-        pb.quantity,
-        pb.received_date,
-        pb.expiry_date,
-        DATEDIFF(pb.expiry_date, CURRENT_DATE) AS days_to_expiry,
-        CASE
-          WHEN pb.expiry_date < CURRENT_DATE THEN 'EXPIRED'
-          WHEN DATEDIFF(pb.expiry_date, CURRENT_DATE) <= 14 THEN 'NEAR_EXPIRY'
-          ELSE 'GOOD'
-        END AS expiry_status
-      FROM product_batches pb
-      JOIN products p ON pb.product_id = p.product_id
-      JOIN branches b ON pb.branch_id = b.branch_id
-      WHERE 1=1
-    `;
+    // ---------- ROWS MODE (Directly from View) ----------
+    let sql = `SELECT *, status AS expiry_status FROM vw_batch_expiry_status WHERE 1=1`;
     const params: any[] = [];
 
     if (branchId) {
-      sql += ` AND pb.branch_id = ?`;
+      sql += ` AND branch_id = ?`;
       params.push(branchId);
     }
 
     if (productId) {
-      sql += ` AND pb.product_id = ?`;
+      sql += ` AND product_id = ?`;
       params.push(productId);
     }
 
     if (search && search.trim()) {
-      sql += ` AND (p.name LIKE ? OR pb.batch_no LIKE ?)`;
+      sql += ` AND (product_name LIKE ? OR batch_no LIKE ?)`;
       params.push(`%${search.trim()}%`, `%${search.trim()}%`);
     }
 
     if (status && ["GOOD", "NEAR_EXPIRY", "EXPIRED"].includes(status)) {
-      if (status === "EXPIRED") {
-        sql += ` AND pb.expiry_date < CURRENT_DATE`;
-      } else if (status === "NEAR_EXPIRY") {
-        sql += ` AND pb.expiry_date >= CURRENT_DATE AND DATEDIFF(pb.expiry_date, CURRENT_DATE) <= 14`;
-      } else if (status === "GOOD") {
-        sql += ` AND (pb.expiry_date IS NULL OR DATEDIFF(pb.expiry_date, CURRENT_DATE) > 14)`;
-      }
+      sql += ` AND status = ?`;
+      params.push(status);
     }
 
-    sql += ` ORDER BY pb.expiry_date ASC, pb.quantity DESC`;
+    sql += ` ORDER BY expiry_date ASC, quantity DESC`;
 
     const batches = await query(sql, params);
     return NextResponse.json(batches);

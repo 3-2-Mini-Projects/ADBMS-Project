@@ -1,21 +1,19 @@
 "use client";
 
 import React, { useState } from "react";
-import { useApp } from "@/lib/context";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useApp } from "@/lib/context";
 import {
-  Store,
   UserCheck,
   ShoppingCart,
-  Database,
   ChevronDown,
-  Sparkles,
   Building2,
   ShieldCheck,
   ShieldAlert,
   LogOut,
 } from "lucide-react";
+import { StockAlertBell } from "./StockAlertBell";
 
 export function Header() {
   const {
@@ -23,13 +21,13 @@ export function Header() {
     setCurrentBranch,
     branches,
     currentEmployee,
-    setCurrentEmployee,
-    employees,
   } = useApp();
   const pathname = usePathname();
+
   if (pathname === "/login" || pathname === "/activate-account") {
     return null;
   }
+
   const [branchDropdownOpen, setBranchDropdownOpen] = useState(false);
   const [employeeDropdownOpen, setEmployeeDropdownOpen] = useState(false);
 
@@ -122,6 +120,9 @@ export function Header() {
           </Link>
         )}
 
+        {/* Real-Time Stock Alert Bell */}
+        <StockAlertBell />
+
         {/* Authenticated Staff Card / Sign In Button */}
         {!currentEmployee ? (
           <Link
@@ -161,64 +162,69 @@ export function Header() {
               </div>
               <ChevronDown className="w-3 h-3 text-slate-400" />
             </button>
-          {employeeDropdownOpen && (
-            <div className="absolute right-0 mt-2 w-72 bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden z-50 animate-in fade-in zoom-in-95">
-              {/* Authenticated Staff Card */}
-              <div className="p-4 bg-slate-950/90 border-b border-slate-800 space-y-3">
-                <div className="flex items-center gap-3">
-                  <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-md ${
-                      isAdmin
-                        ? "bg-gradient-to-tr from-purple-600 to-indigo-600 shadow-purple-900/50"
-                        : "bg-gradient-to-tr from-blue-600 to-indigo-500 shadow-blue-900/50"
-                    }`}
-                  >
-                    {currentEmployee.full_name ? currentEmployee.full_name[0] : "U"}
+
+            {employeeDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-72 bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden z-50 animate-in fade-in zoom-in-95">
+                {/* Authenticated Staff Card */}
+                <div className="p-4 bg-slate-950/90 border-b border-slate-800 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-md ${
+                        isAdmin
+                          ? "bg-gradient-to-tr from-purple-600 to-indigo-600 shadow-purple-900/50"
+                          : "bg-gradient-to-tr from-blue-600 to-indigo-500 shadow-blue-900/50"
+                      }`}
+                    >
+                      {currentEmployee.full_name ? currentEmployee.full_name[0] : "U"}
+                    </div>
+                    <div className="overflow-hidden">
+                      <div className="text-sm font-bold text-white truncate">
+                        {currentEmployee.full_name}
+                      </div>
+                      <div className="text-xs text-slate-400 font-mono truncate">
+                        {currentEmployee.email}
+                      </div>
+                    </div>
                   </div>
-                  <div className="overflow-hidden">
-                    <div className="text-sm font-bold text-white truncate">
-                      {currentEmployee.full_name}
-                    </div>
-                    <div className="text-xs text-slate-400 font-mono truncate">
-                      {currentEmployee.email}
-                    </div>
+
+                  <div className="flex items-center justify-between pt-1">
+                    <span
+                      className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                        isAdmin
+                          ? "bg-purple-950/60 text-purple-300 border border-purple-700/50"
+                          : currentEmployee.role === "STOCK_CLERK"
+                          ? "bg-amber-950/60 text-amber-300 border border-amber-700/50"
+                          : currentEmployee.role === "CATALOG_MANAGER"
+                          ? "bg-indigo-950/60 text-indigo-300 border border-indigo-700/50"
+                          : currentEmployee.role === "MARKETING"
+                          ? "bg-rose-950/60 text-rose-300 border border-rose-700/50"
+                          : currentEmployee.role === "CASHIER"
+                          ? "bg-emerald-950/60 text-emerald-300 border border-emerald-700/50"
+                          : "bg-slate-800 text-slate-300 border border-slate-700"
+                      }`}
+                    >
+                      {currentEmployee.role}
+                    </span>
+                    <span className="text-[11px] text-slate-400">
+                      {currentBranch?.name ?? "Branch"}
+                    </span>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-1">
-                  <span
-                    className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
-                      isAdmin
-                        ? "bg-purple-950/60 text-purple-300 border border-purple-700/50"
-                        : currentEmployee.role === "MANAGER"
-                        ? "bg-blue-950/60 text-blue-300 border border-blue-700/50"
-                        : currentEmployee.role === "CASHIER"
-                        ? "bg-emerald-950/60 text-emerald-300 border border-emerald-700/50"
-                        : "bg-slate-800 text-slate-300 border border-slate-700"
-                    }`}
+                {/* Action */}
+                <div className="p-2 bg-slate-900">
+                  <Link
+                    href="/logout"
+                    onClick={() => setEmployeeDropdownOpen(false)}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-red-300 hover:text-red-200 hover:bg-red-950/40 text-xs font-semibold transition-colors"
                   >
-                    {currentEmployee.role}
-                  </span>
-                  <span className="text-[11px] text-slate-400">
-                    {currentBranch?.name ?? "Branch"}
-                  </span>
+                    <LogOut className="w-4 h-4 text-red-400" />
+                    <span>Sign Out</span>
+                  </Link>
                 </div>
               </div>
-
-              {/* Action */}
-              <div className="p-2 bg-slate-900">
-                <Link
-                  href="/logout"
-                  onClick={() => setEmployeeDropdownOpen(false)}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-red-300 hover:text-red-200 hover:bg-red-950/40 text-xs font-semibold transition-colors"
-                >
-                  <LogOut className="w-4 h-4 text-red-400" />
-                  <span>Sign Out</span>
-                </Link>
-              </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
         )}
       </div>
     </header>

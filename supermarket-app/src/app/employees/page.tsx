@@ -165,12 +165,16 @@ export default function EmployeesPage() {
     }
   };
 
+  const ALLOWED_ROLES = ["ADMIN", "STOCK_CLERK", "CATALOG_MANAGER", "MARKETING", "CASHIER"];
+
   const filteredEmployees = employees.filter((e) => {
+    if (!ALLOWED_ROLES.includes(e.role)) return false;
     const matchesSearch =
       e.full_name.toLowerCase().includes(search.toLowerCase()) ||
       e.email.toLowerCase().includes(search.toLowerCase());
+    const matchesBranch = branchFilter ? String(e.branch_id) === branchFilter : true;
     const matchesRole = roleFilter ? e.role === roleFilter : true;
-    return matchesSearch && matchesRole;
+    return matchesSearch && matchesBranch && matchesRole;
   });
 
   return (
@@ -183,7 +187,7 @@ export default function EmployeesPage() {
             <span>Staff & Employee Directory</span>
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Maintain staff profiles, branch allocations, salary compensation, and system permission roles.
+            Maintain staff profiles, branch allocations, salary compensation, and the 5 system roles.
           </p>
         </div>
 
@@ -227,14 +231,12 @@ export default function EmployeesPage() {
           onChange={(e) => setRoleFilter(e.target.value)}
           className="w-full sm:w-48 px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-200"
         >
-          <option value="">All Roles</option>
+          <option value="">All 5 Roles</option>
           <option value="ADMIN">ADMIN</option>
-          <option value="MANAGER">MANAGER</option>
-          <option value="CASHIER">CASHIER</option>
           <option value="STOCK_CLERK">STOCK_CLERK</option>
           <option value="CATALOG_MANAGER">CATALOG_MANAGER</option>
           <option value="MARKETING">MARKETING</option>
-          <option value="HR">HR</option>
+          <option value="CASHIER">CASHIER</option>
         </select>
       </div>
 
@@ -285,8 +287,12 @@ export default function EmployeesPage() {
                         className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold ${
                           emp.role === "ADMIN"
                             ? "bg-purple-950/60 text-purple-300 border border-purple-800/60"
-                            : emp.role === "MANAGER"
-                            ? "bg-blue-950/60 text-blue-300 border border-blue-800/60"
+                            : emp.role === "STOCK_CLERK"
+                            ? "bg-amber-950/60 text-amber-300 border border-amber-800/60"
+                            : emp.role === "CATALOG_MANAGER"
+                            ? "bg-indigo-950/60 text-indigo-300 border border-indigo-800/60"
+                            : emp.role === "MARKETING"
+                            ? "bg-rose-950/60 text-rose-300 border border-rose-800/60"
                             : emp.role === "CASHIER"
                             ? "bg-emerald-950/60 text-emerald-300 border border-emerald-800/60"
                             : "bg-slate-800 text-slate-300 border border-slate-700"
@@ -406,11 +412,9 @@ export default function EmployeesPage() {
                     className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white"
                   >
                     <option value="CASHIER">CASHIER</option>
-                    <option value="MANAGER">MANAGER</option>
                     <option value="STOCK_CLERK">STOCK_CLERK</option>
                     <option value="CATALOG_MANAGER">CATALOG_MANAGER</option>
                     <option value="MARKETING">MARKETING</option>
-                    <option value="HR">HR</option>
                     <option value="ADMIN">ADMIN</option>
                   </select>
                 </div>
@@ -497,12 +501,10 @@ export default function EmployeesPage() {
                   className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white"
                 >
                   <option value="ADMIN">ADMIN</option>
-                  <option value="MANAGER">MANAGER</option>
-                  <option value="CASHIER">CASHIER</option>
                   <option value="STOCK_CLERK">STOCK_CLERK</option>
                   <option value="CATALOG_MANAGER">CATALOG_MANAGER</option>
                   <option value="MARKETING">MARKETING</option>
-                  <option value="HR">HR</option>
+                  <option value="CASHIER">CASHIER</option>
                 </select>
               </div>
 

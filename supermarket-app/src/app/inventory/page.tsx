@@ -20,7 +20,8 @@ import {
 } from "lucide-react";
 
 export default function InventoryPage() {
-  const { currentBranch, showToast } = useApp();
+  const { currentBranch, currentEmployee, showToast } = useApp();
+  const isClerk = currentEmployee?.role === "STOCK_CLERK";
   const [activeTab, setActiveTab] = useState<"stock" | "batches">("stock");
 
   // Stock State
@@ -36,8 +37,9 @@ export default function InventoryPage() {
   // Stock Adjustment Modal
   const [adjustModalOpen, setAdjustModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
-  const [quantityChange, setQuantityChange] = useState<string>("10");
-  const [adjustmentReason, setAdjustmentReason] = useState("Restock audit count");
+  const [quantityChange, setQuantityChange] = useState<string>("0");
+  const [reorderLevel, setReorderLevel] = useState<string>("10");
+  const [adjustmentReason, setAdjustmentReason] = useState("Inventory recount / adjustment");
   const [isAdjusting, setIsAdjusting] = useState(false);
 
   // Add Batch Modal
@@ -50,6 +52,29 @@ export default function InventoryPage() {
     expiry_date: "",
   });
   const [isAddingBatch, setIsAddingBatch] = useState(false);
+
+  // Stored Procedure Audit Modal State
+  const [auditModalOpen, setAuditModalOpen] = useState(false);
+  const [auditType, setAuditType] = useState<"low_stock" | "expiring_batches">("low_stock");
+  const [auditResults, setAuditResults] = useState<any[]>([]);
+  const [loadingAudit, setLoadingAudit] = useState(false);
+
+  const handleRunAudit = async (type: "low_stock" | "expiring_batches") => {
+    setAuditType(type);
+    setAuditModalOpen(true);
+    setLoadingAudit(true);
+    try {
+      const branchParam = currentBranch ? `&branchId=${currentBranch.branch_id}` : "";
+      const res = await fetch(`/api/inventory/audit?type=${type}${branchParam}`);
+      const data = await res.json();
+      if (Array.isArray(data)) setAuditResults(data);
+      else setAuditResults([]);
+    } catch {
+      setAuditResults([]);
+    } finally {
+      setLoadingAudit(false);
+    }
+  };
 
   useEffect(() => {
     setNewBatch((prev) => ({
@@ -65,8 +90,9 @@ export default function InventoryPage() {
       if (currentBranch) params.append("branchId", String(currentBranch.branch_id));
       if (lowStockOnly) params.append("lowStock", "true");
       if (search.trim()) params.append("search", search.trim());
+      params.append("_t", String(Date.now()));
 
-      const res = await fetch(`/api/inventory?${params.toString()}`);
+      const res = await fetch(`/api/inventory?${params.toString()}`, { cache: "no-store" });
       const data = await res.json();
       if (Array.isArray(data)) setInventory(data);
     } catch (err) {
@@ -81,8 +107,9 @@ export default function InventoryPage() {
     try {
       const params = new URLSearchParams();
       if (currentBranch) params.append("branchId", String(currentBranch.branch_id));
+      params.append("_t", String(Date.now()));
 
-      const res = await fetch(`/api/inventory/batches?${params.toString()}`);
+      const res = await fetch(`/api/inventory/batches?${params.toString()}`, { cache: "no-store" });
       const data = await res.json();
       if (Array.isArray(data)) setBatches(data);
     } catch (err) {
@@ -102,18 +129,29 @@ export default function InventoryPage() {
     if (!selectedItem) return;
     setIsAdjusting(true);
     try {
+      const payload: any = {
+        inventory_id: selectedItem.inventory_id,
+        reason: adjustmentReason || "Inventory recount / adjustment",
+      };
+
+      if (quantityChange !== "" && !isNaN(Number(quantityChange))) {
+        payload.quantity_change = Number(quantityChange);
+      } else {
+        payload.quantity_change = 0;
+      }
+
+      if (reorderLevel !== "" && !isNaN(Number(reorderLevel))) {
+        payload.reorder_level = Number(reorderLevel);
+      }
+
       const res = await fetch("/api/inventory", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          inventory_id: selectedItem.inventory_id,
-          quantity_change: Number(quantityChange),
-          reason: adjustmentReason,
-        }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        showToast(`Stock updated for ${selectedItem.product_name}!`, "success");
+        showToast(`Updated stock & reorder level for ${selectedItem.product_name}!`, "success");
         setAdjustModalOpen(false);
         fetchStock();
       } else {
@@ -156,16 +194,84 @@ export default function InventoryPage() {
     }
   };
 
+  const theme = {
+    wrapper: isClerk
+      ? "space-y-6 animate-in fade-in duration-300 bg-slate-50/90 -m-6 p-6 sm:p-8 min-h-[calc(100vh-4rem)] text-slate-800"
+      : "space-y-6 animate-in fade-in duration-300 text-slate-100",
+    title: isClerk ? "text-2xl font-black text-slate-900 flex items-center gap-2.5" : "text-2xl font-black text-white flex items-center gap-2.5",
+    subtitle: isClerk ? "text-xs text-slate-500 mt-1" : "text-xs text-slate-400 mt-1",
+    tabBorder: isClerk ? "border-slate-200" : "border-slate-800",
+    tabInactive: isClerk
+      ? "bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-100 shadow-sm"
+      : "bg-slate-900/60 border border-slate-800 text-slate-400 hover:text-white",
+    searchBox: isClerk
+      ? "w-full pl-9 pr-4 py-2.5 rounded-xl bg-white border border-slate-300 text-xs text-slate-900 placeholder:text-slate-400 font-mono shadow-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all"
+      : "w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white placeholder:text-slate-500 font-mono focus:border-blue-500 focus:outline-none transition-colors",
+    searchIcon: isClerk ? "text-slate-400" : "text-slate-500",
+    filterBtnInactive: isClerk
+      ? "bg-white border-slate-300 text-slate-700 hover:bg-slate-50 shadow-sm"
+      : "bg-slate-900/80 border-slate-800 text-slate-400 hover:text-white",
+    filterBtnActive: isClerk
+      ? "bg-amber-100 border-amber-400 text-amber-900 shadow-sm"
+      : "bg-amber-500/20 border-amber-500/50 text-amber-300",
+    tableCard: isClerk
+      ? "bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm"
+      : "glass-card rounded-2xl border border-slate-800 overflow-hidden shadow-2xl",
+    thead: isClerk
+      ? "border-b border-slate-200 bg-slate-50/80 text-slate-600 uppercase text-[11px] font-semibold tracking-wider"
+      : "border-b border-slate-800 bg-slate-950/40 text-slate-400 uppercase text-[11px] font-semibold tracking-wider",
+    tbodyDivide: isClerk ? "divide-y divide-slate-100" : "divide-y divide-slate-800/60",
+    rowHover: isClerk ? "hover:bg-blue-50/30 transition-colors" : "hover:bg-slate-800/40 transition-colors",
+    barcode: isClerk ? "text-blue-600 font-bold" : "text-blue-400 font-bold",
+    productName: isClerk ? "font-semibold text-slate-900" : "font-semibold text-white",
+    branchText: isClerk ? "text-slate-600" : "text-slate-300",
+    categoryText: isClerk ? "text-slate-500" : "text-slate-400",
+    qtyText: isClerk ? "text-slate-900" : "text-white",
+    reorderText: isClerk ? "text-slate-500 font-semibold" : "text-slate-400 font-semibold",
+    priceText: isClerk ? "text-emerald-700 font-bold" : "text-emerald-400 font-bold",
+    actionBtn: isClerk
+      ? "p-1.5 rounded-lg bg-slate-100 hover:bg-blue-600 text-slate-600 hover:text-white border border-slate-200 transition-colors"
+      : "p-1.5 rounded-lg bg-slate-800 hover:bg-blue-600 text-slate-400 hover:text-white transition-colors",
+    badgeInStock: isClerk
+      ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+      : "bg-emerald-950/70 text-emerald-400 border border-emerald-800/60",
+    badgeLowStock: isClerk
+      ? "bg-amber-50 text-amber-700 border border-amber-200 animate-pulse"
+      : "bg-amber-950/70 text-amber-400 border border-amber-800/60 animate-pulse",
+    badgeOutOfStock: isClerk
+      ? "bg-rose-50 text-rose-700 border border-rose-200"
+      : "bg-rose-950/70 text-rose-400 border border-rose-800/60",
+    batchNo: isClerk ? "text-indigo-600 font-bold" : "text-indigo-400 font-bold",
+    modalOverlay: isClerk
+      ? "fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+      : "fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200",
+    modalCard: isClerk
+      ? "bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4 text-slate-900"
+      : "bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4 text-white",
+    modalHeaderBorder: isClerk ? "border-slate-100" : "border-slate-800",
+    modalTitle: isClerk ? "text-slate-900 font-bold text-sm flex items-center gap-2" : "text-white font-bold text-sm flex items-center gap-2",
+    modalInfoBox: isClerk
+      ? "bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-1.5"
+      : "bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-1.5",
+    modalLabel: isClerk ? "text-xs font-semibold text-slate-700 block mb-1" : "text-xs text-slate-300 block mb-1",
+    modalInput: isClerk
+      ? "w-full px-3 py-2 rounded-xl bg-white border border-slate-300 text-slate-900 font-mono text-sm font-bold placeholder:text-slate-400 shadow-sm focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all"
+      : "w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white font-mono text-sm font-bold focus:outline-none focus:border-blue-500",
+    modalCancelBtn: isClerk
+      ? "w-1/3 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-semibold transition-colors"
+      : "w-1/3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold",
+  };
+
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <div className={theme.wrapper}>
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-white flex items-center gap-2.5">
-            <Boxes className="w-6 h-6 text-indigo-400" />
+          <h1 className={theme.title}>
+            <Boxes className="w-6 h-6 text-indigo-500" />
             <span>Inventory & Batch Expiry Tracking</span>
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className={theme.subtitle}>
             Track branch quantities, reorder thresholds, and FIFO expiry date rotations.
           </p>
         </div>
@@ -173,7 +279,7 @@ export default function InventoryPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setBatchModalOpen(true)}
-            className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-lg shadow-indigo-950/40 flex items-center gap-2 transition-all"
+            className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-500/20 flex items-center gap-2 transition-all"
           >
             <Plus className="w-4 h-4" />
             <span>Receive New Batch</span>
@@ -182,13 +288,13 @@ export default function InventoryPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-3 border-b border-slate-800 pb-2">
+      <div className={`flex items-center gap-3 border-b ${theme.tabBorder} pb-3`}>
         <button
           onClick={() => setActiveTab("stock")}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
             activeTab === "stock"
-              ? "bg-blue-600 text-white shadow-lg shadow-blue-900/30"
-              : "text-slate-400 hover:text-white hover:bg-slate-800"
+              ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
+              : theme.tabInactive
           }`}
         >
           <Boxes className="w-4 h-4" />
@@ -199,8 +305,8 @@ export default function InventoryPage() {
           onClick={() => setActiveTab("batches")}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
             activeTab === "batches"
-              ? "bg-blue-600 text-white shadow-lg shadow-blue-900/30"
-              : "text-slate-400 hover:text-white hover:bg-slate-800"
+              ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
+              : theme.tabInactive
           }`}
         >
           <Clock className="w-4 h-4" />
@@ -219,51 +325,59 @@ export default function InventoryPage() {
               }}
               className="relative flex-1 w-full"
             >
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Search className={`w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 ${theme.searchIcon}`} />
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search stock by product name, barcode, or brand..."
-                className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white placeholder-slate-500 font-mono focus:border-blue-500"
+                className={theme.searchBox}
               />
             </form>
 
             <button
               onClick={() => setLowStockOnly(!lowStockOnly)}
               className={`px-4 py-2.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-2 shrink-0 ${
-                lowStockOnly
-                  ? "bg-amber-950/60 border-amber-600 text-amber-300"
-                  : "bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800"
+                lowStockOnly ? theme.filterBtnActive : theme.filterBtnInactive
               }`}
             >
-              <AlertTriangle className="w-4 h-4" />
+              <AlertTriangle className="w-4 h-4 text-amber-500" />
               <span>Low Stock Alerts Only</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleRunAudit("low_stock")}
+              className="px-3.5 py-2.5 rounded-xl border border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 shadow-sm"
+              title="Audit using Stored Procedure sp_check_low_stock"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+              <span>SP Audit (sp_check_low_stock)</span>
             </button>
           </div>
 
           {/* Stock Table */}
-          <div className="glass-card rounded-2xl border border-slate-800 overflow-hidden shadow-2xl">
+          <div className={theme.tableCard}>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="border-b border-slate-800 bg-slate-950/60 text-slate-400">
-                    <th className="py-3.5 px-4 font-semibold">Barcode</th>
-                    <th className="py-3.5 px-4 font-semibold">Product Name</th>
-                    <th className="py-3.5 px-4 font-semibold">Branch</th>
-                    <th className="py-3.5 px-4 font-semibold">Category</th>
-                    <th className="py-3.5 px-4 font-semibold text-center">Status</th>
-                    <th className="py-3.5 px-4 font-semibold text-right">Available Qty</th>
-                    <th className="py-3.5 px-4 font-semibold text-right">Reorder Level</th>
-                    <th className="py-3.5 px-4 font-semibold text-right">Selling Price</th>
-                    <th className="py-3.5 px-4 font-semibold text-center">Action</th>
+                  <tr className={theme.thead}>
+                    <th className="py-3.5 px-4">Barcode</th>
+                    <th className="py-3.5 px-4">Product Name</th>
+                    <th className="py-3.5 px-4">Branch</th>
+                    <th className="py-3.5 px-4">Category</th>
+                    <th className="py-3.5 px-4 text-center">Status</th>
+                    <th className="py-3.5 px-4 text-right">Available Qty</th>
+                    <th className="py-3.5 px-4 text-right">Reorder Level</th>
+                    <th className="py-3.5 px-4 text-right">Selling Price</th>
+                    <th className="py-3.5 px-4 text-center">Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60">
+                <tbody className={theme.tbodyDivide}>
                   {loadingStock ? (
                     <tr>
                       <td colSpan={9} className="py-12 text-center text-slate-500">
-                        <Sparkles className="w-5 h-5 animate-spin mx-auto text-blue-400 mb-2" />
+                        <Sparkles className="w-5 h-5 animate-spin mx-auto text-blue-500 mb-2" />
                         Loading stock levels...
                       </td>
                     </tr>
@@ -275,19 +389,31 @@ export default function InventoryPage() {
                     </tr>
                   ) : (
                     inventory.map((item) => (
-                      <tr key={item.inventory_id} className="hover:bg-slate-800/40 transition-colors">
-                        <td className="py-3 px-4 font-mono font-bold text-blue-400">{item.barcode}</td>
-                        <td className="py-3 px-4 font-medium text-white">{item.product_name}</td>
-                        <td className="py-3 px-4 text-slate-300">{item.branch_name}</td>
-                        <td className="py-3 px-4 text-slate-400">{item.category_name || "—"}</td>
+                      <tr key={item.inventory_id} className={theme.rowHover}>
+                        <td className={`py-3 px-4 font-mono ${theme.barcode}`}>{item.barcode}</td>
+                        <td className={`py-3 px-4 ${theme.productName}`}>
+                          <div className="font-semibold">{item.product_name}</div>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-[10px] text-slate-400 font-mono">
+                              Velocity: {Number((item as any).sales_velocity ?? 0).toFixed(2)}/day
+                            </span>
+                            {Number((item as any).suggested_reorder_qty) > 0 && (
+                              <span className="text-[9px] bg-amber-500/15 text-amber-400 border border-amber-500/30 px-1.5 py-0.2 rounded font-mono font-bold">
+                                Suggest: +{(item as any).suggested_reorder_qty}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className={`py-3 px-4 ${theme.branchText}`}>{item.branch_name}</td>
+                        <td className={`py-3 px-4 ${theme.categoryText}`}>{item.category_name || "—"}</td>
                         <td className="py-3 px-4 text-center">
                           <span
                             className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold ${
                               item.quantity_on_hand <= 0
-                                ? "bg-rose-950/60 text-rose-400 border border-rose-800/60"
+                                ? theme.badgeOutOfStock
                                 : item.quantity_on_hand <= item.reorder_level
-                                ? "bg-amber-950/60 text-amber-400 border border-amber-800/60"
-                                : "bg-emerald-950/60 text-emerald-400 border border-emerald-800/60"
+                                ? theme.badgeLowStock
+                                : theme.badgeInStock
                             }`}
                           >
                             {item.quantity_on_hand <= 0
@@ -297,24 +423,26 @@ export default function InventoryPage() {
                               : "IN STOCK"}
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-right font-mono font-bold text-white text-sm">
+                        <td className={`py-3 px-4 text-right font-mono font-black ${theme.qtyText} text-sm`}>
                           {item.quantity_on_hand}
                         </td>
-                        <td className="py-3 px-4 text-right font-mono text-slate-400">
+                        <td className={`py-3 px-4 text-right font-mono ${theme.reorderText}`}>
                           {item.reorder_level}
                         </td>
-                        <td className="py-3 px-4 text-right font-mono text-emerald-400 font-bold">
+                        <td className={`py-3 px-4 text-right font-mono ${theme.priceText}`}>
                           Rs. {Number(item.unit_price).toFixed(2)}
                         </td>
                         <td className="py-3 px-4 text-center">
                           <button
                             onClick={() => {
                               setSelectedItem(item);
-                              setQuantityChange("10");
+                              setQuantityChange("0");
+                              setReorderLevel(String(item.reorder_level ?? 10));
+                              setAdjustmentReason("Inventory recount / adjustment");
                               setAdjustModalOpen(true);
                             }}
-                            className="p-1.5 rounded-lg bg-slate-800 hover:bg-blue-600 text-slate-300 hover:text-white transition-colors"
-                            title="Adjust Stock"
+                            className={theme.actionBtn}
+                            title="Adjust Stock & Reorder Level"
                           >
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
@@ -329,11 +457,11 @@ export default function InventoryPage() {
         </div>
       ) : (
         /* Batches & Expiry Tab */
-        <div className="glass-card rounded-2xl border border-slate-800 overflow-hidden shadow-2xl">
+        <div className={theme.tableCard}>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-slate-800 bg-slate-950/60 text-slate-400">
+                <tr className={theme.thead}>
                   <th className="py-3.5 px-4 font-semibold">Batch No</th>
                   <th className="py-3.5 px-4 font-semibold">Product Name</th>
                   <th className="py-3.5 px-4 font-semibold">Branch</th>
@@ -343,7 +471,7 @@ export default function InventoryPage() {
                   <th className="py-3.5 px-4 font-semibold text-center">Expiry Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60">
+              <tbody className={theme.tbodyDivide}>
                 {loadingBatches ? (
                   <tr>
                     <td colSpan={7} className="py-12 text-center text-slate-500">
@@ -358,27 +486,27 @@ export default function InventoryPage() {
                   </tr>
                 ) : (
                   batches.map((b) => (
-                    <tr key={b.batch_id} className="hover:bg-slate-800/40 transition-colors">
-                      <td className="py-3 px-4 font-mono font-bold text-indigo-400">{b.batch_no}</td>
-                      <td className="py-3 px-4 font-medium text-white">{b.product_name}</td>
-                      <td className="py-3 px-4 text-slate-300">{b.branch_name}</td>
-                      <td className="py-3 px-4 text-right font-mono font-bold text-white">
+                    <tr key={b.batch_id} className={theme.rowHover}>
+                      <td className={`py-3 px-4 font-mono ${theme.batchNo}`}>{b.batch_no}</td>
+                      <td className={`py-3 px-4 ${theme.productName}`}>{b.product_name}</td>
+                      <td className={`py-3 px-4 ${theme.branchText}`}>{b.branch_name}</td>
+                      <td className={`py-3 px-4 text-right font-mono font-black ${theme.qtyText}`}>
                         {b.quantity}
                       </td>
-                      <td className="py-3 px-4 font-mono text-slate-400">
+                      <td className={`py-3 px-4 font-mono ${theme.categoryText}`}>
                         {b.received_date ? new Date(b.received_date).toLocaleDateString() : "—"}
                       </td>
-                      <td className="py-3 px-4 font-mono text-slate-300">
+                      <td className={`py-3 px-4 font-mono ${theme.branchText}`}>
                         {b.expiry_date ? new Date(b.expiry_date).toLocaleDateString() : "No Expiry"}
                       </td>
                       <td className="py-3 px-4 text-center">
                         <span
                           className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold ${
                             b.expiry_status === "EXPIRED"
-                              ? "bg-rose-950/60 text-rose-400 border border-rose-800/60"
+                              ? theme.badgeOutOfStock
                               : b.expiry_status === "NEAR_EXPIRY"
-                              ? "bg-amber-950/60 text-amber-400 border border-amber-800/60 animate-pulse"
-                              : "bg-emerald-950/60 text-emerald-400 border border-emerald-800/60"
+                              ? theme.badgeLowStock
+                              : theme.badgeInStock
                           }`}
                         >
                           {b.expiry_status === "EXPIRED"
@@ -397,49 +525,93 @@ export default function InventoryPage() {
         </div>
       )}
 
-      {/* MODAL: Adjust Stock */}
+      {/* MODAL: Adjust Stock & Reorder Level */}
       {adjustModalOpen && selectedItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <h3 className="font-bold text-sm text-white flex items-center gap-2">
-                <Edit2 className="w-4 h-4 text-blue-400" />
-                <span>Stock Quantity Adjustment</span>
+        <div className={theme.modalOverlay}>
+          <div className={theme.modalCard}>
+            <div className={`flex items-center justify-between pb-3 border-b ${theme.modalHeaderBorder}`}>
+              <h3 className={theme.modalTitle}>
+                <Edit2 className="w-4 h-4 text-blue-500" />
+                <span>Adjust Stock & Reorder Level</span>
               </h3>
               <button
                 onClick={() => setAdjustModalOpen(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-white"
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-300 transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="bg-slate-950 p-3 rounded-xl border border-slate-800">
-              <div className="text-xs font-bold text-white">{selectedItem.product_name}</div>
-              <div className="text-[11px] text-slate-400 font-mono mt-0.5">
-                Current Stock: {selectedItem.quantity_on_hand} units in {selectedItem.branch_name}
+            <div className={theme.modalInfoBox}>
+              <div className="text-xs font-bold">{selectedItem.product_name}</div>
+              <div className="flex justify-between text-[11px] opacity-80 font-mono">
+                <span>Current Stock ({selectedItem.branch_name}):</span>
+                <span className="font-black">{selectedItem.quantity_on_hand} units</span>
+              </div>
+              <div className="flex justify-between text-[11px] opacity-80 font-mono">
+                <span>Current Reorder Level:</span>
+                <span className="font-bold text-amber-500">{selectedItem.reorder_level} units</span>
+              </div>
+              {quantityChange !== "" && !isNaN(Number(quantityChange)) && Number(quantityChange) !== 0 && (
+                <div className={`flex justify-between text-[11px] font-mono pt-1.5 border-t ${theme.modalHeaderBorder}`}>
+                  <span className="text-blue-500 font-medium">Resulting Stock:</span>
+                  <span className="font-black text-emerald-500">
+                    {Math.max(0, Number(selectedItem.quantity_on_hand) + Number(quantityChange))} units
+                  </span>
+                </div>
+              )}
+
+              <div className="p-2.5 bg-blue-500/10 border border-blue-500/20 rounded-xl space-y-1 text-[11px] mt-2">
+                <div className="font-semibold text-blue-400 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+                  <span>ADBMS Analytics (UDF Functions)</span>
+                </div>
+                <div className="flex justify-between text-slate-300 font-mono">
+                  <span>Sales Velocity (fn_product_sales_velocity):</span>
+                  <span className="font-bold">{Number((selectedItem as any).sales_velocity || 0).toFixed(2)} units/day</span>
+                </div>
+                <div className="flex justify-between text-slate-300 font-mono">
+                  <span>Suggested Reorder (fn_suggested_reorder_qty):</span>
+                  <span className="font-bold text-amber-400">+{Number((selectedItem as any).suggested_reorder_qty || 0)} units</span>
+                </div>
               </div>
             </div>
 
             <form onSubmit={handleAdjustStock} className="space-y-4">
               <div>
-                <label className="text-xs text-slate-300 block mb-1">Add/Deduct Quantity (+ or -)</label>
+                <label className={theme.modalLabel}>
+                  Quantity Change <span className="opacity-60 font-normal">(enter 0 or leave empty to keep current stock)</span>
+                </label>
                 <input
                   type="number"
+                  placeholder="e.g. +10, -5, or 0"
                   value={quantityChange}
                   onChange={(e) => setQuantityChange(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white font-mono text-sm font-bold"
+                  className={theme.modalInput}
+                />
+              </div>
+
+              <div>
+                <label className={theme.modalLabel}>
+                  Reorder Level Threshold <span className="opacity-60 font-normal">(triggers Low Stock alert)</span>
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={reorderLevel}
+                  onChange={(e) => setReorderLevel(e.target.value)}
+                  className={theme.modalInput}
                   required
                 />
               </div>
 
               <div>
-                <label className="text-xs text-slate-300 block mb-1">Audit Reason</label>
+                <label className={theme.modalLabel}>Audit Reason</label>
                 <input
                   type="text"
                   value={adjustmentReason}
                   onChange={(e) => setAdjustmentReason(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white"
+                  className={theme.modalInput}
                   required
                 />
               </div>
@@ -448,16 +620,16 @@ export default function InventoryPage() {
                 <button
                   type="button"
                   onClick={() => setAdjustModalOpen(false)}
-                  className="w-1/3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
+                  className={theme.modalCancelBtn}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isAdjusting}
-                  className="w-2/3 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold"
+                  className="w-2/3 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition-all"
                 >
-                  Confirm Adjustment
+                  Confirm Changes
                 </button>
               </div>
             </form>
@@ -467,16 +639,16 @@ export default function InventoryPage() {
 
       {/* MODAL: Add Batch */}
       {batchModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <h3 className="font-bold text-sm text-white flex items-center gap-2">
-                <Plus className="w-4 h-4 text-indigo-400" />
+        <div className={theme.modalOverlay}>
+          <div className={theme.modalCard}>
+            <div className={`flex items-center justify-between pb-3 border-b ${theme.modalHeaderBorder}`}>
+              <h3 className={theme.modalTitle}>
+                <Plus className="w-4 h-4 text-indigo-500" />
                 <span>Register Product Batch</span>
               </h3>
               <button
                 onClick={() => setBatchModalOpen(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-white"
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-300 transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -484,12 +656,12 @@ export default function InventoryPage() {
 
             <form onSubmit={handleAddBatch} className="space-y-4">
               <div>
-                <label className="text-xs text-slate-300 block mb-1">Product</label>
+                <label className={theme.modalLabel}>Product</label>
                 <select
                   required
                   value={newBatch.product_id}
                   onChange={(e) => setNewBatch({ ...newBatch, product_id: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white"
+                  className={theme.modalInput}
                 >
                   <option value="">Select Product</option>
                   {inventory.map((item) => (
@@ -501,19 +673,19 @@ export default function InventoryPage() {
               </div>
 
               <div>
-                <label className="text-xs text-slate-300 block mb-1">Batch Number</label>
+                <label className={theme.modalLabel}>Batch Number</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. MILK-B2"
                   value={newBatch.batch_no}
                   onChange={(e) => setNewBatch({ ...newBatch, batch_no: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs font-mono text-white"
+                  className={theme.modalInput}
                 />
               </div>
 
               <div>
-                <label className="text-xs text-slate-300 block mb-1">Batch Quantity</label>
+                <label className={theme.modalLabel}>Batch Quantity</label>
                 <input
                   type="number"
                   min="1"
@@ -521,17 +693,17 @@ export default function InventoryPage() {
                   placeholder="50"
                   value={newBatch.quantity}
                   onChange={(e) => setNewBatch({ ...newBatch, quantity: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs font-mono text-white"
+                  className={theme.modalInput}
                 />
               </div>
 
               <div>
-                <label className="text-xs text-slate-300 block mb-1">Expiry Date</label>
+                <label className={theme.modalLabel}>Expiry Date</label>
                 <input
                   type="date"
                   value={newBatch.expiry_date}
                   onChange={(e) => setNewBatch({ ...newBatch, expiry_date: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs font-mono text-white"
+                  className={theme.modalInput}
                 />
               </div>
 
@@ -539,19 +711,136 @@ export default function InventoryPage() {
                 <button
                   type="button"
                   onClick={() => setBatchModalOpen(false)}
-                  className="w-1/3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
+                  className={theme.modalCancelBtn}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isAddingBatch}
-                  className="w-2/3 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold"
+                  className="w-2/3 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-500/20 transition-all"
                 >
                   Save Batch & Increase Stock
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Stored Procedure Audit Modal */}
+      {auditModalOpen && (
+        <div className={theme.modalOverlay}>
+          <div className={theme.modalCard}>
+            <div className={`flex items-center justify-between pb-3 border-b ${theme.modalHeaderBorder}`}>
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-teal-400" />
+                <div>
+                  <h3 className="font-bold text-sm text-white">
+                    {auditType === "low_stock"
+                      ? "Stored Procedure: sp_check_low_stock"
+                      : "Stored Procedure: sp_expiring_batches"}
+                  </h3>
+                  <div className="text-[11px] font-mono text-teal-400">
+                    CALL {auditType === "low_stock" ? "sp_check_low_stock(?)" : "sp_expiring_batches(?)"}
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setAuditModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-300 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="py-2">
+              <div className="text-xs text-slate-400 mb-3">
+                Live audit results executed directly inside MySQL engine for branch:{" "}
+                <strong className="text-slate-200">{currentBranch?.name || "All"}</strong>.
+              </div>
+
+              <div className="border border-slate-800 rounded-xl overflow-hidden text-xs bg-slate-900/60 max-h-72 overflow-y-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b border-slate-800 bg-slate-950/60 text-slate-400 text-[10px]">
+                      {auditType === "low_stock" ? (
+                        <>
+                          <th className="py-2 px-3">Product Name</th>
+                          <th className="py-2 px-3 text-right">On Hand</th>
+                          <th className="py-2 px-3 text-right">Reorder Level</th>
+                          <th className="py-2 px-3 text-center">Deficit</th>
+                        </>
+                      ) : (
+                        <>
+                          <th className="py-2 px-3">Batch No</th>
+                          <th className="py-2 px-3 text-right">Quantity</th>
+                          <th className="py-2 px-3">Expiry Date</th>
+                          <th className="py-2 px-3 text-center">Days Remaining</th>
+                        </>
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/40">
+                    {loadingAudit ? (
+                      <tr>
+                        <td colSpan={4} className="py-8 text-center text-slate-500">
+                          <Sparkles className="w-4 h-4 animate-spin mx-auto text-teal-400 mb-1" />
+                          Executing stored procedure on MySQL...
+                        </td>
+                      </tr>
+                    ) : auditResults.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="py-8 text-center text-slate-500">
+                          <CheckCircle2 className="w-5 h-5 mx-auto text-emerald-400 mb-1 opacity-70" />
+                          No issues detected by stored procedure audit.
+                        </td>
+                      </tr>
+                    ) : (
+                      auditResults.map((r, idx) => (
+                        <tr key={idx} className="hover:bg-slate-800/30">
+                          {auditType === "low_stock" ? (
+                            <>
+                              <td className="py-2 px-3 font-semibold text-white">{r.product_name}</td>
+                              <td className="py-2 px-3 text-right font-mono text-amber-400 font-bold">{r.quantity_on_hand}</td>
+                              <td className="py-2 px-3 text-right font-mono text-slate-400">{r.reorder_level}</td>
+                              <td className="py-2 px-3 text-center">
+                                <span className="text-[10px] bg-rose-500/10 text-rose-400 px-1.5 py-0.5 rounded font-mono font-bold">
+                                  -{Math.max(0, r.reorder_level - r.quantity_on_hand)} units
+                                </span>
+                              </td>
+                            </>
+                          ) : (
+                            <>
+                              <td className="py-2 px-3 font-mono font-bold text-white">{r.batch_no}</td>
+                              <td className="py-2 px-3 text-right font-mono text-slate-300">{r.quantity}</td>
+                              <td className="py-2 px-3 font-mono text-slate-400">
+                                {r.expiry_date ? new Date(r.expiry_date).toLocaleDateString() : "—"}
+                              </td>
+                              <td className="py-2 px-3 text-center">
+                                <span className="text-[10px] bg-amber-500/10 text-amber-400 px-1.5 py-0.5 rounded font-mono font-bold">
+                                  {r.days_to_expiry} days
+                                </span>
+                              </td>
+                            </>
+                          )}
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-3 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setAuditModalOpen(false)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
+              >
+                Close Audit View
+              </button>
+            </div>
           </div>
         </div>
       )}

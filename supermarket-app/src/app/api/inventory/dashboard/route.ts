@@ -57,50 +57,40 @@ export async function GET(req: Request) {
       params
     );
 
-    // 4. Top low-stock items needing reorder
+    // 4. Top low-stock items (using ADBMS view: vw_branch_inventory)
     const lowStockItems = await query(
       `SELECT
-        i.inventory_id,
-        p.barcode,
-        p.name AS product_name,
-        b.name AS branch_name,
-        COALESCE(c.name, 'General') AS category_name,
-        i.quantity_on_hand,
-        i.reorder_level,
-        p.unit_price,
-        CASE
-          WHEN i.quantity_on_hand <= 0 THEN 'OUT_OF_STOCK'
-          ELSE 'LOW_STOCK'
-        END AS status
-      FROM inventory i
-      JOIN products p ON i.product_id = p.product_id
-      JOIN branches b ON i.branch_id = b.branch_id
-      LEFT JOIN categories c ON p.category_id = c.category_id
-      WHERE i.quantity_on_hand <= i.reorder_level ${branchFilter}
-      ORDER BY i.quantity_on_hand ASC
+        inventory_id,
+        barcode,
+        product_name,
+        branch_name,
+        COALESCE(category_name, 'General') AS category_name,
+        quantity_on_hand,
+        reorder_level,
+        unit_price,
+        stock_status AS status
+      FROM vw_branch_inventory
+      WHERE stock_status IN ('LOW_STOCK', 'OUT_OF_STOCK') ${branchId ? "AND branch_id = ?" : ""}
+      ORDER BY quantity_on_hand ASC
       LIMIT 10`,
       params
     );
 
-    // 5. Items expiring soon (next 30 days)
+    // 5. Items expiring soon (using ADBMS view: vw_batch_expiry_status)
     const expiringBatches = await query(
       `SELECT
-        pb.batch_id,
-        pb.batch_no,
-        p.name AS product_name,
-        p.barcode,
-        b.name AS branch_name,
-        pb.quantity,
-        pb.expiry_date,
-        DATEDIFF(pb.expiry_date, CURRENT_DATE) AS days_to_expiry
-      FROM product_batches pb
-      JOIN products p ON pb.product_id = p.product_id
-      JOIN branches b ON pb.branch_id = b.branch_id
-      WHERE pb.expiry_date IS NOT NULL
-        AND pb.expiry_date <= DATE_ADD(CURRENT_DATE, INTERVAL 30 DAY)
-        AND pb.quantity > 0
-        ${batchBranchFilter}
-      ORDER BY pb.expiry_date ASC
+        batch_id,
+        batch_no,
+        product_name,
+        barcode,
+        branch_name,
+        quantity,
+        expiry_date,
+        days_to_expiry
+      FROM vw_batch_expiry_status
+      WHERE expiry_status IN ('EXPIRED', 'EXPIRING_SOON')
+        ${branchId ? "AND branch_id = ?" : ""}
+      ORDER BY expiry_date ASC
       LIMIT 10`,
       params
     );

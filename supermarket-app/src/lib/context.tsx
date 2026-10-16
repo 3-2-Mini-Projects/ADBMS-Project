@@ -68,7 +68,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (Array.isArray(dataEmployees)) {
-        setEmployees(dataEmployees);
+        const allowedRoles = ["ADMIN", "MANAGER", "HR", "STOCK_CLERK", "CATALOG_MANAGER", "MARKETING", "CASHIER"];
+        const validEmployees = dataEmployees.filter((e: Employee) => allowedRoles.includes(e.role));
+        setEmployees(validEmployees);
       }
 
       if (dataMe?.user) {

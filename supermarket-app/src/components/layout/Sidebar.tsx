@@ -34,6 +34,10 @@ import {
   UserCircle,
   LogOut,
   LayoutGrid,
+  Award,
+  Ticket,
+  KeyRound,
+  ArrowLeftRight,
 } from "lucide-react";
 
 interface NavItem {
@@ -77,36 +81,6 @@ const ADMIN_NAV_GROUPS: NavGroup[] = [
   },
 ];
 
-const CLERK_NAV_GROUPS: NavGroup[] = [
-  {
-    group: "INVENTORY",
-    items: [
-      { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-      { title: "Inventory Dashboard", href: "/inventory/dashboard", icon: LayoutGrid, badge: "New" },
-      { title: "Inventory", href: "/inventory", icon: Boxes },
-      { title: "Product Batches", href: "/inventory/batches", icon: PackagePlus },
-      { title: "Stock Alerts", href: "/inventory/stock-alerts", icon: AlertTriangle },
-      { title: "Reorder Suggestions", href: "/inventory/reorder-suggestions", icon: ClipboardCheck },
-    ],
-  },
-  {
-    group: "PURCHASING",
-    items: [
-      { title: "Purchase Orders", href: "/purchases", icon: FileSpreadsheet },
-      { title: "Create Purchase Order", href: "/purchases/new", icon: ClipboardCheck },
-      { title: "Receive Stock", href: "/purchases", icon: PackagePlus },
-    ],
-  },
-  {
-    group: "ACCOUNT",
-    items: [
-      { title: "My Profile", href: "/profile", icon: UserCircle },
-      { title: "Settings", href: "/settings", icon: Settings },
-      { title: "Logout", href: "/logout", icon: LogOut },
-    ],
-  },
-];
-
 const NAV_GROUPS: NavGroup[] = [
   {
     group: "OPERATIONS",
@@ -121,11 +95,15 @@ const NAV_GROUPS: NavGroup[] = [
     group: "CATALOG & INVENTORY",
     items: [
       { title: "Inventory Dashboard", href: "/inventory/dashboard", icon: LayoutGrid, permission: "manage_inventory", badge: "New" },
+      { title: "Inventory & Batches", href: "/inventory", icon: Boxes, permission: "manage_inventory" },
+      { title: "Stock Alerts", href: "/inventory/stock-alerts", icon: AlertTriangle, permission: "manage_inventory" },
+      { title: "Batch Tracker", href: "/inventory/batches", icon: Clock, permission: "manage_inventory" },
+      { title: "Reorder Planning", href: "/inventory/reorder-suggestions", icon: Sparkles, permission: "manage_inventory" },
+      { title: "Stock Transfers", href: "/inventory/transfers", icon: ArrowLeftRight, permission: "manage_inventory", badge: "Live" },
+      { title: "Purchase Orders", href: "/purchases", icon: FileSpreadsheet, permission: "receive_purchases" },
+      { title: "Suppliers", href: "/suppliers", icon: Truck },
       { title: "Products", href: "/products", icon: Package, permission: "manage_catalog" },
       { title: "Categories", href: "/categories", icon: Layers, permission: "manage_catalog" },
-      { title: "Suppliers", href: "/suppliers", icon: Truck },
-      { title: "Inventory & Batches", href: "/inventory", icon: Boxes, permission: "manage_inventory" },
-      { title: "Purchase Orders", href: "/purchases", icon: FileSpreadsheet, permission: "receive_purchases" },
     ],
   },
   {
@@ -147,6 +125,110 @@ const NAV_GROUPS: NavGroup[] = [
   },
 ];
 
+const CLERK_NAV_GROUPS: NavGroup[] = [
+  {
+    group: "INVENTORY",
+    items: [
+      { title: "Inventory Dashboard", href: "/inventory/dashboard", icon: LayoutGrid, badge: "New" },
+      { title: "Inventory", href: "/inventory", icon: Boxes },
+      { title: "Product Batches", href: "/inventory/batches", icon: PackagePlus },
+      { title: "Stock Alerts", href: "/inventory/stock-alerts", icon: AlertTriangle },
+      { title: "Reorder Suggestions", href: "/inventory/reorder-suggestions", icon: ClipboardCheck },
+    ],
+  },
+  {
+    group: "PURCHASING",
+    items: [
+      { title: "Purchase Orders", href: "/purchases", icon: FileSpreadsheet },
+      { title: "Create Purchase Order", href: "/purchases/new", icon: ClipboardCheck },
+      { title: "Receive Stock", href: "/purchases?tab=pending", icon: PackagePlus },
+    ],
+  },
+  {
+    group: "ACCOUNT",
+    items: [
+      { title: "My Profile", href: "/profile", icon: UserCircle },
+      { title: "Settings", href: "/settings", icon: Settings },
+      { title: "Logout", href: "/logout", icon: LogOut },
+    ],
+  },
+];
+
+const MARKETING_NAV_GROUPS: NavGroup[] = [
+  {
+    group: "MARKETING",
+    items: [
+      { title: "Dashboard", href: "/marketing/dashboard", icon: LayoutDashboard },
+      { title: "Customer Management", href: "/marketing/customers", icon: Users },
+      { title: "Loyalty Management", href: "/marketing/loyalty", icon: Award },
+      { title: "Promotion Management", href: "/marketing/promotions", icon: Tag },
+      { title: "Coupon Management", href: "/marketing/coupons", icon: Ticket },
+      { title: "Marketing Reports", href: "/marketing/reports", icon: BarChart3 },
+    ],
+  },
+  {
+    group: "ACCOUNT",
+    items: [
+      { title: "My Profile", href: "/profile", icon: UserCircle },
+      { title: "Change Password", href: "/change-password", icon: KeyRound },
+      { title: "Logout", href: "/logout", icon: LogOut },
+    ],
+  },
+];
+
+const CATALOG_NAV_GROUPS: NavGroup[] = [
+  {
+    group: "CATALOG MANAGEMENT",
+    items: [
+      { title: "Products", href: "/products", icon: Package },
+      { title: "Categories", href: "/categories", icon: Layers },
+      { title: "Suppliers", href: "/suppliers", icon: Truck },
+    ],
+  },
+  {
+    group: "INVENTORY OVERVIEW",
+    items: [
+      { title: "Inventory Dashboard", href: "/inventory/dashboard", icon: LayoutGrid },
+      { title: "Inventory Stock", href: "/inventory", icon: Boxes },
+      { title: "Product Batches", href: "/inventory/batches", icon: PackagePlus },
+      { title: "Stock Alerts", href: "/inventory/stock-alerts", icon: AlertTriangle },
+    ],
+  },
+  {
+    group: "ACCOUNT",
+    items: [
+      { title: "My Profile", href: "/profile", icon: UserCircle },
+      { title: "Settings", href: "/settings", icon: Settings },
+      { title: "Logout", href: "/logout", icon: LogOut },
+    ],
+  },
+];
+
+const CASHIER_NAV_GROUPS: NavGroup[] = [
+  {
+    group: "POINT OF SALE",
+    items: [
+      { title: "POS Checkout", href: "/pos", icon: ShoppingCart, badge: "Live", highlight: true },
+      { title: "Sales History", href: "/sales", icon: Receipt },
+      { title: "Returns & Refunds", href: "/returns", icon: RotateCcw },
+    ],
+  },
+  {
+    group: "CUSTOMERS & SHIFTS",
+    items: [
+      { title: "Customers & Loyalty", href: "/customers", icon: Users },
+      { title: "Shifts & Attendance", href: "/shifts", icon: Clock },
+    ],
+  },
+  {
+    group: "ACCOUNT",
+    items: [
+      { title: "My Profile", href: "/profile", icon: UserCircle },
+      { title: "Logout", href: "/logout", icon: LogOut },
+    ],
+  },
+];
+
 export function Sidebar() {
   const pathname = usePathname();
   const { currentEmployee, currentBranch } = useApp();
@@ -163,6 +245,12 @@ export function Sidebar() {
       ? ADMIN_NAV_GROUPS
       : role === "STOCK_CLERK"
       ? CLERK_NAV_GROUPS
+      : role === "CATALOG_MANAGER"
+      ? CATALOG_NAV_GROUPS
+      : role === "MARKETING"
+      ? MARKETING_NAV_GROUPS
+      : role === "CASHIER"
+      ? CASHIER_NAV_GROUPS
       : NAV_GROUPS;
 
   return (
@@ -175,15 +263,18 @@ export function Sidebar() {
       <div>
         <div className="h-16 flex items-center justify-between px-4 border-b border-slate-800">
           {!collapsed ? (
-            <Link href="/dashboard" className="flex items-center gap-2.5">
-              <div
-                className={`w-9 h-9 rounded-xl flex items-center justify-center text-white shadow-lg ${
-                  isAdmin
-                    ? "bg-gradient-to-tr from-purple-600 via-indigo-600 to-purple-500 shadow-purple-500/25"
-                    : "bg-gradient-to-tr from-blue-600 via-indigo-600 to-emerald-500 shadow-blue-500/25"
-                }`}
-              >
-                {isAdmin ? <ShieldCheck className="w-5 h-5 text-white" /> : <Sparkles className="w-5 h-5 text-white" />}
+            <Link
+              href={
+                role === "MARKETING"
+                  ? "/marketing/dashboard"
+                  : role === "STOCK_CLERK"
+                  ? "/inventory/dashboard"
+                  : "/dashboard"
+              }
+              className="flex items-center gap-2.5"
+            >
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-emerald-500 flex items-center justify-center text-white shadow-lg shadow-blue-500/25">
+                <Sparkles className="w-5 h-5 text-white" />
               </div>
               <div>
                 <div className="font-bold text-sm tracking-tight text-white flex items-center gap-1.5">
@@ -243,7 +334,18 @@ export function Sidebar() {
                 )}
                 {group.items.map((item) => {
                   const allowed = !item.permission || canAccess(role, item.permission);
-                  const active = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
+                  const active =
+                    pathname === item.href ||
+                    (item.href !== "/dashboard" &&
+                      item.href !== "/marketing/dashboard" &&
+                      pathname.startsWith(item.href)) ||
+                    (item.href === "/marketing/dashboard" &&
+                      (pathname === "/marketing/dashboard" ||
+                        pathname === "/marketing" ||
+                        (pathname === "/dashboard" && role === "MARKETING"))) ||
+                    (item.href === "/marketing/customers" && pathname.startsWith("/customers")) ||
+                    (item.href === "/marketing/promotions" && pathname.startsWith("/promotions")) ||
+                    (item.href === "/marketing/reports" && pathname.startsWith("/reports"));
 
                   if (!allowed && role === "CASHIER" && item.permission) {
                     // Filter restricted items for cashier
@@ -254,7 +356,7 @@ export function Sidebar() {
 
                   return (
                     <Link
-                      key={item.href}
+                      key={`${item.href}-${item.title}`}
                       href={item.href}
                       className={`group relative flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
                         active
