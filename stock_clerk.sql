@@ -383,6 +383,151 @@ BEGIN
     COMMIT;
 END $$
 
+-- PROCEDURE 6: Inter-Branch Stock Transfer Transaction
+CREATE PROCEDURE sp_transfer_stock(
+    IN p_from_branch_id INT,
+    IN p_to_branch_id INT,
+    IN p_product_id INT,
+    IN p_quantity INT,
+    IN p_initiated_by INT
+)
+BEGIN
+    DECLARE v_from_stock INT DEFAULT 0;
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        RESIGNAL;
+    END;
+
+    IF p_from_branch_id = p_to_branch_id THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Source and destination branches cannot be the same';
+    END IF;
+
+    IF p_quantity <= 0 THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Transfer quantity must be greater than zero';
+    END IF;
+
+    START TRANSACTION;
+
+    -- Lock and check source stock
+    SELECT quantity_on_hand
+    INTO v_from_stock
+    FROM inventory
+    WHERE branch_id = p_from_branch_id
+      AND product_id = p_product_id
+    FOR UPDATE;
+
+    IF v_from_stock IS NULL OR v_from_stock < p_quantity THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Insufficient stock at source branch for transfer';
+    END IF;
+
+    -- Deduct from source branch
+    UPDATE inventory
+    SET quantity_on_hand = quantity_on_hand - p_quantity,
+        last_updated = NOW()
+    WHERE branch_id = p_from_branch_id
+      AND product_id = p_product_id;
+
+    -- Upsert to destination branch
+    INSERT INTO inventory (branch_id, product_id, quantity_on_hand, reserved_qty, reorder_level, last_updated)
+    VALUES (p_to_branch_id, p_product_id, p_quantity, 0, 10, NOW())
+    ON DUPLICATE KEY UPDATE
+        quantity_on_hand = quantity_on_hand + p_quantity,
+        last_updated = NOW();
+
+    -- Audit log
+    INSERT INTO audit_log (table_name, record_id, action, new_value, changed_by, changed_at)
+    VALUES (
+        'inventory',
+        CONCAT('transfer_', p_product_id),
+        'UPDATE',
+        JSON_OBJECT(
+            'event', 'INTER_BRANCH_TRANSFER',
+            'from_branch_id', p_from_branch_id,
+            'to_branch_id', p_to_branch_id,
+            'product_id', p_product_id,
+            'quantity', p_quantity
+        ),
+        CONCAT('employee_', p_initiated_by),
+        NOW()
+    );
+
+    COMMIT;
+END $$
+
+-- PROCEDURE 7: Damaged / Expired Stock Disposal
+CREATE PROCEDURE sp_record_stock_disposal(
+    IN p_batch_id INT,
+    IN p_quantity INT,
+    IN p_reason VARCHAR(50),
+    IN p_disposed_by INT
+)
+BEGIN
+    DECLARE v_batch_qty INT DEFAULT 0;
+    DECLARE v_product_id INT;
+    DECLARE v_branch_id INT;
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        RESIGNAL;
+    END;
+
+    IF p_quantity <= 0 THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Disposal quantity must be greater than zero';
+    END IF;
+
+    START TRANSACTION;
+
+    SELECT quantity, product_id, branch_id
+    INTO v_batch_qty, v_product_id, v_branch_id
+    FROM product_batches
+    WHERE batch_id = p_batch_id
+    FOR UPDATE;
+
+    IF v_batch_qty IS NULL OR v_batch_qty < p_quantity THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Disposal quantity exceeds batch quantity available';
+    END IF;
+
+    -- Deduct from batch
+    UPDATE product_batches
+    SET quantity = quantity - p_quantity
+    WHERE batch_id = p_batch_id;
+
+    -- Deduct from branch inventory
+    UPDATE inventory
+    SET quantity_on_hand = GREATEST(0, quantity_on_hand - p_quantity),
+        last_updated = NOW()
+    WHERE branch_id = v_branch_id
+      AND product_id = v_product_id;
+
+    -- Audit log
+    INSERT INTO audit_log (table_name, record_id, action, new_value, changed_by, changed_at)
+    VALUES (
+        'product_batches',
+        CONCAT('disposal_batch_', p_batch_id),
+        'UPDATE',
+        JSON_OBJECT(
+            'event', 'STOCK_DISPOSAL',
+            'batch_id', p_batch_id,
+            'product_id', v_product_id,
+            'branch_id', v_branch_id,
+            'quantity', p_quantity,
+            'reason', p_reason
+        ),
+        CONCAT('employee_', p_disposed_by),
+        NOW()
+    );
+
+    COMMIT;
+END $$
+
 DELIMITER ;
 
 
@@ -446,6 +591,24 @@ BEGIN
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'Expiry date cannot be before received date';
     END IF;  
+END $$
+
+-- TRIGGER 4: Real-time Low Stock Alert on Inventory Change
+CREATE TRIGGER trg_inventory_after_update
+AFTER UPDATE ON inventory
+FOR EACH ROW
+BEGIN
+    IF NEW.quantity_on_hand <= NEW.reorder_level AND OLD.quantity_on_hand > NEW.reorder_level THEN
+        INSERT INTO stock_alerts (branch_id, product_id, alert_type, message, is_resolved, created_at)
+        VALUES (
+            NEW.branch_id,
+            NEW.product_id,
+            'LOW_STOCK',
+            CONCAT('Product ID ', NEW.product_id, ' dropped to low stock (', NEW.quantity_on_hand, ' remaining, threshold: ', NEW.reorder_level, ')'),
+            0,
+            NOW()
+        );
+    END IF;
 END $$
 
 DELIMITER ;

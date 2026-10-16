@@ -37,6 +37,7 @@ import {
   Award,
   Ticket,
   KeyRound,
+  ArrowLeftRight,
 } from "lucide-react";
 
 interface NavItem {
@@ -94,11 +95,15 @@ const NAV_GROUPS: NavGroup[] = [
     group: "CATALOG & INVENTORY",
     items: [
       { title: "Inventory Dashboard", href: "/inventory/dashboard", icon: LayoutGrid, permission: "manage_inventory", badge: "New" },
+      { title: "Inventory & Batches", href: "/inventory", icon: Boxes, permission: "manage_inventory" },
+      { title: "Stock Alerts", href: "/inventory/stock-alerts", icon: AlertTriangle, permission: "manage_inventory" },
+      { title: "Batch Tracker", href: "/inventory/batches", icon: Clock, permission: "manage_inventory" },
+      { title: "Reorder Planning", href: "/inventory/reorder-suggestions", icon: Sparkles, permission: "manage_inventory" },
+      { title: "Stock Transfers", href: "/inventory/transfers", icon: ArrowLeftRight, permission: "manage_inventory", badge: "Live" },
+      { title: "Purchase Orders", href: "/purchases", icon: FileSpreadsheet, permission: "receive_purchases" },
+      { title: "Suppliers", href: "/suppliers", icon: Truck },
       { title: "Products", href: "/products", icon: Package, permission: "manage_catalog" },
       { title: "Categories", href: "/categories", icon: Layers, permission: "manage_catalog" },
-      { title: "Suppliers", href: "/suppliers", icon: Truck },
-      { title: "Inventory & Batches", href: "/inventory", icon: Boxes, permission: "manage_inventory" },
-      { title: "Purchase Orders", href: "/purchases", icon: FileSpreadsheet, permission: "receive_purchases" },
     ],
   },
   {
