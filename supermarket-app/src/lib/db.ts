@@ -1,40 +1,47 @@
-import mysql from "mysql2/promise";
+import mysql, { Pool } from "mysql2/promise";
 
-const pool = mysql.createPool({
+declare global {
+  // eslint-disable-next-line no-var
+  var __mysqlPool: Pool | undefined;
+}
+
+const poolConfig: mysql.PoolOptions = {
   host: process.env.DB_HOST,
-  port: Number(process.env.DB_PORT) || 3306,
+  port: Number(process.env.DB_PORT ?? 3306),
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   waitForConnections: true,
   connectionLimit: 10,
-  connectTimeout: 20000,
+  queueLimit: 0,
   enableKeepAlive: true,
   keepAliveInitialDelay: 10000,
-  ssl: { rejectUnauthorized: false },
-});
+  decimalNumbers: false,
+  ssl: {
+    rejectUnauthorized: false,
+  },
+};
 
-export async function query<T = any>(sql: string, params?: any[]): Promise<T[]> {
-  const [rows] = await pool.query(sql, params);
-  return rows as T[];
+export const pool: Pool = global.__mysqlPool ?? mysql.createPool(poolConfig);
+
+if (process.env.NODE_ENV !== "production") {
+  global.__mysqlPool = pool;
 }
 
-export async function withTransaction<T>(
-  callback: (conn: mysql.PoolConnection) => Promise<T>
-): Promise<T> {
-  const conn = await pool.getConnection();
+export async function query<T = any>(sql: string, params: any[] = []): Promise<T[]> {
   try {
-    await conn.beginTransaction();
-    const result = await callback(conn);
-    await conn.commit();
-    return result;
-  } catch (error) {
-    await conn.rollback();
-    throw error;
-  } finally {
-    conn.release();
+    const [rows] = await pool.query(sql, params);
+    return rows as T[];
+  } catch (err: any) {
+    if (err.code === "ECONNRESET" || err.code === "PROTOCOL_CONNECTION_LOST" || err.message?.includes("ECONNRESET")) {
+      const [rows] = await pool.query(sql, params);
+      return rows as T[];
+    }
+    throw err;
   }
 }
 
-export default pool;
-
+export async function queryOne<T = any>(sql: string, params: any[] = []): Promise<T | null> {
+  const rows = await query<T>(sql, params);
+  return rows.length > 0 ? rows[0] : null;
+}
