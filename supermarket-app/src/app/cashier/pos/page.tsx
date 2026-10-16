@@ -84,6 +84,8 @@ export default function POSBillingPage() {
   const [showBarcodeModal, setShowBarcodeModal] = useState(false);
 
   const barcodeInputRef = useRef<HTMLInputElement>(null);
+  const lastBarcodeSubmitRef = useRef<{ code: string; time: number }>({ code: "", time: 0 });
+  const lastCameraScanRef = useRef<{ code: string; time: number }>({ code: "", time: 0 });
 
   // Load products & categories for the active branch
   const fetchProducts = useCallback(
@@ -133,6 +135,14 @@ export default function POSBillingPage() {
     const code = barcodeInput.trim();
     if (!code || !cashier) return;
 
+    // Guard against rapid duplicate enter / scanner bounce within 800ms
+    const now = Date.now();
+    if (code === lastBarcodeSubmitRef.current.code && now - lastBarcodeSubmitRef.current.time < 800) {
+      setBarcodeInput("");
+      return;
+    }
+    lastBarcodeSubmitRef.current = { code, time: now };
+
     try {
       const res = await fetch(
         `/api/cashier/products?branchId=${cashier.branch_id}&barcode=${encodeURIComponent(code)}`
@@ -161,22 +171,31 @@ export default function POSBillingPage() {
 
   // Handle scanned barcode from camera modal
   const handleCameraBarcodeScanned = async (code: string) => {
-    if (!code || !cashier) return;
+    const trimmed = code ? code.trim() : "";
+    if (!trimmed || !cashier) return;
+
+    // Guard against rapid duplicate scans of the same item within 1500ms
+    const now = Date.now();
+    if (trimmed === lastCameraScanRef.current.code && now - lastCameraScanRef.current.time < 1500) {
+      return;
+    }
+    lastCameraScanRef.current = { code: trimmed, time: now };
+
     try {
       const res = await fetch(
-        `/api/cashier/products?branchId=${cashier.branch_id}&barcode=${encodeURIComponent(code)}`
+        `/api/cashier/products?branchId=${cashier.branch_id}&barcode=${encodeURIComponent(trimmed)}`
       );
       const json = await res.json();
       if (json.products && json.products.length > 0) {
         addProductToCart(json.products[0]);
       } else {
         const found = products.find(
-          (p) => p.barcode === code || p.barcode.toLowerCase() === code.toLowerCase()
+          (p) => p.barcode === trimmed || p.barcode.toLowerCase() === trimmed.toLowerCase()
         );
         if (found) {
           addProductToCart(found);
         } else {
-          setErrorMsg(`Scanned barcode "${code}" not found in branch catalog.`);
+          setErrorMsg(`Scanned barcode "${trimmed}" not found in branch catalog.`);
           setTimeout(() => setErrorMsg(""), 4000);
         }
       }
