@@ -21,6 +21,12 @@ import {
   Copy,
   Check,
   KeyRound,
+  Trash2,
+  RotateCcw,
+  Eye,
+  Users,
+  UserX,
+  AlertTriangle,
 } from "lucide-react";
 
 export default function EmployeesPage() {
@@ -47,10 +53,67 @@ export default function EmployeesPage() {
     full_name: string;
     email: string;
     role: string;
-    activation_url: string;
-    expires_at: string;
   } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [activeTab, setActiveTab] = useState<"ACTIVE" | "DELETED">("ACTIVE");
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [empToDelete, setEmpToDelete] = useState<Employee | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [viewDetailsEmp, setViewDetailsEmp] = useState<Employee | null>(null);
+  const [isRestoring, setIsRestoring] = useState(false);
+
+  const handleDeleteEmployee = async () => {
+    if (!empToDelete) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/employees?employee_id=${empToDelete.employee_id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showToast(data.message || `Deleted ${empToDelete.full_name}`, "info");
+        setDeleteModalOpen(false);
+        setEmpToDelete(null);
+        fetchEmployees();
+        refreshAppData();
+      } else {
+        showToast(data.error || "Failed to delete employee", "error");
+      }
+    } catch {
+      showToast("Error deleting employee", "error");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleRestoreEmployee = async (emp: Employee) => {
+    setIsRestoring(true);
+    try {
+      const res = await fetch("/api/employees", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          employee_id: emp.employee_id,
+          is_active: 1,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showToast(`Restored "${emp.full_name}" to active staff!`, "success");
+        if (viewDetailsEmp && viewDetailsEmp.employee_id === emp.employee_id) {
+          setViewDetailsEmp(null);
+        }
+        fetchEmployees();
+        refreshAppData();
+      } else {
+        showToast(data.error || "Failed to restore employee", "error");
+      }
+    } catch {
+      showToast("Error restoring employee", "error");
+    } finally {
+      setIsRestoring(false);
+    }
+  };
 
   useEffect(() => {
     setNewEmp((prev) => ({
@@ -103,16 +166,11 @@ export default function EmployeesPage() {
       if (res.ok && data.success) {
         showToast(`Staff member "${newEmp.full_name}" registered!`, "success");
         setAddModalOpen(false);
-        if (data.activation) {
-          const origin = typeof window !== "undefined" ? window.location.origin : "";
-          setCreatedActivation({
-            full_name: newEmp.full_name,
-            email: newEmp.email,
-            role: newEmp.role,
-            activation_url: `${origin}${data.activation.activation_url}`,
-            expires_at: data.activation.expires_at,
-          });
-        }
+        setCreatedActivation({
+          full_name: newEmp.full_name,
+          email: newEmp.email,
+          role: newEmp.role,
+        });
         setNewEmp({
           branch_id: "1",
           full_name: "",
@@ -165,12 +223,16 @@ export default function EmployeesPage() {
     }
   };
 
+  const activeCount = employees.filter((e) => e.is_active === 1).length;
+  const deletedCount = employees.filter((e) => e.is_active === 0).length;
+
   const filteredEmployees = employees.filter((e) => {
     const matchesSearch =
       e.full_name.toLowerCase().includes(search.toLowerCase()) ||
       e.email.toLowerCase().includes(search.toLowerCase());
     const matchesRole = roleFilter ? e.role === roleFilter : true;
-    return matchesSearch && matchesRole;
+    const matchesTab = activeTab === "ACTIVE" ? e.is_active === 1 : e.is_active === 0;
+    return matchesSearch && matchesRole && matchesTab;
   });
 
   return (
@@ -193,6 +255,49 @@ export default function EmployeesPage() {
         >
           <Plus className="w-4 h-4" />
           <span>Add New Staff Member</span>
+        </button>
+      </div>
+
+      {/* Tabs: Active Staff vs Deleted / Former Staff */}
+      <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
+        <button
+          type="button"
+          onClick={() => setActiveTab("ACTIVE")}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+            activeTab === "ACTIVE"
+              ? "bg-purple-600 text-white shadow-lg shadow-purple-900/40"
+              : "bg-slate-900 text-slate-400 hover:text-white border border-slate-800"
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          <span>Active Staff</span>
+          <span
+            className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+              activeTab === "ACTIVE" ? "bg-purple-800 text-purple-200" : "bg-slate-800 text-slate-400"
+            }`}
+          >
+            {activeCount}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("DELETED")}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+            activeTab === "DELETED"
+              ? "bg-rose-600 text-white shadow-lg shadow-rose-900/40"
+              : "bg-slate-900 text-slate-400 hover:text-white border border-slate-800"
+          }`}
+        >
+          <UserX className="w-4 h-4" />
+          <span>Deleted / Former Staff</span>
+          <span
+            className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+              activeTab === "DELETED" ? "bg-rose-800 text-rose-200" : "bg-slate-800 text-slate-400"
+            }`}
+          >
+            {deletedCount}
+          </span>
         </button>
       </div>
 
@@ -331,19 +436,55 @@ export default function EmployeesPage() {
                       )}
                     </td>
                     <td className="py-3 px-4 text-center">
-                      <button
-                        onClick={() => {
-                          setSelectedEmp(emp);
-                          setEditRole(emp.role);
-                          setEditSalary(String(emp.monthly_salary));
-                          setEditActive(emp.is_active);
-                          setEditModalOpen(true);
-                        }}
-                        className="p-1.5 rounded-lg bg-slate-800 hover:bg-purple-600 text-slate-300 hover:text-white transition-colors"
-                        title="Edit employee"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="flex items-center justify-center gap-1.5">
+                        {emp.is_active === 1 ? (
+                          <>
+                            <button
+                              onClick={() => {
+                                setSelectedEmp(emp);
+                                setEditRole(emp.role);
+                                setEditSalary(String(emp.monthly_salary));
+                                setEditActive(emp.is_active);
+                                setEditModalOpen(true);
+                              }}
+                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-purple-600 text-slate-300 hover:text-white transition-colors"
+                              title="Edit employee"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setEmpToDelete(emp);
+                                setDeleteModalOpen(true);
+                              }}
+                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white transition-colors"
+                              title="Delete employee"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => setViewDetailsEmp(emp)}
+                              className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-blue-600 text-slate-300 hover:text-white text-[11px] font-semibold transition-colors flex items-center gap-1"
+                              title="View former staff details"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                              <span>Details</span>
+                            </button>
+                            <button
+                              onClick={() => handleRestoreEmployee(emp)}
+                              disabled={isRestoring}
+                              className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-emerald-600 text-slate-300 hover:text-white text-[11px] font-semibold transition-colors flex items-center gap-1"
+                              title="Restore staff member"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5" />
+                              <span>Restore</span>
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -587,6 +728,166 @@ export default function EmployeesPage() {
                 className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold"
               >
                 Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Delete Confirmation */}
+      {deleteModalOpen && empToDelete && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-md shadow-2xl space-y-5 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2 text-rose-400 font-bold text-sm">
+                <AlertTriangle className="w-5 h-5 text-rose-500" />
+                <span>Delete Staff Member</span>
+              </div>
+              <button
+                onClick={() => setDeleteModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-rose-950/20 border border-rose-800/30 space-y-2">
+              <div className="text-xs font-semibold text-rose-300">
+                Are you sure you want to delete {empToDelete.full_name}?
+              </div>
+              <p className="text-[11px] text-slate-300 leading-relaxed">
+                Their system credentials will be deactivated immediately. Their profile and employment history will be archived under <strong>Deleted / Former Staff</strong> while preserving historical sales, shifts, and audit records.
+              </p>
+              <div className="text-xs font-mono text-slate-400 pt-1">
+                Role: <strong className="text-slate-200">{empToDelete.role}</strong> • Email: <strong className="text-slate-200">{empToDelete.email}</strong>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeleteModalOpen(false)}
+                className="w-1/3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={handleDeleteEmployee}
+                className="w-2/3 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-lg shadow-rose-950/50"
+              >
+                {isDeleting ? "Deleting..." : "Confirm Deletion"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: View Former Staff Details */}
+      {viewDetailsEmp && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-lg shadow-2xl space-y-5 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2 text-white font-bold text-sm">
+                <UserCog className="w-5 h-5 text-rose-400" />
+                <span>Former Staff Details</span>
+              </div>
+              <button
+                onClick={() => setViewDetailsEmp(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex items-center gap-3.5 p-4 rounded-2xl bg-slate-950 border border-slate-800">
+              <div className="w-12 h-12 rounded-2xl bg-rose-950/50 border border-rose-800/40 flex items-center justify-center text-rose-400 text-lg font-bold">
+                {viewDetailsEmp.full_name[0]}
+              </div>
+              <div>
+                <div className="text-base font-bold text-white flex items-center gap-2">
+                  <span>{viewDetailsEmp.full_name}</span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-rose-950/80 text-rose-300 border border-rose-800/50 font-bold">
+                    DELETED / INACTIVE
+                  </span>
+                </div>
+                <div className="text-xs text-slate-400 font-mono mt-0.5">
+                  Employee ID #{viewDetailsEmp.employee_id} • Assigned Role: <strong className="text-blue-400">{viewDetailsEmp.role}</strong>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 space-y-1">
+                <div className="text-slate-400 font-semibold flex items-center gap-1.5">
+                  <Mail className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Email Address</span>
+                </div>
+                <div className="text-slate-200 font-mono">{viewDetailsEmp.email}</div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 space-y-1">
+                <div className="text-slate-400 font-semibold flex items-center gap-1.5">
+                  <Phone className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Contact Phone</span>
+                </div>
+                <div className="text-slate-200 font-mono">{viewDetailsEmp.phone || "—"}</div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 space-y-1">
+                <div className="text-slate-400 font-semibold flex items-center gap-1.5">
+                  <Building2 className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Assigned Branch</span>
+                </div>
+                <div className="text-slate-200">{viewDetailsEmp.branch_name || `Branch #${viewDetailsEmp.branch_id}`}</div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 space-y-1">
+                <div className="text-slate-400 font-semibold flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Hire Date</span>
+                </div>
+                <div className="text-slate-200 font-mono">{new Date(viewDetailsEmp.hire_date).toLocaleDateString()}</div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 space-y-1">
+                <div className="text-slate-400 font-semibold flex items-center gap-1.5">
+                  <DollarSign className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Monthly Salary</span>
+                </div>
+                <div className="text-slate-200 font-mono font-bold">
+                  Rs. {Number(viewDetailsEmp.monthly_salary).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 space-y-1">
+                <div className="text-slate-400 font-semibold flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Activation Record</span>
+                </div>
+                <div className="text-slate-200">
+                  {viewDetailsEmp.is_activated ? "Password Configured" : "Unactivated"}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-2">
+              <button
+                type="button"
+                onClick={() => setViewDetailsEmp(null)}
+                className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                disabled={isRestoring}
+                onClick={() => handleRestoreEmployee(viewDetailsEmp)}
+                className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-lg shadow-emerald-950/50"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Restore to Active Staff</span>
               </button>
             </div>
           </div>

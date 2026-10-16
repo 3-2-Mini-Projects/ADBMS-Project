@@ -152,7 +152,7 @@ export function Sidebar() {
   const { currentEmployee, currentBranch } = useApp();
   const [collapsed, setCollapsed] = useState(false);
 
-  if (pathname === "/login" || pathname === "/activate-account") {
+  if (pathname === "/login") {
     return null;
   }
 

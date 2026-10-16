@@ -14,6 +14,8 @@ import {
   X,
   Building2,
   CheckCircle2,
+  Edit2,
+  Loader2,
 } from "lucide-react";
 
 export default function BranchesPage() {
@@ -39,6 +41,67 @@ export default function BranchesPage() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Edit Branch Modal
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    city: "",
+    region: "",
+    address: "",
+    phone: "",
+    manager_id: "",
+    is_active: 1,
+  });
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const handleOpenEdit = (b: Branch) => {
+    setSelectedBranch(b);
+    setEditForm({
+      name: b.name,
+      city: b.city,
+      region: b.region,
+      address: b.address || "",
+      phone: b.phone || "",
+      manager_id: b.manager_id ? String(b.manager_id) : "",
+      is_active: b.is_active ?? 1,
+    });
+    setEditModalOpen(true);
+  };
+
+  const handleUpdateBranch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedBranch) return;
+    setIsUpdating(true);
+    try {
+      const res = await fetch("/api/branches", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          branch_id: selectedBranch.branch_id,
+          name: editForm.name,
+          city: editForm.city,
+          region: editForm.region,
+          address: editForm.address,
+          phone: editForm.phone,
+          manager_id: editForm.manager_id ? Number(editForm.manager_id) : null,
+          is_active: Number(editForm.is_active),
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showToast(`Branch "${editForm.name}" updated successfully!`, "success");
+        setEditModalOpen(false);
+        refreshAppData();
+      } else {
+        showToast(data.error || "Failed to update branch", "error");
+      }
+    } catch {
+      showToast("Error updating branch", "error");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
   const handleAddBranch = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -151,8 +214,26 @@ export default function BranchesPage() {
             </div>
 
             <div className="mt-5 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs">
-              <span className="text-emerald-400 font-mono text-[11px] font-bold">OPERATIONAL</span>
-              <span className="text-slate-400 font-mono text-[11px]">Branch ID #{b.branch_id}</span>
+              <div className="flex items-center gap-2">
+                <span
+                  className={`font-mono text-[10px] px-2 py-0.5 rounded font-bold ${
+                    b.is_active === 1
+                      ? "bg-emerald-950/60 text-emerald-400 border border-emerald-800/60"
+                      : "bg-rose-950/60 text-rose-400 border border-rose-800/60"
+                  }`}
+                >
+                  {b.is_active === 1 ? "OPERATIONAL" : "INACTIVE"}
+                </span>
+                <span className="text-slate-500 font-mono text-[11px]">#{b.branch_code}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleOpenEdit(b)}
+                className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-all flex items-center gap-1.5"
+              >
+                <Edit2 className="w-3 h-3 text-blue-400" />
+                <span>Edit</span>
+              </button>
             </div>
           </div>
         ))}
@@ -231,12 +312,14 @@ export default function BranchesPage() {
                     onChange={(e) => setNewBranch({ ...newBranch, manager_id: e.target.value })}
                     className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white"
                   >
-                    <option value="">Select Manager</option>
-                    {employees.map((e) => (
-                      <option key={e.employee_id} value={e.employee_id}>
-                        {e.full_name} ({e.role})
-                      </option>
-                    ))}
+                    <option value="">Select Manager (Optional)</option>
+                    {employees
+                      .filter((e) => e.role === "MANAGER" && e.is_active === 1)
+                      .map((m) => (
+                        <option key={m.employee_id} value={m.employee_id}>
+                          {m.full_name}
+                        </option>
+                      ))}
                   </select>
                 </div>
               </div>
@@ -277,6 +360,147 @@ export default function BranchesPage() {
                   className="w-2/3 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold"
                 >
                   Initialize Branch
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Edit Branch */}
+      {editModalOpen && selectedBranch && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <h3 className="font-bold text-sm text-white flex items-center gap-2">
+                <Edit2 className="w-4 h-4 text-blue-400" />
+                <span>Edit Branch Details</span>
+              </h3>
+              <button
+                onClick={() => setEditModalOpen(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateBranch} className="space-y-3.5">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-slate-400 block mb-1">Branch Code</label>
+                  <input
+                    type="text"
+                    disabled
+                    value={selectedBranch.branch_code}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-950/60 border border-slate-800 font-mono text-xs text-slate-400 cursor-not-allowed"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-300 block mb-1">Operating Status</label>
+                  <select
+                    value={editForm.is_active}
+                    onChange={(e) => setEditForm({ ...editForm, is_active: Number(e.target.value) })}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white"
+                  >
+                    <option value={1}>OPERATIONAL</option>
+                    <option value={0}>INACTIVE</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs text-slate-300 block mb-1">Branch Name</label>
+                <input
+                  type="text"
+                  required
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-slate-300 block mb-1">City</label>
+                  <input
+                    type="text"
+                    required
+                    value={editForm.city}
+                    onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-300 block mb-1">Region</label>
+                  <input
+                    type="text"
+                    required
+                    value={editForm.region}
+                    onChange={(e) => setEditForm({ ...editForm, region: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs text-slate-300 block mb-1">Branch Manager</label>
+                <select
+                  value={editForm.manager_id}
+                  onChange={(e) => setEditForm({ ...editForm, manager_id: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white"
+                >
+                  <option value="">None / Unassigned</option>
+                  {employees
+                    .filter((e) => e.role === "MANAGER" && e.is_active === 1)
+                    .map((m) => (
+                      <option key={m.employee_id} value={m.employee_id}>
+                        {m.full_name}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs text-slate-300 block mb-1">Street Address</label>
+                <input
+                  type="text"
+                  value={editForm.address}
+                  onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-slate-300 block mb-1">Contact Phone</label>
+                <input
+                  type="text"
+                  value={editForm.phone}
+                  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 font-mono text-xs text-white"
+                />
+              </div>
+
+              <div className="flex items-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditModalOpen(false)}
+                  className="w-1/3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUpdating}
+                  className="w-2/3 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center justify-center gap-2"
+                >
+                  {isUpdating ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <span>Save Modifications</span>
+                  )}
                 </button>
               </div>
             </form>
