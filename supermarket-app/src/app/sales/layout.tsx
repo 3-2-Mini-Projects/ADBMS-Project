@@ -116,7 +116,7 @@ export default function SalesLayout({ children }: { children: React.ReactNode })
             Other Modules
           </div>
           {[
-            { label: "Dashboard", href: "/", icon: "🏠" },
+            { label: "Cashier Portal", href: "/cashier/dashboard", icon: "🛒" },
             { label: "Inventory",  href: "/inventory", icon: "📦" },
             { label: "Customers",  href: "/customers", icon: "👥" },
             { label: "Reports",    href: "/reports",   icon: "📈" },

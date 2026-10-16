@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
 
-export async function GET(_: Request, { params }: { params: { id: string } }) {
+export async function GET(_: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const id = params.id;
+    const { id } = await context.params;
 
     const [sale] = await query<any>(`
       SELECT
