@@ -18,7 +18,8 @@ export async function GET(req: Request) {
 
     let sql = `
       SELECT 
-        log_id,
+        audit_id AS log_id,
+        audit_id,
         record_id,
         action,
         new_value,
@@ -38,7 +39,7 @@ export async function GET(req: Request) {
       params.push(branchId, branchId);
     }
 
-    sql += ` ORDER BY log_id DESC LIMIT 50`;
+    sql += ` ORDER BY audit_id DESC LIMIT 50`;
 
     const logs: any = await query(sql, params);
 

@@ -1,8 +1,63 @@
 import { NextResponse } from "next/server";
-import { pool } from "@/lib/db";
+import { pool, query } from "@/lib/db";
 import { authorizeRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
+
+export async function GET(req: Request) {
+  const auth = await authorizeRequest("manage_inventory");
+  if (auth.error) {
+    return auth.error;
+  }
+  const { session } = auth;
+
+  try {
+    const { searchParams } = new URL(req.url);
+    const branchId = session.role === "ADMIN" ? searchParams.get("branchId") : String(session.branch_id);
+
+    let sql = `
+      SELECT 
+        audit_id AS log_id,
+        audit_id,
+        record_id,
+        action,
+        new_value,
+        changed_by,
+        changed_at
+      FROM audit_log
+      WHERE table_name = 'product_batches'
+        AND record_id LIKE 'disposal_batch_%'
+    `;
+    const params: any[] = [];
+
+    if (branchId && branchId !== "ALL") {
+      sql += ` AND JSON_UNQUOTE(JSON_EXTRACT(new_value, '$.branch_id')) = ?`;
+      params.push(branchId);
+    }
+
+    sql += ` ORDER BY audit_id DESC LIMIT 50`;
+
+    const logs: any = await query(sql, params);
+
+    const parsed = logs.map((l: any) => {
+      let details: any = {};
+      try {
+        details = typeof l.new_value === "string" ? JSON.parse(l.new_value) : l.new_value;
+      } catch {
+        details = {};
+      }
+      return {
+        ...l,
+        details,
+      };
+    });
+
+    return NextResponse.json(parsed);
+  } catch (err: any) {
+    console.error("GET /api/inventory/disposal error:", err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
 
 export async function POST(req: Request) {
   const auth = await authorizeRequest("manage_inventory");
