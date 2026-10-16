@@ -35,7 +35,7 @@ export async function GET(req: Request) {
     }
 
     // ---------- ROWS MODE (Directly from View) ----------
-    let sql = `SELECT * FROM vw_batch_expiry_status WHERE 1=1`;
+    let sql = `SELECT *, status AS expiry_status FROM vw_batch_expiry_status WHERE 1=1`;
     const params: any[] = [];
 
     if (branchId) {

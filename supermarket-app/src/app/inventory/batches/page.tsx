@@ -65,7 +65,7 @@ function StatusBadge({
       </span>
     );
   }
-  if (status === "NEAR_EXPIRY") {
+  if (status === "NEAR_EXPIRY" || status === "EXPIRING_SOON") {
     return (
       <span
         className={`inline-flex items-center gap-1 text-[10px] font-mono px-2.5 py-1 rounded-full font-bold ${
@@ -273,13 +273,15 @@ export default function InventoryBatchesPage() {
       : "border-b border-slate-800 bg-slate-950/40 text-slate-400 uppercase tracking-wider text-[11px] font-semibold",
     tableDivide: isClerk ? "divide-y divide-slate-100" : "divide-y divide-slate-800/60",
     rowHighlight: (expiryStatus?: string) => {
+      const isExp = expiryStatus === "EXPIRED";
+      const isNear = expiryStatus === "NEAR_EXPIRY" || expiryStatus === "EXPIRING_SOON";
       if (isClerk) {
-        if (expiryStatus === "EXPIRED") return "bg-rose-50/50 hover:bg-rose-50";
-        if (expiryStatus === "NEAR_EXPIRY") return "bg-amber-50/50 hover:bg-amber-50";
+        if (isExp) return "bg-rose-50/50 hover:bg-rose-50";
+        if (isNear) return "bg-amber-50/50 hover:bg-amber-50";
         return "hover:bg-slate-50";
       } else {
-        if (expiryStatus === "EXPIRED") return "bg-rose-950/10 hover:bg-rose-950/20";
-        if (expiryStatus === "NEAR_EXPIRY") return "bg-amber-950/10 hover:bg-amber-950/20";
+        if (isExp) return "bg-rose-950/10 hover:bg-rose-950/20";
+        if (isNear) return "bg-amber-950/10 hover:bg-amber-950/20";
         return "hover:bg-slate-800/40";
       }
     },
@@ -552,9 +554,19 @@ export default function InventoryBatchesPage() {
                 batches.map((b) => {
                   const daysLeft =
                     b.days_to_expiry !== undefined ? Number(b.days_to_expiry) : null;
+                  const isExpired =
+                    b.status === "EXPIRED" ||
+                    b.expiry_status === "EXPIRED" ||
+                    (daysLeft !== null && daysLeft < 0);
+                  const isNearExpiry =
+                    b.status === "NEAR_EXPIRY" ||
+                    b.expiry_status === "NEAR_EXPIRY" ||
+                    b.expiry_status === "EXPIRING_SOON" ||
+                    (daysLeft !== null && daysLeft >= 0 && daysLeft <= 14);
+                  const batchStatus = isExpired ? "EXPIRED" : isNearExpiry ? "NEAR_EXPIRY" : "GOOD";
 
                   return (
-                    <tr key={b.batch_id} className={`transition-colors ${theme.rowHighlight(b.expiry_status)}`}>
+                    <tr key={b.batch_id} className={`transition-colors ${theme.rowHighlight(batchStatus)}`}>
 
                       {/* Batch No */}
                       <td className={theme.batchNo}>
@@ -619,7 +631,7 @@ export default function InventoryBatchesPage() {
                       {/* Status Badge */}
                       <td className="py-3 px-4 text-center">
                         <StatusBadge
-                          status={b.expiry_status}
+                          status={batchStatus}
                           isClerk={isClerk}
                           daysToExpiry={
                             daysLeft !== null && daysLeft >= 0 ? daysLeft : undefined
@@ -633,7 +645,7 @@ export default function InventoryBatchesPage() {
                           onClick={() => handleOpenDisposal(b)}
                           disabled={b.quantity <= 0}
                           className={`p-1.5 rounded-lg border text-xs font-semibold transition-all inline-flex items-center gap-1 shadow-sm disabled:opacity-40 ${
-                            b.expiry_status === "EXPIRED"
+                            batchStatus === "EXPIRED"
                               ? "bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border-rose-500/30"
                               : "bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700"
                           }`}
@@ -711,8 +723,8 @@ export default function InventoryBatchesPage() {
               {selectedDisposalBatch.expiry_date && (
                 <div className="flex justify-between text-slate-400">
                   <span>Expiry Date:</span>
-                  <span className={`font-mono font-semibold ${selectedDisposalBatch.expiry_status === "EXPIRED" ? "text-rose-400" : "text-amber-400"}`}>
-                    {formatDate(selectedDisposalBatch.expiry_date)} ({selectedDisposalBatch.expiry_status})
+                  <span className={`font-mono font-semibold ${(selectedDisposalBatch.expiry_status || selectedDisposalBatch.status) === "EXPIRED" ? "text-rose-400" : "text-amber-400"}`}>
+                    {formatDate(selectedDisposalBatch.expiry_date)} ({selectedDisposalBatch.expiry_status || selectedDisposalBatch.status})
                   </span>
                 </div>
               )}
