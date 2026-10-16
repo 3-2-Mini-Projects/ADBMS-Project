@@ -8,7 +8,6 @@ import {
   Award,
   Tag,
   Ticket,
-  TrendingUp,
   Sparkles,
   ArrowUpRight,
   Gift,
@@ -268,40 +267,6 @@ export function MarketingDashboardVeiw() {
         </div>
       </div>
 
-      {/* Member Revenue Contribution Banner */}
-      <div className="p-5 rounded-2xl bg-gradient-to-r from-blue-950/40 via-indigo-950/30 to-purple-950/40 border border-indigo-800/40 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-xl">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 text-xs font-semibold text-blue-400 uppercase tracking-wider">
-            <TrendingUp className="w-4 h-4" />
-            <span>Member Sales Impact</span>
-          </div>
-          <h2 className="text-lg font-bold text-white">
-            Loyalty Customers Drive {summary?.member_revenue_percent ?? 0}% of Total Revenue
-          </h2>
-          <p className="text-xs text-slate-400">
-            Total discounts given to customers:{" "}
-            <strong className="text-rose-400 font-mono">
-              Rs. {Number(summary?.total_discounts_given ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
-            </strong>
-          </p>
-        </div>
-
-        <div className="flex items-center gap-6">
-          <div className="text-right">
-            <div className="text-xs text-slate-400">Member Avg Basket</div>
-            <div className="text-base font-bold text-emerald-400 font-mono">
-              Rs. {Number(summary?.avg_member_basket ?? 0).toFixed(2)}
-            </div>
-          </div>
-          <div className="w-px h-8 bg-slate-800" />
-          <div className="text-right">
-            <div className="text-xs text-slate-400">Regular Avg Basket</div>
-            <div className="text-base font-bold text-slate-300 font-mono">
-              Rs. {Number(summary?.avg_non_member_basket ?? 0).toFixed(2)}
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Membership Tier Breakdown Cards */}
       <div className="space-y-3">
