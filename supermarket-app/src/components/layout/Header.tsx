@@ -178,21 +178,6 @@ export function Header() {
 
                   <button
                     onClick={() => {
-                      switchRole("MANAGER");
-                      setEmployeeDropdownOpen(false);
-                    }}
-                    className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-xs font-semibold transition-all ${
-                      currentEmployee?.role === "MANAGER"
-                        ? "bg-blue-600 text-white shadow-md shadow-blue-900/40 ring-1 ring-blue-400"
-                        : "bg-slate-800 hover:bg-blue-950/60 text-slate-300 hover:text-blue-200 border border-slate-700/60"
-                    }`}
-                  >
-                    <UserCheck className="w-3.5 h-3.5 text-blue-300 shrink-0" />
-                    <span className="truncate">Manager</span>
-                  </button>
-
-                  <button
-                    onClick={() => {
                       switchRole("STOCK_CLERK");
                       setEmployeeDropdownOpen(false);
                     }}
@@ -208,10 +193,40 @@ export function Header() {
 
                   <button
                     onClick={() => {
-                      switchRole("CASHIER");
+                      switchRole("CATALOG_MANAGER");
                       setEmployeeDropdownOpen(false);
                     }}
                     className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-xs font-semibold transition-all ${
+                      currentEmployee?.role === "CATALOG_MANAGER"
+                        ? "bg-indigo-600 text-white shadow-md shadow-indigo-900/40 ring-1 ring-indigo-400"
+                        : "bg-slate-800 hover:bg-indigo-950/60 text-slate-300 hover:text-indigo-200 border border-slate-700/60"
+                    }`}
+                  >
+                    <UserCheck className="w-3.5 h-3.5 text-indigo-300 shrink-0" />
+                    <span className="truncate">Catalog Mgr</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      switchRole("MARKETING");
+                      setEmployeeDropdownOpen(false);
+                    }}
+                    className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-xs font-semibold transition-all ${
+                      currentEmployee?.role === "MARKETING"
+                        ? "bg-rose-600 text-white shadow-md shadow-rose-900/40 ring-1 ring-rose-400"
+                        : "bg-slate-800 hover:bg-rose-950/60 text-slate-300 hover:text-rose-200 border border-slate-700/60"
+                    }`}
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-rose-300 shrink-0" />
+                    <span className="truncate">Marketing</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      switchRole("CASHIER");
+                      setEmployeeDropdownOpen(false);
+                    }}
+                    className={`col-span-2 flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-lg text-xs font-semibold transition-all ${
                       currentEmployee?.role === "CASHIER"
                         ? "bg-emerald-600 text-white shadow-md shadow-emerald-900/40 ring-1 ring-emerald-400"
                         : "bg-slate-800 hover:bg-emerald-950/60 text-slate-300 hover:text-emerald-200 border border-slate-700/60"
@@ -263,8 +278,12 @@ export function Header() {
                       className={`text-[9px] font-mono px-1.5 py-0.5 rounded font-semibold ${
                         e.role === "ADMIN"
                           ? "bg-purple-900/60 text-purple-300 border border-purple-700/50"
-                          : e.role === "MANAGER"
-                          ? "bg-blue-900/60 text-blue-300 border border-blue-700/50"
+                          : e.role === "STOCK_CLERK"
+                          ? "bg-amber-900/60 text-amber-300 border border-amber-700/50"
+                          : e.role === "CATALOG_MANAGER"
+                          ? "bg-indigo-900/60 text-indigo-300 border border-indigo-700/50"
+                          : e.role === "MARKETING"
+                          ? "bg-rose-900/60 text-rose-300 border border-rose-700/50"
                           : e.role === "CASHIER"
                           ? "bg-emerald-900/60 text-emerald-300 border border-emerald-700/50"
                           : "bg-slate-800 text-slate-300 border border-slate-700"

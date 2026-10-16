@@ -80,36 +80,6 @@ const ADMIN_NAV_GROUPS: NavGroup[] = [
   },
 ];
 
-const CLERK_NAV_GROUPS: NavGroup[] = [
-  {
-    group: "INVENTORY",
-    items: [
-      { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-      { title: "Inventory Dashboard", href: "/inventory/dashboard", icon: LayoutGrid, badge: "New" },
-      { title: "Inventory", href: "/inventory", icon: Boxes },
-      { title: "Product Batches", href: "/inventory/batches", icon: PackagePlus },
-      { title: "Stock Alerts", href: "/inventory/stock-alerts", icon: AlertTriangle },
-      { title: "Reorder Suggestions", href: "/inventory/reorder-suggestions", icon: ClipboardCheck },
-    ],
-  },
-  {
-    group: "PURCHASING",
-    items: [
-      { title: "Purchase Orders", href: "/purchases", icon: FileSpreadsheet },
-      { title: "Create Purchase Order", href: "/purchases/new", icon: ClipboardCheck },
-      { title: "Receive Stock", href: "/purchases", icon: PackagePlus },
-    ],
-  },
-  {
-    group: "ACCOUNT",
-    items: [
-      { title: "My Profile", href: "/profile", icon: UserCircle },
-      { title: "Settings", href: "/settings", icon: Settings },
-      { title: "Logout", href: "/logout", icon: LogOut },
-    ],
-  },
-];
-
 const NAV_GROUPS: NavGroup[] = [
   {
     group: "OPERATIONS",
@@ -260,8 +230,11 @@ export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
 
   const role = currentEmployee?.role ?? "ADMIN";
+  const isAdmin = role === "ADMIN";
   const navGroups =
-    role === "STOCK_CLERK"
+    isAdmin
+      ? ADMIN_NAV_GROUPS
+      : role === "STOCK_CLERK"
       ? CLERK_NAV_GROUPS
       : role === "CATALOG_MANAGER"
       ? CATALOG_NAV_GROUPS
