@@ -1,9 +1,11 @@
 export type UserRole =
   | 'ADMIN'
+  | 'MANAGER'
+  | 'CASHIER'
   | 'STOCK_CLERK'
   | 'CATALOG_MANAGER'
   | 'MARKETING'
-  | 'CASHIER';
+  | 'HR';
 
 export interface Branch {
   branch_id: number;
@@ -30,6 +32,7 @@ export interface Employee {
   hire_date: string;
   monthly_salary: string | number;
   is_active: number;
+  is_activated?: number | boolean;
   created_at: string;
 }
 

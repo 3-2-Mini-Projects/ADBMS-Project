@@ -17,6 +17,10 @@ import {
   Sparkles,
   X,
   CheckCircle2,
+  Clock,
+  Copy,
+  Check,
+  KeyRound,
 } from "lucide-react";
 
 export default function EmployeesPage() {
@@ -39,6 +43,14 @@ export default function EmployeesPage() {
     hire_date: "",
   });
   const [isAdding, setIsAdding] = useState(false);
+  const [createdActivation, setCreatedActivation] = useState<{
+    full_name: string;
+    email: string;
+    role: string;
+    activation_url: string;
+    expires_at: string;
+  } | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     setNewEmp((prev) => ({
@@ -91,6 +103,25 @@ export default function EmployeesPage() {
       if (res.ok && data.success) {
         showToast(`Staff member "${newEmp.full_name}" registered!`, "success");
         setAddModalOpen(false);
+        if (data.activation) {
+          const origin = typeof window !== "undefined" ? window.location.origin : "";
+          setCreatedActivation({
+            full_name: newEmp.full_name,
+            email: newEmp.email,
+            role: newEmp.role,
+            activation_url: `${origin}${data.activation.activation_url}`,
+            expires_at: data.activation.expires_at,
+          });
+        }
+        setNewEmp({
+          branch_id: "1",
+          full_name: "",
+          role: "CASHIER",
+          email: "",
+          phone: "",
+          monthly_salary: "60000",
+          hire_date: new Date().toISOString().split("T")[0],
+        });
         fetchEmployees();
         refreshAppData();
       } else {
@@ -222,20 +253,21 @@ export default function EmployeesPage() {
                 <th className="py-3.5 px-4 font-semibold">Hire Date</th>
                 <th className="py-3.5 px-4 font-semibold text-right">Monthly Salary</th>
                 <th className="py-3.5 px-4 font-semibold text-center">Status</th>
+                <th className="py-3.5 px-4 font-semibold text-center">Activation</th>
                 <th className="py-3.5 px-4 font-semibold text-center">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-500">
+                  <td colSpan={9} className="py-12 text-center text-slate-500">
                     <Sparkles className="w-5 h-5 animate-spin mx-auto text-purple-400 mb-2" />
                     Loading staff records...
                   </td>
                 </tr>
               ) : filteredEmployees.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-500">
+                  <td colSpan={9} className="py-12 text-center text-slate-500">
                     No employees matching filters.
                   </td>
                 </tr>
@@ -290,6 +322,19 @@ export default function EmployeesPage() {
                       >
                         {emp.is_active === 1 ? "ACTIVE" : "INACTIVE"}
                       </span>
+                    </td>
+                    <td className="py-3 px-4 text-center">
+                      {emp.is_activated ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-950/60 text-emerald-400 border border-emerald-800/60 font-semibold">
+                          <CheckCircle2 className="w-3 h-3" />
+                          <span>Activated</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-950/60 text-amber-400 border border-amber-800/60 font-semibold">
+                          <Clock className="w-3 h-3" />
+                          <span>Pending</span>
+                        </span>
+                      )}
                     </td>
                     <td className="py-3 px-4 text-center">
                       <button
@@ -502,6 +547,50 @@ export default function EmployeesPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Activation Invitation Modal */}
+      {createdActivation && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-lg shadow-2xl space-y-5 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2 text-white font-bold text-base">
+                <KeyRound className="w-5 h-5 text-amber-400" />
+                <span>Employee Account Activation</span>
+              </div>
+              <button
+                onClick={() => setCreatedActivation(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-emerald-950/30 border border-emerald-800/40 space-y-2">
+              <div className="text-xs font-semibold text-emerald-300">
+                Account Created for {createdActivation.full_name} ({createdActivation.role})
+              </div>
+              <p className="text-[11px] text-slate-300 leading-relaxed">
+                The staff member has been registered with <strong>Pending Activation</strong> status. They can now activate their account directly by visiting the login page and entering their email:
+              </p>
+              <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 text-xs font-mono text-emerald-400 font-bold select-all">
+                {createdActivation.email}
+              </div>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Upon entering their email on the login screen, they will automatically be prompted to create and confirm their password.
+              </p>
+            </div>
+            <div className="flex justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => setCreatedActivation(null)}
+                className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold"
+              >
+                Done
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -25,6 +25,30 @@ export const ROLE_PERMISSIONS: Record<UserRole, Record<PermissionKey, boolean>> 
     view_reports: true,
     view_audit_log: true,
   },
+  MANAGER: {
+    manage_branches: false,
+    manage_employees: true,
+    manage_catalog: true,
+    manage_inventory: true,
+    receive_purchases: true,
+    create_pos_sales: true,
+    process_returns: true,
+    manage_promotions: true,
+    view_reports: true,
+    view_audit_log: true,
+  },
+  CASHIER: {
+    manage_branches: false,
+    manage_employees: false,
+    manage_catalog: false,
+    manage_inventory: false,
+    receive_purchases: false,
+    create_pos_sales: true,
+    process_returns: true,
+    manage_promotions: false,
+    view_reports: false,
+    view_audit_log: false,
+  },
   STOCK_CLERK: {
     manage_branches: false,
     manage_employees: false,
@@ -34,14 +58,14 @@ export const ROLE_PERMISSIONS: Record<UserRole, Record<PermissionKey, boolean>> 
     create_pos_sales: false,
     process_returns: false,
     manage_promotions: false,
-    view_reports: true, // stock reports
+    view_reports: true,
     view_audit_log: false,
   },
   CATALOG_MANAGER: {
     manage_branches: false,
     manage_employees: false,
     manage_catalog: true,
-    manage_inventory: true, // view-only inventory
+    manage_inventory: true,
     receive_purchases: false,
     create_pos_sales: false,
     process_returns: false,
@@ -61,20 +85,40 @@ export const ROLE_PERMISSIONS: Record<UserRole, Record<PermissionKey, boolean>> 
     view_reports: true,
     view_audit_log: false,
   },
-  CASHIER: {
+  HR: {
     manage_branches: false,
-    manage_employees: false,
+    manage_employees: true,
     manage_catalog: false,
     manage_inventory: false,
     receive_purchases: false,
-    create_pos_sales: true,
-    process_returns: true,
+    create_pos_sales: false,
+    process_returns: false,
     manage_promotions: false,
-    view_reports: false,
-    view_audit_log: false,
+    view_reports: true,
+    view_audit_log: true,
   },
 };
 
 export function canAccess(role: UserRole, permission: PermissionKey): boolean {
   return ROLE_PERMISSIONS[role]?.[permission] ?? false;
+}
+
+export function getRoleDefaultPath(role?: UserRole | null): string {
+  switch (role) {
+    case "ADMIN":
+    case "MANAGER":
+      return "/dashboard";
+    case "CASHIER":
+      return "/pos";
+    case "STOCK_CLERK":
+      return "/inventory";
+    case "CATALOG_MANAGER":
+      return "/products";
+    case "MARKETING":
+      return "/promotions";
+    case "HR":
+      return "/employees";
+    default:
+      return "/dashboard";
+  }
 }

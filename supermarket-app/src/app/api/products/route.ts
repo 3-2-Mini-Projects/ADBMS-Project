@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { pool, query } from "@/lib/db";
+import { authorizeRequest } from "@/lib/auth";
 
 export async function GET(req: Request) {
   try {
@@ -59,6 +60,11 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const auth = await authorizeRequest("manage_catalog");
+  if (auth.error) {
+    return auth.error;
+  }
+
   try {
     const body = await req.json();
     const {
@@ -111,10 +117,16 @@ export async function POST(req: Request) {
 }
 
 export async function PATCH(req: Request) {
+  const auth = await authorizeRequest("manage_catalog");
+  if (auth.error) {
+    return auth.error;
+  }
+  const changed_by = auth.session.employee_id;
+
   const connection = await pool.getConnection();
   try {
     const body = await req.json();
-    const { product_id, unit_price, cost_price, is_active, changed_by, reason } = body;
+    const { product_id, unit_price, cost_price, is_active, reason } = body;
 
     if (!product_id) {
       return NextResponse.json({ error: "product_id is required" }, { status: 400 });

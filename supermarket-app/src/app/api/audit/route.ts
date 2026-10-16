@@ -1,10 +1,16 @@
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
+import { authorizeRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
   try {
+    const auth = await authorizeRequest("view_audit_log");
+    if (auth.error) {
+      return auth.error;
+    }
+
     const { searchParams } = new URL(req.url);
     const table = searchParams.get("table");
     const action = searchParams.get("action");

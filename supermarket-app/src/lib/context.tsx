@@ -13,14 +13,14 @@ interface AppContextType {
   currentBranch: Branch | null;
   setCurrentBranch: (branch: Branch) => void;
   currentEmployee: Employee | null;
-  setCurrentEmployee: (employee: Employee) => void;
+  setCurrentEmployee: (employee: Employee | null) => void;
+  authenticatedUser: Employee | null;
   branches: Branch[];
   employees: Employee[];
   toasts: ToastMessage[];
   showToast: (message: string, type?: "success" | "error" | "info" | "warning") => void;
   removeToast: (id: string) => void;
   refreshAppData: () => Promise<void>;
-  switchRole: (role: UserRole) => void;
   isLoading: boolean;
 }
 
@@ -31,6 +31,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [currentBranch, setCurrentBranch] = useState<Branch | null>(null);
   const [currentEmployee, setCurrentEmployee] = useState<Employee | null>(null);
+  const [authenticatedUser, setAuthenticatedUser] = useState<Employee | null>(null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -46,30 +47,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
-  const switchRole = (role: UserRole) => {
-    const empWithRole = employees.find((e) => e.role === role);
-    if (empWithRole) {
-      setCurrentEmployee(empWithRole);
-      showToast(`Switched active view to ${role} (${empWithRole.full_name})`, "info");
-    } else if (currentEmployee) {
-      setCurrentEmployee({
-        ...currentEmployee,
-        role,
-      });
-      showToast(`Switched active role to ${role}`, "info");
-    } else {
-      showToast(`Role switched to ${role}`, "info");
-    }
-  };
 
   const refreshAppData = async () => {
     try {
-      const [resBranches, resEmployees] = await Promise.all([
+      const [resBranches, resEmployees, resMe] = await Promise.all([
         fetch("/api/branches"),
         fetch("/api/employees"),
+        fetch("/api/auth/me"),
       ]);
-      const dataBranches = await resBranches.json();
-      const dataEmployees = await resEmployees.json();
+
+      const dataBranches = await resBranches.json().catch(() => []);
+      const dataEmployees = await resEmployees.json().catch(() => []);
+      const dataMe = resMe.ok ? await resMe.json().catch(() => ({})) : null;
 
       if (Array.isArray(dataBranches)) {
         setBranches(dataBranches);
@@ -79,19 +68,48 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (Array.isArray(dataEmployees)) {
-        const allowedRoles = ["ADMIN", "STOCK_CLERK", "CATALOG_MANAGER", "MARKETING", "CASHIER"];
+        const allowedRoles = ["ADMIN", "MANAGER", "HR", "STOCK_CLERK", "CATALOG_MANAGER", "MARKETING", "CASHIER"];
         const validEmployees = dataEmployees.filter((e: Employee) => allowedRoles.includes(e.role));
         setEmployees(validEmployees);
-        if (!currentEmployee && validEmployees.length > 0) {
-          // Default to Stock Clerk
-          const stockClerk = validEmployees.find(
-            (e: Employee) => e.role === "STOCK_CLERK"
-          ) || validEmployees[0];
-          setCurrentEmployee(stockClerk);
+      }
+
+      if (dataMe?.user) {
+        const authEmp: Employee = {
+          employee_id: dataMe.user.employee_id,
+          branch_id: dataMe.user.branch_id,
+          branch_name: dataMe.user.branch_name,
+          full_name: dataMe.user.full_name,
+          role: dataMe.user.role,
+          email: dataMe.user.email,
+          monthly_salary: 0,
+          is_active: 1,
+          hire_date: "",
+          created_at: "",
+        };
+        setAuthenticatedUser(authEmp);
+        setCurrentEmployee(authEmp);
+
+        if (Array.isArray(dataBranches)) {
+          const userBranch = dataBranches.find(
+            (b: Branch) => b.branch_id === dataMe.user.branch_id
+          );
+          if (userBranch) {
+            setCurrentBranch(userBranch);
+          }
+        }
+      } else {
+        setAuthenticatedUser(null);
+        setCurrentEmployee(null);
+        if (
+          typeof window !== "undefined" &&
+          window.location.pathname !== "/login" &&
+          !window.location.pathname.startsWith("/activate-account")
+        ) {
+          window.location.replace("/login");
         }
       }
     } catch (err) {
-      console.error("Failed to load initial branches/employees:", err);
+      console.error("Failed to load initial application context:", err);
     } finally {
       setIsLoading(false);
     }
@@ -108,13 +126,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setCurrentBranch,
         currentEmployee,
         setCurrentEmployee,
+        authenticatedUser,
         branches,
         employees,
         toasts,
         showToast,
         removeToast,
         refreshAppData,
-        switchRole,
         isLoading,
       }}
     >

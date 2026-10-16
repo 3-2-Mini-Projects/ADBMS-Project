@@ -1,10 +1,18 @@
 import { NextResponse } from "next/server";
 import { pool, query } from "@/lib/db";
+import { authorizeRequest } from "@/lib/auth";
 
 export async function GET(req: Request) {
+  const auth = await authorizeRequest("receive_purchases");
+  if (auth.error) {
+    return auth.error;
+  }
+  const { session } = auth;
+
   try {
     const { searchParams } = new URL(req.url);
-    const branchId = searchParams.get("branchId");
+    const branchIdParam = searchParams.get("branchId");
+    const branchId = session.role === "ADMIN" ? branchIdParam : String(session.branch_id);
     const status = searchParams.get("status");
 
     // ADBMS Stock Clerk View: vw_purchase_order_summary
@@ -52,11 +60,18 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const auth = await authorizeRequest("receive_purchases");
+  if (auth.error) {
+    return auth.error;
+  }
+  const { session } = auth;
+
   const connection = await pool.getConnection();
   try {
     const body = await req.json();
-    const { supplier_id, branch_id, expected_date, created_by, items } = body;
-
+    const { supplier_id, branch_id: reqBranchId, expected_date, items } = body;
+    const branch_id = session.role === "ADMIN" ? (reqBranchId || session.branch_id) : session.branch_id;
+    const created_by = session.employee_id;
     if (!supplier_id || !branch_id || !items || items.length === 0) {
       return NextResponse.json({ error: "Supplier, Branch, and items are required" }, { status: 400 });
     }

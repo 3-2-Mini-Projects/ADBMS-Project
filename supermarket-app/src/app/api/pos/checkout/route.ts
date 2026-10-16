@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { pool } from "@/lib/db";
-
+import { authorizeRequest } from "@/lib/auth";
 interface CartItemInput {
   product_id: number;
   quantity: number;
@@ -14,29 +14,34 @@ interface PaymentInput {
 }
 
 export async function POST(req: Request) {
+  const auth = await authorizeRequest("create_pos_sales");
+  if (auth.error) {
+    return auth.error;
+  }
+  const { session } = auth;
+
   const connection = await pool.getConnection();
 
   try {
     const body = await req.json();
     const {
-      branch_id,
-      cashier_id,
       customer_id,
       coupon_code,
       items,
       payments,
     }: {
-      branch_id: number;
-      cashier_id: number;
       customer_id?: number | null;
       coupon_code?: string | null;
       items: CartItemInput[];
       payments: PaymentInput[];
     } = body;
 
-    if (!branch_id || !cashier_id) {
-      return NextResponse.json({ error: "Branch ID and Cashier ID are required" }, { status: 400 });
-    }
+    // Server-verified cashier identity and branch confinement
+    const cashier_id = session.employee_id;
+    const branch_id =
+      session.role === "ADMIN" && body.branch_id
+        ? Number(body.branch_id)
+        : session.branch_id;
 
     if (!items || items.length === 0) {
       return NextResponse.json({ error: "Cart cannot be empty" }, { status: 400 });

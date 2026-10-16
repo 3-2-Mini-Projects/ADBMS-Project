@@ -1,5 +1,11 @@
-import { DashboardView } from "@/components/dashboard/DashboardView";
+import { redirect } from "next/navigation";
+import { getServerSession } from "@/lib/auth";
+import { getRoleDefaultPath } from "@/lib/permissions";
 
-export default function Home() {
-  return <DashboardView />;
+export default async function Home() {
+  const session = await getServerSession();
+  if (!session) {
+    redirect("/login");
+  }
+  redirect(getRoleDefaultPath(session.role));
 }
