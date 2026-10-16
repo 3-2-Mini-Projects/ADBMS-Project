@@ -21,7 +21,6 @@ interface AppContextType {
   showToast: (message: string, type?: "success" | "error" | "info" | "warning") => void;
   removeToast: (id: string) => void;
   refreshAppData: () => Promise<void>;
-  switchRole: (role: UserRole) => void;
   isLoading: boolean;
 }
 
@@ -48,21 +47,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
-  const switchRole = (role: UserRole) => {
-    const empWithRole = employees.find((e) => e.role === role);
-    if (empWithRole) {
-      setCurrentEmployee(empWithRole);
-      showToast(`Switched active view to ${role} (${empWithRole.full_name})`, "info");
-    } else if (currentEmployee) {
-      setCurrentEmployee({
-        ...currentEmployee,
-        role,
-      });
-      showToast(`Switched active view role to ${role}`, "info");
-    } else {
-      showToast(`Switched active view role to ${role}`, "info");
-    }
-  };
 
   const refreshAppData = async () => {
     try {
@@ -147,7 +131,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         showToast,
         removeToast,
         refreshAppData,
-        switchRole,
         isLoading,
       }}
     >
