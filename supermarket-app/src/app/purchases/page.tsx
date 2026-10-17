@@ -17,6 +17,7 @@ import {
   Search,
   Filter,
   Send,
+  AlertTriangle,
 } from "lucide-react";
 
 export default function PurchasesPage() {
@@ -42,9 +43,21 @@ export default function PurchasesPage() {
   const [isCreating, setIsCreating] = useState(false);
 
   // Receive PO Modal State
+  interface ReceivingItemState {
+    po_item_id: number;
+    product_id: number;
+    product_name: string;
+    ordered_qty: number;
+    received_quantity: number;
+    batch_no: string;
+    expiry_date: string;
+    unit_cost: number;
+  }
+
   const [receiveModalOpen, setReceiveModalOpen] = useState(false);
   const [selectedPO, setSelectedPO] = useState<PurchaseOrder | null>(null);
   const [batchExpiryDate, setBatchExpiryDate] = useState("");
+  const [receivingItems, setReceivingItems] = useState<ReceivingItemState[]>([]);
   const [isReceiving, setIsReceiving] = useState(false);
   const [poDetails, setPoDetails] = useState<any[]>([]);
   const [loadingDetails, setLoadingDetails] = useState(false);
@@ -54,8 +67,27 @@ export default function PurchasesPage() {
       setLoadingDetails(true);
       fetch(`/api/purchases/${selectedPO.po_id}`)
         .then((r) => r.json())
-        .then((d) => Array.isArray(d) && setPoDetails(d))
-        .catch(() => setPoDetails([]))
+        .then((d) => {
+          if (Array.isArray(d)) {
+            setPoDetails(d);
+            const defaultExp = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+            const mapped: ReceivingItemState[] = d.map((it: any) => ({
+              po_item_id: it.po_item_id || it.product_id,
+              product_id: it.product_id,
+              product_name: it.product_name,
+              ordered_qty: Number(it.ordered_qty || 0),
+              received_quantity: Number(it.ordered_qty || 0),
+              batch_no: `BATCH-${selectedPO.po_number || selectedPO.po_id}-${it.po_item_id || it.product_id}`,
+              expiry_date: defaultExp,
+              unit_cost: Number(it.unit_cost || 0),
+            }));
+            setReceivingItems(mapped);
+          }
+        })
+        .catch(() => {
+          setPoDetails([]);
+          setReceivingItems([]);
+        })
         .finally(() => setLoadingDetails(false));
     }
   }, [selectedPO]);
@@ -132,22 +164,51 @@ export default function PurchasesPage() {
     }
   };
 
+  const handleApplyGlobalExpiry = (exp: string) => {
+    setBatchExpiryDate(exp);
+    setReceivingItems((prev) =>
+      prev.map((item) => ({ ...item, expiry_date: exp }))
+    );
+  };
+
+  const handleUpdateReceivingItem = (index: number, field: keyof ReceivingItemState, value: any) => {
+    setReceivingItems((prev) => {
+      const copy = [...prev];
+      copy[index] = { ...copy[index], [field]: value };
+      return copy;
+    });
+  };
+
   const handleReceivePO = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedPO) return;
     setIsReceiving(true);
     try {
+      const payloadItems = receivingItems.map((item) => ({
+        po_item_id: item.po_item_id,
+        product_id: item.product_id,
+        received_quantity: Number(item.received_quantity),
+        batch_no: item.batch_no,
+        expiry_date: item.expiry_date,
+      }));
+
       const res = await fetch(`/api/purchases/${selectedPO.po_id}/receive`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           expiry_date: batchExpiryDate,
           received_by: currentEmployee?.employee_id || 1,
+          items: payloadItems,
         }),
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        showToast(`PO ${selectedPO.po_number} received! Stock & batches updated.`, "success");
+        showToast(
+          data.has_discrepancy
+            ? `PO ${selectedPO.po_number} received! Shortages noted & logged in audit.`
+            : `PO ${selectedPO.po_number} received! Stock & individual batches updated.`,
+          data.has_discrepancy ? "info" : "success"
+        );
         setReceiveModalOpen(false);
         fetchOrders();
       } else {
@@ -263,6 +324,9 @@ export default function PurchasesPage() {
     modalCardLarge: isClerk
       ? "bg-white border border-slate-200 rounded-2xl w-full max-w-2xl p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-slate-900"
       : "bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-white",
+    modalCardReceive: isClerk
+      ? "bg-white border border-slate-200 rounded-2xl w-full max-w-4xl p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-slate-900"
+      : "bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-4xl p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-white",
     modalHeaderBorder: isClerk ? "border-slate-100" : "border-slate-800",
     modalTitle: isClerk ? "text-slate-900 font-bold text-sm flex items-center gap-2" : "text-white font-bold text-sm flex items-center gap-2",
     modalCloseBtn: isClerk ? "text-slate-400 hover:text-slate-700" : "text-slate-400 hover:text-white",
@@ -469,89 +533,248 @@ export default function PurchasesPage() {
       {/* MODAL: Receive PO */}
       {receiveModalOpen && selectedPO && (
         <div className={theme.modalOverlay}>
-          <div className={theme.modalCardSmall}>
+          <div className={theme.modalCardReceive}>
+            {/* Header */}
             <div className={`flex items-center justify-between pb-3 border-b ${theme.modalHeaderBorder}`}>
-              <h3 className={theme.modalTitle}>
-                <PackageCheck className="w-4 h-4 text-teal-500" />
-                <span>Receive Goods: {selectedPO.po_number}</span>
-              </h3>
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-teal-500/10 text-teal-600 border border-teal-500/20">
+                  <PackageCheck className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className={theme.modalTitle}>
+                    <span>Receive Goods: {selectedPO.po_number}</span>
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    Verify delivered quantities, configure individual batch expiry dates, and commit into branch inventory.
+                  </p>
+                </div>
+              </div>
               <button
                 onClick={() => setReceiveModalOpen(false)}
-                className={`p-1 rounded-lg ${theme.modalCloseBtn}`}
+                className={`p-1.5 rounded-lg ${theme.modalCloseBtn}`}
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className={theme.modalInfoBox}>
-              <div>Supplier: <strong className={theme.modalInfoStrong}>{selectedPO.supplier_name}</strong></div>
-              <div>Receiving Branch: <strong className={theme.modalInfoStrong}>{selectedPO.branch_name}</strong></div>
-              <div className={theme.modalInfoDesc}>
-                Receiving will add order quantities directly to branch inventory and register FIFO batch codes automatically.
+            {/* PO Summary & Quick Expiry Bar */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className={theme.modalInfoBox}>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Supplier:</span>
+                  <strong className={theme.modalInfoStrong}>{selectedPO.supplier_name}</strong>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Receiving Branch:</span>
+                  <strong className={theme.modalInfoStrong}>{selectedPO.branch_name}</strong>
+                </div>
+                <div className="flex justify-between items-center text-[11px] pt-0.5 border-t border-slate-200/50 dark:border-slate-800">
+                  <span className="text-slate-400">Order Date:</span>
+                  <span className="font-mono">{selectedPO.order_date ? new Date(selectedPO.order_date).toLocaleDateString() : "-"}</span>
+                </div>
+              </div>
+
+              {/* Bulk Expiry Quick-Apply */}
+              <div className={`${isClerk ? "bg-teal-50/60 border-teal-200" : "bg-teal-950/30 border-teal-800/60"} border p-3 rounded-xl flex flex-col justify-between text-xs`}>
+                <div className="flex items-center gap-1.5 font-semibold text-teal-700 dark:text-teal-300">
+                  <Calendar className="w-3.5 h-3.5" />
+                  <span>Quick Apply Expiry Date to All Items</span>
+                </div>
+                <div className="flex items-center gap-2 mt-2">
+                  <input
+                    type="date"
+                    value={batchExpiryDate}
+                    onChange={(e) => setBatchExpiryDate(e.target.value)}
+                    className={`${theme.modalInput} !py-1 text-xs`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleApplyGlobalExpiry(batchExpiryDate)}
+                    className="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-white font-semibold text-xs whitespace-nowrap shadow-sm transition-all"
+                  >
+                    Apply to All
+                  </button>
+                </div>
               </div>
             </div>
 
-            {/* Items Breakdown via vw_purchase_order_details */}
-            <div className="border border-slate-800 rounded-xl overflow-hidden text-xs bg-slate-900/60 my-2">
-              <div className="bg-slate-800/60 px-3 py-1.5 font-semibold text-slate-300 flex justify-between items-center text-[11px]">
-                <span className="flex items-center gap-1.5 text-teal-400">
-                  <Sparkles className="w-3 h-3" />
-                  <span>Items to Receive (vw_purchase_order_details)</span>
-                </span>
-                <span className="text-slate-400">{poDetails.length} items</span>
-              </div>
-              <div className="max-h-36 overflow-y-auto">
-                <table className="w-full text-left">
-                  <thead>
-                    <tr className="border-b border-slate-800 text-[10px] text-slate-400">
-                      <th className="py-1 px-3">Product</th>
-                      <th className="py-1 px-3 text-right">Qty</th>
-                      <th className="py-1 px-3 text-right">Unit Cost</th>
-                      <th className="py-1 px-3 text-right">Line Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {loadingDetails ? (
-                      <tr>
-                        <td colSpan={4} className="py-3 text-center text-slate-500 text-[11px]">
-                          Loading items from database view...
-                        </td>
+            {/* Itemized Receiving Table Form */}
+            <form onSubmit={handleReceivePO} className="space-y-4">
+              <div className={`${isClerk ? "bg-slate-50 border-slate-200" : "bg-slate-950/70 border-slate-800"} border rounded-xl overflow-hidden`}>
+                <div className={`px-4 py-2.5 font-semibold text-xs flex justify-between items-center border-b ${isClerk ? "bg-slate-100/80 border-slate-200 text-slate-700" : "bg-slate-900 border-slate-800 text-slate-300"}`}>
+                  <span className="flex items-center gap-1.5 text-teal-600 dark:text-teal-400 font-bold">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Item-by-Item Batch & Stock Delivery Details</span>
+                  </span>
+                  <span className="text-slate-500 font-mono text-[11px]">
+                    {receivingItems.length} line items
+                  </span>
+                </div>
+
+                <div className="max-h-72 overflow-y-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className={`border-b text-[10px] font-bold uppercase tracking-wider ${isClerk ? "border-slate-200 bg-slate-100/50 text-slate-500" : "border-slate-800 bg-slate-900/50 text-slate-400"}`}>
+                        <th className="py-2.5 px-3">Product</th>
+                        <th className="py-2.5 px-2 text-center w-20">Ordered</th>
+                        <th className="py-2.5 px-2 text-center w-36">Received Qty</th>
+                        <th className="py-2.5 px-2 w-44">Batch Code</th>
+                        <th className="py-2.5 px-2 w-36">Expiry Date</th>
+                        <th className="py-2.5 px-3 text-right">Status</th>
                       </tr>
-                    ) : poDetails.length === 0 ? (
-                      <tr>
-                        <td colSpan={4} className="py-3 text-center text-slate-500 text-[11px]">
-                          No items found for this order.
-                        </td>
-                      </tr>
-                    ) : (
-                      poDetails.map((it, idx) => (
-                        <tr key={idx} className="border-b border-slate-800/40 text-[11px]">
-                          <td className="py-1.5 px-3 text-slate-200">{it.product_name}</td>
-                          <td className="py-1.5 px-3 text-right font-mono text-slate-300 font-bold">{it.ordered_qty}</td>
-                          <td className="py-1.5 px-3 text-right font-mono text-slate-400">Rs. {Number(it.unit_cost).toFixed(2)}</td>
-                          <td className="py-1.5 px-3 text-right font-mono text-teal-400 font-semibold">
-                            Rs. {Number(it.line_cost).toFixed(2)}
+                    </thead>
+                    <tbody className={isClerk ? "divide-y divide-slate-100" : "divide-y divide-slate-800/50"}>
+                      {loadingDetails ? (
+                        <tr>
+                          <td colSpan={6} className="py-8 text-center text-slate-400 text-xs">
+                            <Sparkles className="w-5 h-5 mx-auto animate-spin mb-1 text-teal-500" />
+                            Loading line items...
                           </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+                      ) : receivingItems.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="py-6 text-center text-slate-400 text-xs">
+                            No items found in this purchase order.
+                          </td>
+                        </tr>
+                      ) : (
+                        receivingItems.map((item, idx) => {
+                          const shortage = item.ordered_qty - item.received_quantity;
+                          const excess = item.received_quantity - item.ordered_qty;
+                          return (
+                            <tr key={idx} className={isClerk ? "hover:bg-slate-50/80 transition-colors" : "hover:bg-slate-800/30 transition-colors"}>
+                              {/* Product Info */}
+                              <td className="py-2.5 px-3">
+                                <div className="font-semibold text-slate-900 dark:text-white">
+                                  {item.product_name}
+                                </div>
+                                <div className="text-[10px] text-slate-400 font-mono">
+                                  Rs. {Number(item.unit_cost).toFixed(2)} / unit
+                                </div>
+                              </td>
 
-            <form onSubmit={handleReceivePO} className="space-y-4">
-              <div>
-                <label className={theme.modalLabel}>Batch Expiry Date</label>
-                <input
-                  type="date"
-                  required
-                  value={batchExpiryDate}
-                  onChange={(e) => setBatchExpiryDate(e.target.value)}
-                  className={theme.modalInput}
-                />
+                              {/* Ordered Qty */}
+                              <td className="py-2.5 px-2 text-center">
+                                <span className="inline-block px-2 py-1 rounded-lg font-mono font-bold text-xs bg-slate-200/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                                  {item.ordered_qty}
+                                </span>
+                              </td>
+
+                              {/* Received Qty */}
+                              <td className="py-2.5 px-2 text-center">
+                                <div className="flex items-center justify-center gap-1">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    required
+                                    value={item.received_quantity}
+                                    onChange={(e) =>
+                                      handleUpdateReceivingItem(
+                                        idx,
+                                        "received_quantity",
+                                        Math.max(0, Number(e.target.value))
+                                      )
+                                    }
+                                    className={`w-20 text-center font-mono font-bold text-xs py-1 px-2 rounded-lg border ${
+                                      shortage > 0
+                                        ? "border-amber-400 bg-amber-50 text-amber-900 dark:bg-amber-950/40 dark:text-amber-300"
+                                        : isClerk
+                                        ? "border-slate-300 bg-white text-slate-900 focus:border-teal-600"
+                                        : "border-slate-700 bg-slate-900 text-white focus:border-teal-500"
+                                    }`}
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUpdateReceivingItem(idx, "received_quantity", item.ordered_qty)}
+                                    title="Set to full order quantity"
+                                    className="px-1.5 py-1 text-[10px] rounded bg-slate-200 dark:bg-slate-800 hover:bg-teal-500 hover:text-white transition-colors"
+                                  >
+                                    All
+                                  </button>
+                                </div>
+                              </td>
+
+                              {/* Batch Number */}
+                              <td className="py-2.5 px-2">
+                                <input
+                                  type="text"
+                                  required
+                                  value={item.batch_no}
+                                  onChange={(e) => handleUpdateReceivingItem(idx, "batch_no", e.target.value)}
+                                  placeholder="Batch No."
+                                  className={`w-full font-mono text-[11px] py-1 px-2 rounded-lg border ${
+                                    isClerk
+                                      ? "border-slate-300 bg-white text-slate-900 focus:border-teal-600"
+                                      : "border-slate-700 bg-slate-900 text-white focus:border-teal-500"
+                                  }`}
+                                />
+                              </td>
+
+                              {/* Expiry Date */}
+                              <td className="py-2.5 px-2">
+                                <input
+                                  type="date"
+                                  required
+                                  value={item.expiry_date}
+                                  onChange={(e) => handleUpdateReceivingItem(idx, "expiry_date", e.target.value)}
+                                  className={`w-full font-mono text-[11px] py-1 px-2 rounded-lg border ${
+                                    isClerk
+                                      ? "border-slate-300 bg-white text-slate-900 focus:border-teal-600"
+                                      : "border-slate-700 bg-slate-900 text-white focus:border-teal-500"
+                                  }`}
+                                />
+                              </td>
+
+                              {/* Status Badge */}
+                              <td className="py-2.5 px-3 text-right">
+                                {shortage > 0 ? (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800">
+                                    <AlertTriangle className="w-2.5 h-2.5" />
+                                    <span>-{shortage} Short</span>
+                                  </span>
+                                ) : excess > 0 ? (
+                                  <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-300 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800">
+                                    +{excess} Over
+                                  </span>
+                                ) : (
+                                  <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800">
+                                    ✓ Complete
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
 
+              {/* Discrepancy & Summary Alerts */}
+              {receivingItems.some((it) => it.received_quantity !== it.ordered_qty) && (
+                <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-200 text-xs">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-bold">Quantity Discrepancy Detected</div>
+                    <div className="text-[11px] text-amber-700 dark:text-amber-300">
+                      One or more items have shortages or excess counts. Branch inventory will only be incremented by the actual received quantity, and an audit discrepancy log will automatically be recorded.
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Total Units Summary */}
+              <div className="flex flex-wrap items-center justify-between text-xs px-1 text-slate-500 font-mono">
+                <div>
+                  Total Ordered: <strong className="text-slate-800 dark:text-white">{receivingItems.reduce((acc, it) => acc + (it.ordered_qty || 0), 0)}</strong> units
+                </div>
+                <div>
+                  Total Receiving: <strong className="text-teal-700 dark:text-teal-400 font-bold">{receivingItems.reduce((acc, it) => acc + (Number(it.received_quantity) || 0), 0)}</strong> units
+                </div>
+              </div>
+
+              {/* Actions */}
               <div className="flex items-center gap-3 pt-2">
                 <button
                   type="button"
@@ -562,8 +785,8 @@ export default function PurchasesPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={isReceiving}
-                  className="w-2/3 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+                  disabled={isReceiving || receivingItems.length === 0}
+                  className="w-2/3 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-white text-xs font-bold transition-colors flex items-center justify-center gap-2 shadow-sm"
                 >
                   {isReceiving ? <Sparkles className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                   <span>Confirm Receipt & Update Stock</span>

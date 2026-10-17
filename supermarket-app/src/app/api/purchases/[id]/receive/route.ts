@@ -66,55 +66,107 @@ export async function POST(
       );
     }
 
-    // 5. Call ADBMS Stock Clerk Stored Procedure: sp_receive_purchase_order
-    // (Updates inventory stock and marks purchase_orders.status = 'RECEIVED')
-    try {
-      await connection.query("CALL sp_receive_purchase_order(?)", [id]);
-    } catch (spErr: any) {
-      console.warn("sp_receive_purchase_order warning/fallback:", spErr.message);
-      // Fallback in case sp_receive_purchase_order is missing or schema differs
-      await connection.query(
-        `UPDATE inventory i
-         JOIN purchase_order_items poi ON poi.product_id = i.product_id
-         SET i.quantity_on_hand = i.quantity_on_hand + poi.quantity,
-             i.last_updated = NOW()
-         WHERE poi.po_id = ? AND i.branch_id = ?`,
-        [id, po.branch_id]
-      );
-      await connection.query(
-        "UPDATE purchase_orders SET status = 'RECEIVED', received_date = CURRENT_DATE WHERE po_id = ?",
-        [id]
-      );
-    }
+    await connection.beginTransaction();
 
-    // 6. Add product batches for batch tracking & expiry alerts
+    const { items: receivedItems, expiry_date: globalExpiryDate } = body;
     const defaultExpiry =
-      expiry_date ||
-      new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]; // +60 days
+      globalExpiryDate ||
+      new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]; // +60 days fallback
 
+    let anyDiscrepancy = false;
+    const discrepancies: any[] = [];
+
+    // Process each line item with its own batch number, expiry date, and actual received qty
     for (const item of items) {
-      const batchNo = `BATCH-${po.po_number}-${item.po_item_id}`;
+      const customItem = Array.isArray(receivedItems)
+        ? receivedItems.find(
+            (r: any) =>
+              Number(r.po_item_id) === Number(item.po_item_id) ||
+              Number(r.product_id) === Number(item.product_id)
+          )
+        : null;
+
+      const receivedQty =
+        customItem && customItem.received_quantity !== undefined && customItem.received_quantity !== ""
+          ? Math.max(0, Number(customItem.received_quantity))
+          : Number(item.quantity);
+
+      const itemExpiry =
+        (customItem && customItem.expiry_date) || defaultExpiry;
+
+      const itemBatchNo =
+        customItem && customItem.batch_no && customItem.batch_no.trim()
+          ? customItem.batch_no.trim()
+          : `BATCH-${po.po_number || po.po_id}-${item.po_item_id}`;
+
+      // Update actual received quantity on the PO line item
+      try {
+        await connection.query(
+          "UPDATE purchase_order_items SET received_quantity = ? WHERE po_item_id = ?",
+          [receivedQty, item.po_item_id]
+        );
+      } catch (err: any) {
+        console.warn("Could not update received_quantity column:", err.message);
+      }
+
+      // Add to inventory on-hand stock based on actual received quantity
       await connection.query(
-        `INSERT INTO product_batches (product_id, branch_id, batch_no, quantity, received_date, expiry_date)
-         VALUES (?, ?, ?, ?, CURDATE(), ?)`,
-        [item.product_id, po.branch_id, batchNo, item.quantity, defaultExpiry]
+        `UPDATE inventory 
+         SET quantity_on_hand = quantity_on_hand + ?, last_updated = NOW()
+         WHERE branch_id = ? AND product_id = ?`,
+        [receivedQty, po.branch_id, item.product_id]
       );
+
+      // Create FIFO product batch if quantity was received
+      if (receivedQty > 0) {
+        await connection.query(
+          `INSERT INTO product_batches (product_id, branch_id, batch_no, quantity, received_date, expiry_date)
+           VALUES (?, ?, ?, ?, CURDATE(), ?)`,
+          [item.product_id, po.branch_id, itemBatchNo, receivedQty, itemExpiry]
+        );
+      }
+
+      // Track discrepancy if supplier delivered less or more than ordered
+      if (receivedQty !== Number(item.quantity)) {
+        anyDiscrepancy = true;
+        discrepancies.push({
+          po_item_id: item.po_item_id,
+          product_id: item.product_id,
+          ordered_qty: Number(item.quantity),
+          received_qty: receivedQty,
+          difference: receivedQty - Number(item.quantity),
+        });
+      }
     }
 
-    // 7. Record Audit Log
+    // Update purchase order header status to RECEIVED
+    await connection.query(
+      "UPDATE purchase_orders SET status = 'RECEIVED', received_date = CURRENT_DATE WHERE po_id = ?",
+      [id]
+    );
+
+    // Record Audit Log with discrepancy details
     await connection.query(
       `INSERT INTO audit_log (table_name, record_id, action, new_value, changed_by, changed_at)
        VALUES ('purchase_orders', ?, 'UPDATE', ?, ?, NOW())`,
       [
         String(id),
-        JSON.stringify({ status: "RECEIVED", items_count: items.length }),
+        JSON.stringify({
+          status: "RECEIVED",
+          items_count: items.length,
+          has_discrepancy: anyDiscrepancy,
+          discrepancies: discrepancies.length > 0 ? discrepancies : undefined,
+        }),
         `employee_${received_by}`,
       ]
     );
 
+    await connection.commit();
+
     return NextResponse.json({
       success: true,
-      message: `Purchase order ${po.po_number} received successfully. Stock and batches updated.`,
+      has_discrepancy: anyDiscrepancy,
+      message: `Purchase order ${po.po_number || id} received successfully. Stock and batches registered.`,
     });
   } catch (err: any) {
     console.error("POST /api/purchases/[id]/receive error:", err);

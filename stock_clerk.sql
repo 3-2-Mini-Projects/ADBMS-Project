@@ -78,9 +78,11 @@ SELECT
     b.name AS branch_name,
     e.employee_id,
     e.full_name AS created_by,
+    poi.po_item_id,
     p.product_id,
     p.name AS product_name,
     poi.quantity AS ordered_qty,
+    poi.received_quantity,
     poi.unit_cost,
     (poi.quantity * poi.unit_cost) AS line_cost,
     po.total_cost AS order_total
