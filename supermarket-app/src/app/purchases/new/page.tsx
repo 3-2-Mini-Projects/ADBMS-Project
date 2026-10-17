@@ -127,12 +127,13 @@ export default function NewPurchasePage() {
           branch_id: currentBranch.branch_id,
           expected_date: expectedDate || null,
           created_by: currentEmployee?.employee_id || 1,
+          status: "SENT",
           items: validItems,
         }),
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        showToast(`Purchase Order ${data.po_number} created successfully!`, "success");
+        showToast(`Purchase Order ${data.po_number} sent to supplier! Awaiting delivery.`, "success");
         router.push("/purchases");
       } else {
         showToast(data.error || "Failed to create purchase order", "error");
@@ -353,7 +354,7 @@ export default function NewPurchasePage() {
             ) : (
               <CheckCircle2 className="w-4 h-4" />
             )}
-            <span>Generate Purchase Order</span>
+            <span>Send Order to Supplier</span>
           </button>
         </div>
       </form>

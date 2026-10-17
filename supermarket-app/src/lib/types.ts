@@ -249,7 +249,7 @@ export interface PurchaseOrder {
   branch_name?: string;
   order_date: string;
   expected_date?: string | null;
-  status: 'PENDING' | 'ORDERED' | 'RECEIVED' | 'CANCELLED';
+  status: 'DRAFT' | 'SENT' | 'PENDING' | 'ORDERED' | 'RECEIVED' | 'CANCELLED';
   total_cost: number | string;
   created_by: number;
   creator_name?: string;
