@@ -14,41 +14,97 @@ export async function POST(req: Request) {
           message: "Customer tiers recalculated successfully via recalculate_tiers() procedure.",
         });
       } catch (procErr: any) {
-        // Fallback calculation if procedure is not yet compiled in MySQL
-        console.warn("recalculate_tiers() procedure fallback:", procErr.message);
+        console.warn("recalculate_tiers() procedure invocation:", procErr.message);
 
-        const customers: any = await query("SELECT customer_id, tier FROM customers WHERE is_active = 1");
-        let upgraded = 0;
+        try {
+          await query("DROP PROCEDURE IF EXISTS recalculate_tiers");
+          await query(`
+            CREATE PROCEDURE recalculate_tiers()
+            BEGIN
+                DECLARE done INT DEFAULT 0;
+                DECLARE customerId INT;
+                DECLARE old_tier VARCHAR(10);
+                DECLARE new_tier VARCHAR(10);
+                DECLARE customer_points INT;
 
-        for (const c of customers) {
-          const [spendResult]: any = await query(
-            "SELECT COALESCE(SUM(total_amount), 0) AS spending FROM sales WHERE customer_id = ? AND status = 'COMPLETED'",
-            [c.customer_id]
+                DECLARE cur CURSOR FOR
+                    SELECT customer_id, tier, points_balance
+                    FROM customers
+                    WHERE is_active = 1;
+
+                DECLARE CONTINUE HANDLER FOR NOT FOUND
+                    SET done = 1;
+
+                OPEN cur;
+
+                tier_loop: LOOP
+                    FETCH cur INTO customerId, old_tier, customer_points;
+                    IF done = 1 THEN
+                        LEAVE tier_loop;
+                    END IF;
+
+                    IF customer_points >= 3000 THEN
+                        SET new_tier = 'PLATINUM';
+                    ELSEIF customer_points >= 1500 THEN
+                        SET new_tier = 'GOLD';
+                    ELSEIF customer_points >= 500 THEN
+                        SET new_tier = 'SILVER';
+                    ELSE
+                        SET new_tier = 'BRONZE';
+                    END IF;
+
+                    IF old_tier <> new_tier THEN
+                        INSERT INTO customer_tier_history (customer_id, old_tier, new_tier, reason)
+                        VALUES (customerId, old_tier, new_tier, 'Tier recalculated from points balance');
+
+                        UPDATE customers
+                        SET tier = new_tier
+                        WHERE customer_id = customerId;
+                    END IF;
+                END LOOP;
+
+                CLOSE cur;
+            END
+          `);
+          await query("CALL recalculate_tiers()");
+          return NextResponse.json({
+            success: true,
+            message: "Customer tiers recalculated successfully via recalculate_tiers() procedure.",
+          });
+        } catch {
+          // Direct fallback calculation based on points balance
+          const customers: any = await query(
+            "SELECT customer_id, tier, points_balance FROM customers WHERE is_active = 1"
           );
-          const spending = Number(spendResult?.spending ?? 0);
-          let newTier = "BRONZE";
-          if (spending >= 100000) newTier = "PLATINUM";
-          else if (spending >= 50000) newTier = "GOLD";
-          else if (spending >= 20000) newTier = "SILVER";
+          let upgraded = 0;
 
-          if (c.tier !== newTier) {
-            try {
-              await query(
-                "INSERT INTO customer_tier_history (customer_id, old_tier, new_tier, reason) VALUES (?, ?, ?, 'Tier recalculated from completed sales')",
-                [c.customer_id, c.tier, newTier]
-              );
-            } catch {
-              // ignore history insert error if table structure varies
+          for (const c of customers) {
+            const customer_points = Number(c.points_balance || 0);
+            let newTier = "BRONZE";
+            if (customer_points >= 3000) newTier = "PLATINUM";
+            else if (customer_points >= 1500) newTier = "GOLD";
+            else if (customer_points >= 500) newTier = "SILVER";
+            else newTier = "BRONZE";
+
+            if (c.tier !== newTier) {
+              try {
+                await query(
+                  "INSERT INTO customer_tier_history (customer_id, old_tier, new_tier, reason) VALUES (?, ?, ?, 'Tier recalculated from points balance')",
+                  [c.customer_id, c.tier, newTier]
+                );
+              } catch {
+                // ignore history insert error
+              }
+              await query("UPDATE customers SET tier = ? WHERE customer_id = ?", [newTier, c.customer_id]);
+              upgraded++;
             }
-            await query("UPDATE customers SET tier = ? WHERE customer_id = ?", [newTier, c.customer_id]);
-            upgraded++;
           }
-        }
 
-        return NextResponse.json({
-          success: true,
-          message: `Tiers recalculated successfully. (${upgraded} customer tiers updated)`,
-        });
+          return NextResponse.json({
+            success: true,
+            message: `Customer tiers recalculated successfully from points balance. (${upgraded} customer tiers updated)`,
+          });
+        }
       }
     }
 

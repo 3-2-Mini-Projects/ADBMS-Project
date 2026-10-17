@@ -13,7 +13,6 @@ import {
   Search,
   Filter,
   Trophy,
-  ShieldCheck,
   Eye,
   CheckCircle2,
   X,
@@ -46,31 +45,19 @@ interface TopCustomerRow {
   points_balance: number;
 }
 
-interface CustomerEtlRow {
-  customer_id: number;
-  card_no: string;
-  full_name: string;
-  masked_phone: string;
-  email: string;
-  tier: string;
-  points_balance: number;
-  join_date: string;
-}
-
 export default function LoyaltyManagementPage() {
   const { showToast } = useApp();
   const [data, setData] = useState<any>(null);
   const [customerSummaries, setCustomerSummaries] = useState<CustomerSummaryRow[]>([]);
   const [topCustomers, setTopCustomers] = useState<TopCustomerRow[]>([]);
-  const [customerEtl, setCustomerEtl] = useState<CustomerEtlRow[]>([]);
   const [customersList, setCustomersList] = useState<any[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [recalculating, setRecalculating] = useState(false);
   const [submittingAction, setSubmittingAction] = useState(false);
 
-  // Active View Tab: 'summary' (customer_summary_vw) | 'ledger' (loyalty_transactions) | 'top' (top_customers_vw) | 'etl' (customer_etl_vw)
-  const [activeTab, setActiveTab] = useState<"summary" | "ledger" | "top" | "etl">("summary");
+  // Active View Tab: 'summary' (customer_summary_vw) | 'ledger' (loyalty_transactions) | 'top' (top_customers_vw)
+  const [activeTab, setActiveTab] = useState<"summary" | "ledger" | "top">("summary");
 
   // Filtering & Search
   const [selectedTierFilter, setSelectedTierFilter] = useState<string>("ALL");
@@ -88,18 +75,16 @@ export default function LoyaltyManagementPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [dashRes, summaryRes, topRes, etlRes, custRes] = await Promise.all([
+      const [dashRes, summaryRes, topRes, custRes] = await Promise.all([
         fetch("/api/marketing/dashboard").then((r) => r.json()),
         fetch("/api/marketing/actions?view=customer_summary").then((r) => r.json()),
         fetch("/api/marketing/actions?view=top_customers").then((r) => r.json()),
-        fetch("/api/marketing/actions?view=customer_etl").then((r) => r.json()),
         fetch("/api/customers").then((r) => r.json()),
       ]);
 
       if (dashRes && !dashRes.error) setData(dashRes);
       if (Array.isArray(summaryRes)) setCustomerSummaries(summaryRes);
       if (Array.isArray(topRes)) setTopCustomers(topRes);
-      if (Array.isArray(etlRes)) setCustomerEtl(etlRes);
       if (Array.isArray(custRes)) setCustomersList(custRes);
     } catch (err) {
       console.error("Error loading loyalty management data:", err);
@@ -329,7 +314,7 @@ export default function LoyaltyManagementPage() {
                 }`}
             >
               <Users className="w-3.5 h-3.5" />
-              <span>Customer Summary (customer_summary_vw)</span>
+              <span>Customer Summary</span>
             </button>
 
             <button
@@ -354,19 +339,9 @@ export default function LoyaltyManagementPage() {
                 }`}
             >
               <Trophy className="w-3.5 h-3.5" />
-              <span>Top Customers (top_customers_vw)</span>
+              <span>Top Customers</span>
             </button>
 
-            <button
-              onClick={() => setActiveTab("etl")}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${activeTab === "etl"
-                ? "bg-amber-500/10 text-amber-400 border border-amber-500/30 shadow-sm"
-                : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-                }`}
-            >
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>ETL Masked View (customer_etl_vw)</span>
-            </button>
           </div>
 
           {/* Quick Refresh */}
@@ -404,18 +379,15 @@ export default function LoyaltyManagementPage() {
                 <span className="text-[11px] text-slate-400 font-semibold mr-1 flex items-center gap-1">
                   <Filter className="w-3 h-3 text-slate-500" /> Tier:
                 </span>
-                {["ALL", "BRONZE", "SILVER", "GOLD", "PLATINUM"].map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setSelectedTierFilter(t)}
-                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${selectedTierFilter === t
-                      ? "bg-amber-500 text-slate-950 shadow-md"
-                      : "bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white"
-                      }`}
-                  >
-                    {t}
-                  </button>
-                ))}
+                <button
+                  onClick={() => setSelectedTierFilter("ALL")}
+                  className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${selectedTierFilter === "ALL"
+                    ? "bg-amber-500 text-slate-950 shadow-md"
+                    : "bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white"
+                    }`}
+                >
+                  ALL
+                </button>
               </div>
             </div>
 
@@ -653,67 +625,6 @@ export default function LoyaltyManagementPage() {
                         >
                           + Award Points
                         </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* ========================================================================= */}
-        {/* TAB 4: Customer ETL Masked Privacy View (customer_etl_vw) */}
-        {/* ========================================================================= */}
-        {activeTab === "etl" && (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-slate-800 bg-slate-950/40 text-slate-400 font-semibold">
-                  <th className="py-3 px-4 font-mono">Card No</th>
-                  <th className="py-3 px-4">Customer Name</th>
-                  <th className="py-3 px-4 font-mono">Masked Phone (concat left/right)</th>
-                  <th className="py-3 px-4">Email</th>
-                  <th className="py-3 px-4">Tier</th>
-                  <th className="py-3 px-4 text-right">Points Balance</th>
-                  <th className="py-3 px-4">Join Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60 font-mono">
-                {loading ? (
-                  <tr>
-                    <td colSpan={7} className="py-12 text-center text-slate-500 font-sans">
-                      <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-amber-500" />
-                      Querying customer_etl_vw...
-                    </td>
-                  </tr>
-                ) : customerEtl.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="py-12 text-center text-slate-500 font-sans">
-                      No records in customer_etl_vw.
-                    </td>
-                  </tr>
-                ) : (
-                  customerEtl.map((c) => (
-                    <tr key={c.customer_id} className="hover:bg-slate-800/30 transition-colors">
-                      <td className="py-3 px-4 text-amber-400 font-bold">{c.card_no}</td>
-                      <td className="py-3 px-4 font-sans font-medium text-white">{c.full_name}</td>
-                      <td className="py-3 px-4 text-slate-300 font-bold">
-                        <span className="px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700/60 text-slate-300">
-                          {c.masked_phone}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-slate-400 font-sans">{c.email || "—"}</td>
-                      <td className="py-3 px-4">
-                        <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-slate-800 text-slate-300">
-                          {c.tier}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-right font-bold text-amber-300">
-                        {Number(c.points_balance || 0).toLocaleString()} pts
-                      </td>
-                      <td className="py-3 px-4 text-slate-400 text-[11px]">
-                        {c.join_date ? new Date(c.join_date).toLocaleDateString() : "—"}
                       </td>
                     </tr>
                   ))
