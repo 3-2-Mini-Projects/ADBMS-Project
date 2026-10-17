@@ -19,6 +19,7 @@ import {
   ArrowUpRight,
   Pencil,
   Calendar,
+  Lock,
 } from "lucide-react";
 
 export default function CustomersPage() {
@@ -59,11 +60,12 @@ export default function CustomersPage() {
   });
   const [isAdding, setIsAdding] = useState(false);
 
-  const fetchCustomers = async () => {
+  const fetchCustomers = async (queryOverride?: string) => {
     setLoading(true);
     try {
+      const q = queryOverride !== undefined ? queryOverride : search;
       const params = new URLSearchParams();
-      if (search.trim()) params.append("search", search.trim());
+      if (q.trim()) params.append("search", q.trim());
       const res = await fetch(`/api/customers?${params.toString()}`);
       const data = await res.json();
       if (Array.isArray(data)) setCustomers(data);
@@ -74,9 +76,13 @@ export default function CustomersPage() {
     }
   };
 
+  // Debounce search so all customers reload automatically when phone number or search is cleared or changed
   useEffect(() => {
-    fetchCustomers();
-  }, []);
+    const timer = setTimeout(() => {
+      fetchCustomers(search);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const openCustomerEdit = (customer: Customer) => {
     let formattedDate = "";
@@ -157,7 +163,8 @@ export default function CustomersPage() {
         showToast(`Customer registered! Card issued: ${data.card_no}`, "success");
         setAddModalOpen(false);
         setNewCust({ full_name: "", phone: "", email: "", city: "Colombo" });
-        fetchCustomers();
+        setSearch("");
+        fetchCustomers("");
       } else {
         showToast(data.error || "Failed to register customer", "error");
       }
@@ -193,7 +200,7 @@ export default function CustomersPage() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            fetchCustomers();
+            fetchCustomers(search);
           }}
           className="relative flex-1"
         >
@@ -201,10 +208,29 @@ export default function CustomersPage() {
           <input
             type="text"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value;
+              setSearch(val);
+              if (!val.trim()) {
+                fetchCustomers("");
+              }
+            }}
             placeholder="Search customer by name, card number, or phone..."
-            className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white placeholder-slate-500 font-mono focus:border-blue-500"
+            className="w-full pl-9 pr-9 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white placeholder-slate-500 font-mono focus:border-blue-500"
           />
+          {search && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearch("");
+                fetchCustomers("");
+              }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-0.5 rounded transition-colors"
+              title="Clear search and show all customers"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </form>
       </div>
 
@@ -248,12 +274,12 @@ export default function CustomersPage() {
                     <td className="py-3 px-4 text-center">
                       <span
                         className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold ${c.tier === "PLATINUM"
-                            ? "bg-purple-950/60 text-purple-300 border border-purple-800/60"
-                            : c.tier === "GOLD"
-                              ? "bg-amber-950/60 text-amber-300 border border-amber-800/60"
-                              : c.tier === "SILVER"
-                                ? "bg-slate-800 text-slate-300 border border-slate-700"
-                                : "bg-orange-950/60 text-orange-300 border border-orange-800/60"
+                          ? "bg-purple-950/60 text-purple-300 border border-purple-800/60"
+                          : c.tier === "GOLD"
+                            ? "bg-amber-950/60 text-amber-300 border border-amber-800/60"
+                            : c.tier === "SILVER"
+                              ? "bg-slate-800 text-slate-300 border border-slate-700"
+                              : "bg-orange-950/60 text-orange-300 border border-orange-800/60"
                           }`}
                       >
                         {c.tier}
@@ -336,8 +362,8 @@ export default function CustomersPage() {
                           <td className="py-2">
                             <span
                               className={`text-[9px] font-mono px-1.5 py-0.2 rounded font-bold ${lt.transaction_type === "EARNED"
-                                  ? "bg-emerald-950 text-emerald-300"
-                                  : "bg-rose-950 text-rose-300"
+                                ? "bg-emerald-950 text-emerald-300"
+                                : "bg-rose-950 text-rose-300"
                                 }`}
                             >
                               {lt.transaction_type}
@@ -494,9 +520,6 @@ export default function CustomersPage() {
                   <Pencil className="w-4 h-4 text-blue-400" />
                   <span>Edit Customer Details</span>
                 </h3>
-                <div className="text-[11px] text-slate-400 font-mono mt-0.5">
-                  Update customer card number, personal details, tier, and joining date.
-                </div>
               </div>
               <button
                 onClick={() => {
@@ -510,17 +533,27 @@ export default function CustomersPage() {
             </div>
 
             <form onSubmit={handleUpdateCustomer} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Row 1: Card Number & Full Name */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs text-slate-300 block mb-1">Card Number</label>
-                  <input
-                    type="text"
-                    required
-                    value={editingCustomer.card_no}
-                    onChange={(e) => setEditingCustomer({ ...editingCustomer, card_no: e.target.value.toUpperCase() })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 font-mono text-xs text-amber-300 font-bold focus:border-amber-500"
-                    placeholder="e.g. C0007"
-                  />
+                  <label className="text-xs text-slate-300 block mb-1 flex items-center justify-between">
+                    <span>Card Number</span>
+                    <span className="text-[10px] text-amber-400 font-mono flex items-center gap-1">
+                      <Lock className="w-2.5 h-2.5" />
+                      Locked
+                    </span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      readOnly
+                      disabled
+                      value={editingCustomer.card_no}
+                      className="w-full px-3 py-2 pr-8 rounded-xl bg-slate-950/70 border border-slate-800 font-mono text-xs text-amber-300/80 font-bold cursor-not-allowed select-none opacity-90"
+                      title="Card Number is permanently assigned and cannot be changed"
+                    />
+                    <Lock className="w-3.5 h-3.5 text-slate-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
                 </div>
 
                 <div>
@@ -533,7 +566,10 @@ export default function CustomersPage() {
                     className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus:border-blue-500"
                   />
                 </div>
+              </div>
 
+              {/* Row 2: Phone Number & Joining Date */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs text-slate-300 block mb-1">Phone Number</label>
                   <input
@@ -544,8 +580,23 @@ export default function CustomersPage() {
                     className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 font-mono text-xs text-white focus:border-blue-500"
                   />
                 </div>
+
+                <div>
+                  <label className="text-xs text-slate-300 block mb-1 flex items-center gap-1">
+                    <Calendar className="w-3 h-3 text-blue-400" />
+                    <span>Joining Date</span>
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={editingCustomer.join_date}
+                    onChange={(e) => setEditingCustomer({ ...editingCustomer, join_date: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 font-mono text-xs text-white focus:border-blue-500"
+                  />
+                </div>
               </div>
 
+              {/* Row 3: Email & City */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs text-slate-300 block mb-1">Email</label>
@@ -569,7 +620,8 @@ export default function CustomersPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Row 4: Membership Tier & Points Balance */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs text-slate-300 block mb-1">Membership Tier</label>
                   <select
@@ -594,20 +646,6 @@ export default function CustomersPage() {
                     className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 font-mono text-xs text-white focus:border-blue-500"
                   />
                 </div>
-
-                <div>
-                  <label className="text-xs text-slate-300 block mb-1 flex items-center gap-1">
-                    <Calendar className="w-3 h-3 text-blue-400" />
-                    <span>Joining Date</span>
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={editingCustomer.join_date}
-                    onChange={(e) => setEditingCustomer({ ...editingCustomer, join_date: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 font-mono text-xs text-white focus:border-blue-500"
-                  />
-                </div>
               </div>
 
               <div className="flex items-center justify-between pt-3 border-t border-slate-800">
@@ -623,7 +661,6 @@ export default function CustomersPage() {
                   className="text-xs text-slate-400 hover:text-slate-200 flex items-center gap-1.5 transition-colors"
                 >
                   <History className="w-3.5 h-3.5" />
-                  <span>View Points Ledger</span>
                 </button>
 
                 <div className="flex items-center gap-2">

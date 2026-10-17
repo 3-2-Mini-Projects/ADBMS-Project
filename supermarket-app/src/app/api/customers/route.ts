@@ -112,8 +112,7 @@ export async function PUT(req: Request) {
 
     await query(
       `UPDATE customers
-       SET card_no = COALESCE(?, card_no),
-           full_name = ?,
+       SET full_name = ?,
            phone = ?,
            email = ?,
            city = ?,
@@ -123,7 +122,6 @@ export async function PUT(req: Request) {
            is_active = COALESCE(?, is_active)
        WHERE customer_id = ?`,
       [
-        card_no || null,
         full_name,
         phone,
         email || null,

@@ -255,7 +255,7 @@ export default function LoyaltyManagementPage() {
         <div>
           <h1 className="text-2xl font-black text-white flex items-center gap-2.5">
             <Award className="w-6 h-6 text-amber-400" />
-            <span>Loyalty Program & Points Management</span>
+            <span>Loyalty Points Management</span>
           </h1>
         </div>
 
@@ -341,8 +341,8 @@ export default function LoyaltyManagementPage() {
             <button
               onClick={() => setActiveTab("summary")}
               className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${activeTab === "summary"
-                  ? "bg-amber-500/10 text-amber-400 border border-amber-500/30 shadow-sm"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+                ? "bg-amber-500/10 text-amber-400 border border-amber-500/30 shadow-sm"
+                : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
                 }`}
             >
               <Users className="w-3.5 h-3.5" />
@@ -352,8 +352,8 @@ export default function LoyaltyManagementPage() {
             <button
               onClick={() => setActiveTab("ledger")}
               className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${activeTab === "ledger"
-                  ? "bg-amber-500/10 text-amber-400 border border-amber-500/30 shadow-sm"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+                ? "bg-amber-500/10 text-amber-400 border border-amber-500/30 shadow-sm"
+                : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
                 }`}
             >
               <History className="w-3.5 h-3.5" />
@@ -366,8 +366,8 @@ export default function LoyaltyManagementPage() {
             <button
               onClick={() => setActiveTab("top")}
               className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${activeTab === "top"
-                  ? "bg-amber-500/10 text-amber-400 border border-amber-500/30 shadow-sm"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+                ? "bg-amber-500/10 text-amber-400 border border-amber-500/30 shadow-sm"
+                : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
                 }`}
             >
               <Trophy className="w-3.5 h-3.5" />
@@ -377,8 +377,8 @@ export default function LoyaltyManagementPage() {
             <button
               onClick={() => setActiveTab("etl")}
               className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${activeTab === "etl"
-                  ? "bg-amber-500/10 text-amber-400 border border-amber-500/30 shadow-sm"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+                ? "bg-amber-500/10 text-amber-400 border border-amber-500/30 shadow-sm"
+                : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
                 }`}
             >
               <ShieldCheck className="w-3.5 h-3.5" />
@@ -426,8 +426,8 @@ export default function LoyaltyManagementPage() {
                     key={t}
                     onClick={() => setSelectedTierFilter(t)}
                     className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${selectedTierFilter === t
-                        ? "bg-amber-500 text-slate-950 shadow-md"
-                        : "bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white"
+                      ? "bg-amber-500 text-slate-950 shadow-md"
+                      : "bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white"
                       }`}
                   >
                     {t}
@@ -477,12 +477,12 @@ export default function LoyaltyManagementPage() {
                         <td className="py-3 px-4">
                           <span
                             className={`text-[10px] px-2 py-0.5 rounded font-bold ${c.tier === "PLATINUM"
-                                ? "bg-purple-950 text-purple-300 border border-purple-800/40"
-                                : c.tier === "GOLD"
-                                  ? "bg-amber-950 text-amber-300 border border-amber-800/40"
-                                  : c.tier === "SILVER"
-                                    ? "bg-slate-800 text-slate-200 border border-slate-700"
-                                    : "bg-orange-950 text-orange-300 border border-orange-800/40"
+                              ? "bg-purple-950 text-purple-300 border border-purple-800/40"
+                              : c.tier === "GOLD"
+                                ? "bg-amber-950 text-amber-300 border border-amber-800/40"
+                                : c.tier === "SILVER"
+                                  ? "bg-slate-800 text-slate-200 border border-slate-700"
+                                  : "bg-orange-950 text-orange-300 border border-orange-800/40"
                               }`}
                           >
                             {c.tier}
@@ -576,8 +576,8 @@ export default function LoyaltyManagementPage() {
                       <td className="py-3 px-4">
                         <span
                           className={`text-[9px] px-2 py-0.5 rounded font-bold ${lt.transaction_type === "EARNED"
-                              ? "bg-emerald-950 text-emerald-300 border border-emerald-800/40"
-                              : "bg-rose-950 text-rose-300 border border-rose-800/40"
+                            ? "bg-emerald-950 text-emerald-300 border border-emerald-800/40"
+                            : "bg-rose-950 text-rose-300 border border-rose-800/40"
                             }`}
                         >
                           {lt.transaction_type}
