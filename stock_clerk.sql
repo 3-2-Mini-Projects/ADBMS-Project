@@ -78,9 +78,15 @@ SELECT
     b.name AS branch_name,
     e.employee_id,
     e.full_name AS created_by,
+    poi.po_item_id,
     p.product_id,
     p.name AS product_name,
     poi.quantity AS ordered_qty,
+    poi.received_quantity,
+    poi.damaged_quantity,
+    poi.shortage_quantity,
+    poi.discrepancy_reason,
+    poi.discrepancy_notes,
     poi.unit_cost,
     (poi.quantity * poi.unit_cost) AS line_cost,
     po.total_cost AS order_total
@@ -254,6 +260,26 @@ BEGIN
     END IF;
 
     RETURN DATEDIFF(p_expiry_date, CURRENT_DATE);
+END $$
+
+-- FUNCTION 6: Estimated Branch Replenishment Cost (Total budget required to restock)
+CREATE FUNCTION fn_branch_replenishment_cost(
+    p_branch_id INT
+)
+RETURNS DECIMAL(12,2)
+READS SQL DATA
+BEGIN
+    DECLARE v_total_cost DECIMAL(12,2) DEFAULT 0.00;
+
+    SELECT COALESCE(SUM(
+        fn_suggested_reorder_qty(i.branch_id, i.product_id, 4, 1) * p.cost_price
+    ), 0.00)
+    INTO v_total_cost
+    FROM inventory i
+    JOIN products p ON p.product_id = i.product_id
+    WHERE (p_branch_id IS NULL OR i.branch_id = p_branch_id);
+
+    RETURN v_total_cost;
 END $$
 
 DELIMITER ;

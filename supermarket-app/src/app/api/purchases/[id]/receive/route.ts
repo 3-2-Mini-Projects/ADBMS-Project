@@ -66,57 +66,160 @@ export async function POST(
       );
     }
 
-    // 5. Call ADBMS Stock Clerk Stored Procedure: sp_receive_purchase_order
-    // (Updates inventory stock and marks purchase_orders.status = 'RECEIVED')
-    try {
-      await connection.query("CALL sp_receive_purchase_order(?)", [id]);
-    } catch (spErr: any) {
-      console.warn("sp_receive_purchase_order warning/fallback:", spErr.message);
-      // Fallback in case sp_receive_purchase_order is missing or schema differs
-      await connection.query(
-        `UPDATE inventory i
-         JOIN purchase_order_items poi ON poi.product_id = i.product_id
-         SET i.quantity_on_hand = i.quantity_on_hand + poi.quantity,
-             i.last_updated = NOW()
-         WHERE poi.po_id = ? AND i.branch_id = ?`,
-        [id, po.branch_id]
-      );
-      await connection.query(
-        "UPDATE purchase_orders SET status = 'RECEIVED', received_date = CURRENT_DATE WHERE po_id = ?",
-        [id]
-      );
-    }
+    await connection.beginTransaction();
 
-    // 6. Add product batches for batch tracking & expiry alerts
+    const { items: receivedItems, expiry_date: globalExpiryDate } = body;
     const defaultExpiry =
-      expiry_date ||
-      new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]; // +60 days
+      globalExpiryDate ||
+      new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]; // +60 days fallback
 
+    let anyDiscrepancy = false;
+    let totalClaimAmount = 0;
+    const discrepancies: any[] = [];
+
+    // Process each line item with its own batch number, expiry date, good received qty, and damaged qty
     for (const item of items) {
-      const batchNo = `BATCH-${po.po_number}-${item.po_item_id}`;
+      const customItem = Array.isArray(receivedItems)
+        ? receivedItems.find(
+            (r: any) =>
+              Number(r.po_item_id) === Number(item.po_item_id) ||
+              Number(r.product_id) === Number(item.product_id)
+          )
+        : null;
+
+      const receivedQty =
+        customItem && customItem.received_quantity !== undefined && customItem.received_quantity !== ""
+          ? Math.max(0, Number(customItem.received_quantity))
+          : Number(item.quantity);
+
+      const damagedQty =
+        customItem && customItem.damaged_quantity !== undefined && customItem.damaged_quantity !== ""
+          ? Math.max(0, Number(customItem.damaged_quantity))
+          : 0;
+
+      const discrepancyReason =
+        customItem && customItem.discrepancy_reason
+          ? customItem.discrepancy_reason
+          : (damagedQty > 0 ? "DAMAGED_IN_TRANSIT" : "NONE");
+
+      const discrepancyNotes =
+        customItem && customItem.discrepancy_notes
+          ? String(customItem.discrepancy_notes).trim()
+          : null;
+
+      const orderedQty = Number(item.quantity);
+      const totalAccountedFor = receivedQty + damagedQty;
+      const shortageQty = Math.max(0, orderedQty - totalAccountedFor);
+      const itemUnitCost = Number(item.unit_cost || 0);
+      const claimAmount = (damagedQty + shortageQty) * itemUnitCost;
+
+      const itemExpiry =
+        (customItem && customItem.expiry_date) || defaultExpiry;
+
+      const itemBatchNo =
+        customItem && customItem.batch_no && customItem.batch_no.trim()
+          ? customItem.batch_no.trim()
+          : `BATCH-${po.po_number || po.po_id}-${item.po_item_id}`;
+
+      // Update actual received quantity, damaged qty, shortage qty, and reason on the PO line item
+      try {
+        await connection.query(
+          `UPDATE purchase_order_items 
+           SET received_quantity = ?, 
+               damaged_quantity = ?, 
+               shortage_quantity = ?, 
+               discrepancy_reason = ?, 
+               discrepancy_notes = ? 
+           WHERE po_item_id = ?`,
+          [
+            receivedQty,
+            damagedQty,
+            shortageQty,
+            discrepancyReason,
+            discrepancyNotes,
+            item.po_item_id,
+          ]
+        );
+      } catch (err: any) {
+        console.warn("Could not update purchase_order_items discrepancy fields:", err.message);
+      }
+
+      // Add to inventory on-hand stock based ONLY on actual good, usable received quantity
+      // Damaged items are rejected at the dock and NOT added to supermarket stock
       await connection.query(
-        `INSERT INTO product_batches (product_id, branch_id, batch_no, quantity, received_date, expiry_date)
-         VALUES (?, ?, ?, ?, CURDATE(), ?)`,
-        [item.product_id, po.branch_id, batchNo, item.quantity, defaultExpiry]
+        `UPDATE inventory 
+         SET quantity_on_hand = quantity_on_hand + ?, last_updated = NOW()
+         WHERE branch_id = ? AND product_id = ?`,
+        [receivedQty, po.branch_id, item.product_id]
       );
+
+      // Create FIFO product batch if usable quantity was received
+      if (receivedQty > 0) {
+        await connection.query(
+          `INSERT INTO product_batches (product_id, branch_id, batch_no, quantity, received_date, expiry_date)
+           VALUES (?, ?, ?, ?, CURDATE(), ?)`,
+          [item.product_id, po.branch_id, itemBatchNo, receivedQty, itemExpiry]
+        );
+      }
+
+      // Track discrepancy if damaged goods exist or supplier delivered short/excess
+      if (damagedQty > 0 || shortageQty > 0 || receivedQty !== orderedQty) {
+        anyDiscrepancy = true;
+        totalClaimAmount += claimAmount;
+        discrepancies.push({
+          po_item_id: item.po_item_id,
+          product_id: item.product_id,
+          ordered_qty: orderedQty,
+          received_qty: receivedQty,
+          damaged_qty: damagedQty,
+          shortage_qty: shortageQty,
+          discrepancy_reason: discrepancyReason,
+          discrepancy_notes: discrepancyNotes,
+          unit_cost: itemUnitCost,
+          claim_amount: claimAmount,
+        });
+      }
     }
 
-    // 7. Record Audit Log
+    // Update purchase order header status to RECEIVED
+    await connection.query(
+      "UPDATE purchase_orders SET status = 'RECEIVED', received_date = CURRENT_DATE WHERE po_id = ?",
+      [id]
+    );
+
+    // Record Audit Log with complete discrepancy breakdown and financial claim
     await connection.query(
       `INSERT INTO audit_log (table_name, record_id, action, new_value, changed_by, changed_at)
        VALUES ('purchase_orders', ?, 'UPDATE', ?, ?, NOW())`,
       [
         String(id),
-        JSON.stringify({ status: "RECEIVED", items_count: items.length }),
+        JSON.stringify({
+          action_type: anyDiscrepancy ? "RECEIVE_DISCREPANCY" : "RECEIVE_ORDER",
+          status: "RECEIVED",
+          items_count: items.length,
+          has_discrepancy: anyDiscrepancy,
+          total_claim_amount: totalClaimAmount,
+          discrepancies: discrepancies.length > 0 ? discrepancies : undefined,
+        }),
         `employee_${received_by}`,
       ]
     );
 
+    await connection.commit();
+
     return NextResponse.json({
       success: true,
-      message: `Purchase order ${po.po_number} received successfully. Stock and batches updated.`,
+      has_discrepancy: anyDiscrepancy,
+      total_claim_amount: totalClaimAmount,
+      discrepancies,
+      message: `Purchase order ${po.po_number || id} received successfully. Stock and batches registered.`,
     });
   } catch (err: any) {
+    try {
+      await connection.rollback();
+    } catch {
+      // ignore rollback error
+    }
     console.error("POST /api/purchases/[id]/receive error:", err);
     return NextResponse.json({ error: err.message }, { status: 400 });
   } finally {
