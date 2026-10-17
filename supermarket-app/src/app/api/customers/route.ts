@@ -5,30 +5,56 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const search = searchParams.get("search");
+    const branchId = searchParams.get("branchId");
 
     let sql = `
       SELECT 
-        customer_id,
-        card_no,
-        full_name,
-        phone,
-        email,
-        city,
-        join_date,
-        tier,
-        points_balance,
-        is_active
-      FROM customers
+        c.customer_id,
+        c.card_no,
+        c.full_name,
+        c.phone,
+        c.email,
+        c.city,
+        c.join_date,
+        c.tier,
+        c.points_balance,
+        c.is_active
+      FROM customers c
       WHERE 1=1
     `;
     const params: any[] = [];
 
     if (search) {
-      sql += ` AND (card_no = ? OR phone LIKE ? OR full_name LIKE ?)`;
+      sql += ` AND (c.card_no = ? OR c.phone LIKE ? OR c.full_name LIKE ?)`;
       params.push(search, `%${search}%`, `%${search}%`);
     }
 
-    sql += ` ORDER BY customer_id DESC`;
+    if (branchId && branchId !== "ALL" && branchId !== "0") {
+      let hasBranchCol = false;
+      try {
+        await query(`SELECT branch_id FROM customers LIMIT 1`);
+        hasBranchCol = true;
+      } catch {
+        hasBranchCol = false;
+      }
+
+      if (hasBranchCol) {
+        sql += ` AND (
+          c.branch_id = ?
+          OR c.customer_id IN (SELECT DISTINCT s.customer_id FROM sales s WHERE s.branch_id = ? AND s.customer_id IS NOT NULL)
+          OR LOWER(TRIM(c.city)) = (SELECT LOWER(TRIM(b.city)) FROM branches b WHERE b.branch_id = ?)
+        )`;
+        params.push(branchId, branchId, branchId);
+      } else {
+        sql += ` AND (
+          c.customer_id IN (SELECT DISTINCT s.customer_id FROM sales s WHERE s.branch_id = ? AND s.customer_id IS NOT NULL)
+          OR LOWER(TRIM(c.city)) = (SELECT LOWER(TRIM(b.city)) FROM branches b WHERE b.branch_id = ?)
+        )`;
+        params.push(branchId, branchId);
+      }
+    }
+
+    sql += ` ORDER BY c.customer_id DESC`;
 
     const customers = await query(sql, params);
     return NextResponse.json(customers);
@@ -118,7 +144,6 @@ export async function PUT(req: Request) {
            city = ?,
            tier = COALESCE(?, tier),
            points_balance = COALESCE(?, points_balance),
-           join_date = COALESCE(?, join_date),
            is_active = COALESCE(?, is_active)
        WHERE customer_id = ?`,
       [
@@ -128,7 +153,6 @@ export async function PUT(req: Request) {
         city || null,
         tier || null,
         points_balance !== undefined ? points_balance : null,
-        formattedJoinDate,
         is_active !== undefined ? is_active : null,
         customer_id,
       ]

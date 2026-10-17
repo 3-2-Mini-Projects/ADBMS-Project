@@ -259,25 +259,8 @@ export default function LoyaltyManagementPage() {
           </h1>
         </div>
 
-        {/* Action Buttons: Award, Redeem, Recalculate */}
+        {/* Action Buttons: Recalculate */}
         <div className="flex items-center gap-2.5 flex-wrap">
-          <button
-            onClick={() => openAwardModal()}
-            className="px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-semibold flex items-center gap-2 shadow-lg shadow-emerald-950/40 border border-emerald-500/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
-            title="Award points to customer via add_ltpoints stored procedure"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Award Points (add_ltpoints)</span>
-          </button>
-
-          <button
-            onClick={() => openRedeemModal()}
-            className="px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white text-xs font-semibold flex items-center gap-2 shadow-lg shadow-rose-950/40 border border-rose-500/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
-            title="Redeem points for customer via redeem_points stored procedure"
-          >
-            <Minus className="w-4 h-4" />
-            <span>Redeem Points (redeem_points)</span>
-          </button>
 
           <button
             onClick={handleRecalculateTiers}
