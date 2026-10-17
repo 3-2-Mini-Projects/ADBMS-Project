@@ -40,6 +40,28 @@ export default function NewPurchasePage() {
       .then(([suppliersData, productsData]) => {
         if (Array.isArray(suppliersData)) setSuppliers(suppliersData);
         if (Array.isArray(productsData)) setProducts(productsData);
+
+        // Pre-fill if navigated from /inventory/reorder-suggestions with productId & quantity
+        if (typeof window !== "undefined") {
+          const params = new URLSearchParams(window.location.search);
+          const pId = params.get("productId");
+          const pQty = params.get("quantity");
+          if (pId && Array.isArray(productsData)) {
+            const found = productsData.find((p: any) => String(p.product_id) === String(pId));
+            if (found) {
+              if (found.supplier_id) {
+                setSupplierId(String(found.supplier_id));
+              }
+              setPoItems([
+                {
+                  product_id: String(found.product_id),
+                  quantity: pQty && Number(pQty) > 0 ? Number(pQty) : 50,
+                  unit_cost: Number(found.cost_price || 0),
+                },
+              ]);
+            }
+          }
+        }
       })
       .catch((err) => {
         console.error("Failed to load initial data:", err);
