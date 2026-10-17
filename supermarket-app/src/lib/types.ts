@@ -256,6 +256,15 @@ export interface PurchaseOrder {
   items?: PurchaseOrderItem[];
 }
 
+export type DiscrepancyReason =
+  | 'NONE'
+  | 'DAMAGED_IN_TRANSIT'
+  | 'PACKAGING_BROKEN'
+  | 'EXPIRED_ON_ARRIVAL'
+  | 'SUPPLIER_SHORTAGE'
+  | 'WRONG_PRODUCT'
+  | 'QUALITY_DEFECT';
+
 export interface PurchaseOrderItem {
   po_item_id: number;
   po_id: number;
@@ -266,6 +275,10 @@ export interface PurchaseOrderItem {
   unit_cost: number | string;
   line_total: number | string;
   received_quantity?: number;
+  damaged_quantity?: number;
+  shortage_quantity?: number;
+  discrepancy_reason?: DiscrepancyReason;
+  discrepancy_notes?: string | null;
 }
 
 export interface Shift {

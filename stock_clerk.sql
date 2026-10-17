@@ -83,6 +83,10 @@ SELECT
     p.name AS product_name,
     poi.quantity AS ordered_qty,
     poi.received_quantity,
+    poi.damaged_quantity,
+    poi.shortage_quantity,
+    poi.discrepancy_reason,
+    poi.discrepancy_notes,
     poi.unit_cost,
     (poi.quantity * poi.unit_cost) AS line_cost,
     po.total_cost AS order_total

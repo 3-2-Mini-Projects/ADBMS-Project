@@ -74,9 +74,10 @@ export async function POST(
       new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]; // +60 days fallback
 
     let anyDiscrepancy = false;
+    let totalClaimAmount = 0;
     const discrepancies: any[] = [];
 
-    // Process each line item with its own batch number, expiry date, and actual received qty
+    // Process each line item with its own batch number, expiry date, good received qty, and damaged qty
     for (const item of items) {
       const customItem = Array.isArray(receivedItems)
         ? receivedItems.find(
@@ -91,6 +92,27 @@ export async function POST(
           ? Math.max(0, Number(customItem.received_quantity))
           : Number(item.quantity);
 
+      const damagedQty =
+        customItem && customItem.damaged_quantity !== undefined && customItem.damaged_quantity !== ""
+          ? Math.max(0, Number(customItem.damaged_quantity))
+          : 0;
+
+      const discrepancyReason =
+        customItem && customItem.discrepancy_reason
+          ? customItem.discrepancy_reason
+          : (damagedQty > 0 ? "DAMAGED_IN_TRANSIT" : "NONE");
+
+      const discrepancyNotes =
+        customItem && customItem.discrepancy_notes
+          ? String(customItem.discrepancy_notes).trim()
+          : null;
+
+      const orderedQty = Number(item.quantity);
+      const totalAccountedFor = receivedQty + damagedQty;
+      const shortageQty = Math.max(0, orderedQty - totalAccountedFor);
+      const itemUnitCost = Number(item.unit_cost || 0);
+      const claimAmount = (damagedQty + shortageQty) * itemUnitCost;
+
       const itemExpiry =
         (customItem && customItem.expiry_date) || defaultExpiry;
 
@@ -99,17 +121,31 @@ export async function POST(
           ? customItem.batch_no.trim()
           : `BATCH-${po.po_number || po.po_id}-${item.po_item_id}`;
 
-      // Update actual received quantity on the PO line item
+      // Update actual received quantity, damaged qty, shortage qty, and reason on the PO line item
       try {
         await connection.query(
-          "UPDATE purchase_order_items SET received_quantity = ? WHERE po_item_id = ?",
-          [receivedQty, item.po_item_id]
+          `UPDATE purchase_order_items 
+           SET received_quantity = ?, 
+               damaged_quantity = ?, 
+               shortage_quantity = ?, 
+               discrepancy_reason = ?, 
+               discrepancy_notes = ? 
+           WHERE po_item_id = ?`,
+          [
+            receivedQty,
+            damagedQty,
+            shortageQty,
+            discrepancyReason,
+            discrepancyNotes,
+            item.po_item_id,
+          ]
         );
       } catch (err: any) {
-        console.warn("Could not update received_quantity column:", err.message);
+        console.warn("Could not update purchase_order_items discrepancy fields:", err.message);
       }
 
-      // Add to inventory on-hand stock based on actual received quantity
+      // Add to inventory on-hand stock based ONLY on actual good, usable received quantity
+      // Damaged items are rejected at the dock and NOT added to supermarket stock
       await connection.query(
         `UPDATE inventory 
          SET quantity_on_hand = quantity_on_hand + ?, last_updated = NOW()
@@ -117,7 +153,7 @@ export async function POST(
         [receivedQty, po.branch_id, item.product_id]
       );
 
-      // Create FIFO product batch if quantity was received
+      // Create FIFO product batch if usable quantity was received
       if (receivedQty > 0) {
         await connection.query(
           `INSERT INTO product_batches (product_id, branch_id, batch_no, quantity, received_date, expiry_date)
@@ -126,15 +162,21 @@ export async function POST(
         );
       }
 
-      // Track discrepancy if supplier delivered less or more than ordered
-      if (receivedQty !== Number(item.quantity)) {
+      // Track discrepancy if damaged goods exist or supplier delivered short/excess
+      if (damagedQty > 0 || shortageQty > 0 || receivedQty !== orderedQty) {
         anyDiscrepancy = true;
+        totalClaimAmount += claimAmount;
         discrepancies.push({
           po_item_id: item.po_item_id,
           product_id: item.product_id,
-          ordered_qty: Number(item.quantity),
+          ordered_qty: orderedQty,
           received_qty: receivedQty,
-          difference: receivedQty - Number(item.quantity),
+          damaged_qty: damagedQty,
+          shortage_qty: shortageQty,
+          discrepancy_reason: discrepancyReason,
+          discrepancy_notes: discrepancyNotes,
+          unit_cost: itemUnitCost,
+          claim_amount: claimAmount,
         });
       }
     }
@@ -145,16 +187,18 @@ export async function POST(
       [id]
     );
 
-    // Record Audit Log with discrepancy details
+    // Record Audit Log with complete discrepancy breakdown and financial claim
     await connection.query(
       `INSERT INTO audit_log (table_name, record_id, action, new_value, changed_by, changed_at)
        VALUES ('purchase_orders', ?, 'UPDATE', ?, ?, NOW())`,
       [
         String(id),
         JSON.stringify({
+          action_type: anyDiscrepancy ? "RECEIVE_DISCREPANCY" : "RECEIVE_ORDER",
           status: "RECEIVED",
           items_count: items.length,
           has_discrepancy: anyDiscrepancy,
+          total_claim_amount: totalClaimAmount,
           discrepancies: discrepancies.length > 0 ? discrepancies : undefined,
         }),
         `employee_${received_by}`,
@@ -166,9 +210,16 @@ export async function POST(
     return NextResponse.json({
       success: true,
       has_discrepancy: anyDiscrepancy,
+      total_claim_amount: totalClaimAmount,
+      discrepancies,
       message: `Purchase order ${po.po_number || id} received successfully. Stock and batches registered.`,
     });
   } catch (err: any) {
+    try {
+      await connection.rollback();
+    } catch {
+      // ignore rollback error
+    }
     console.error("POST /api/purchases/[id]/receive error:", err);
     return NextResponse.json({ error: err.message }, { status: 400 });
   } finally {
