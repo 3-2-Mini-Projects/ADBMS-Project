@@ -140,6 +140,10 @@ export default function LoginPage() {
         "success"
       );
 
+      if (data?.user?.role === "CASHIER" && data?.user?.employee_id && typeof window !== "undefined") {
+        localStorage.setItem("nexus_cashier_id", String(data.user.employee_id));
+      }
+
       const targetPath = getRoleDefaultPath(data?.user?.role);
       await refreshAppData().catch(() => {});
       router.push(targetPath);
@@ -192,6 +196,10 @@ export default function LoginPage() {
         `Account setup complete! Welcome, ${data?.user?.full_name || "Employee"}!`,
         "success"
       );
+
+      if (data?.user?.role === "CASHIER" && data?.user?.employee_id && typeof window !== "undefined") {
+        localStorage.setItem("nexus_cashier_id", String(data.user.employee_id));
+      }
 
       const targetPath = getRoleDefaultPath(data?.user?.role);
       await refreshAppData().catch(() => {});

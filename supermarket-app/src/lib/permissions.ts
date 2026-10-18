@@ -109,7 +109,7 @@ export function getRoleDefaultPath(role?: UserRole | null): string {
     case "MANAGER":
       return "/dashboard";
     case "CASHIER":
-      return "/pos";
+      return "/cashier/dashboard";
     case "STOCK_CLERK":
       return "/inventory";
     case "CATALOG_MANAGER":

@@ -208,6 +208,7 @@ const CASHIER_NAV_GROUPS: NavGroup[] = [
   {
     group: "POINT OF SALE",
     items: [
+      { title: "Cashier Dashboard", href: "/cashier/dashboard", icon: LayoutDashboard },
       { title: "POS Checkout", href: "/pos", icon: ShoppingCart, badge: "Live", highlight: true },
       { title: "Sales History", href: "/sales", icon: Receipt },
       { title: "Returns & Refunds", href: "/returns", icon: RotateCcw },
@@ -269,6 +270,8 @@ export function Sidebar() {
                   ? "/marketing/dashboard"
                   : role === "STOCK_CLERK"
                   ? "/inventory/dashboard"
+                  : role === "CASHIER"
+                  ? "/cashier/dashboard"
                   : "/dashboard"
               }
               className="flex items-center gap-2.5"
