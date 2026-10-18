@@ -54,23 +54,23 @@ const ADMIN_NAV_GROUPS: NavGroup[] = [
   {
     group: "ADMINISTRATION",
     items: [
-      { title: "Admin Console", href: "/dashboard", icon: ShieldCheck, badge: "Admin", highlight: true },
-      { title: "Branch Management", href: "/branches", icon: Store, permission: "manage_branches" },
-      { title: "Employee & Roles", href: "/employees", icon: UserCog, permission: "manage_employees" },
+      { title: "Admin Console", href: "/admin", icon: ShieldCheck, badge: "Admin", highlight: true },
+      { title: "Branch Management", href: "/admin/branches", icon: Store, permission: "manage_branches" },
+      { title: "Employee & Roles", href: "/admin/employees", icon: UserCog, permission: "manage_employees" },
       { title: "Staff Shifts & Roster", href: "/shifts", icon: Clock },
     ],
   },
   {
     group: "SECURITY & AUDIT",
     items: [
-      { title: "Audit Trail & Logs", href: "/audit", icon: ShieldAlert, badge: "Security", permission: "view_audit_log" },
-      { title: "Reports & SQL Views", href: "/reports", icon: BarChart3, badge: "ADBMS", permission: "view_reports" },
+      { title: "Audit Trail & Logs", href: "/admin/audit", icon: ShieldAlert, badge: "Security", permission: "view_audit_log" },
+      { title: "Reports & SQL Views", href: "/admin/reports", icon: BarChart3, badge: "ADBMS", permission: "view_reports" },
     ],
   },
   {
     group: "SYSTEM & ACCOUNT",
     items: [
-      { title: "System Settings", href: "/settings", icon: Settings },
+      { title: "System Settings", href: "/admin/settings", icon: Settings },
       { title: "Admin Profile", href: "/profile", icon: UserCircle },
       { title: "Logout", href: "/logout", icon: LogOut },
     ],
@@ -138,11 +138,11 @@ const NAV_GROUPS: NavGroup[] = [
   {
     group: "MANAGEMENT & AUDIT",
     items: [
-      { title: "Employees", href: "/employees", icon: UserCog, permission: "manage_employees" },
+      { title: "Employees", href: "/admin/employees", icon: UserCog, permission: "manage_employees" },
       { title: "Shifts & Attendance", href: "/shifts", icon: Clock },
-      { title: "Branches", href: "/branches", icon: Store, permission: "manage_branches" },
-      { title: "Reports & SQL Views", href: "/reports", icon: BarChart3, permission: "view_reports", badge: "ADBMS" },
-      { title: "Audit & Error Logs", href: "/audit", icon: ShieldAlert, permission: "view_audit_log" },
+      { title: "Branches", href: "/admin/branches", icon: Store, permission: "manage_branches" },
+      { title: "Reports & SQL Views", href: "/admin/reports", icon: BarChart3, permission: "view_reports", badge: "ADBMS" },
+      { title: "Audit & Error Logs", href: "/admin/audit", icon: ShieldAlert, permission: "view_audit_log" },
     ],
   },
 ];
