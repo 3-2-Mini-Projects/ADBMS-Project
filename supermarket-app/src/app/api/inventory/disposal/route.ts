@@ -4,6 +4,12 @@ import { authorizeRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
+function isMissingProcedureError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const dbError = error as { code?: string };
+  return dbError.code === "ER_SP_DOES_NOT_EXIST";
+}
+
 export async function GET(req: Request) {
   const auth = await authorizeRequest("manage_inventory");
   if (auth.error) {
@@ -83,6 +89,17 @@ export async function POST(req: Request) {
       );
     }
 
+    const [batchRows]: any = await connection.query(
+      "SELECT branch_id FROM product_batches WHERE batch_id = ?",
+      [batchId]
+    );
+    if (!batchRows || batchRows.length === 0) {
+      return NextResponse.json({ error: "Batch record not found." }, { status: 404 });
+    }
+    if (session.role !== "ADMIN" && Number(batchRows[0].branch_id) !== Number(session.branch_id)) {
+      return NextResponse.json({ error: "Forbidden: batch belongs to another branch." }, { status: 403 });
+    }
+
     // Try ADBMS Stored Procedure: sp_record_stock_disposal
     try {
       await connection.query("CALL sp_record_stock_disposal(?, ?, ?, ?)", [
@@ -92,7 +109,10 @@ export async function POST(req: Request) {
         session.employee_id,
       ]);
     } catch (spErr: any) {
-      console.warn("sp_record_stock_disposal fallback invoked:", spErr.message);
+      if (!isMissingProcedureError(spErr)) {
+        throw spErr;
+      }
+      console.warn("sp_record_stock_disposal is unavailable; using transactional fallback.");
 
       await connection.beginTransaction();
 

@@ -1,12 +1,18 @@
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
+import { authorizeRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
+  const auth = await authorizeRequest("manage_inventory");
+  if (auth.error) return auth.error;
+  const { session } = auth;
+
   try {
     const { searchParams } = new URL(req.url);
-    const branchId = searchParams.get("branchId");
+    const requestedBranchId = searchParams.get("branchId");
+    const branchId = session.role === "ADMIN" ? requestedBranchId : String(session.branch_id);
     const productId = searchParams.get("productId");
     const search = searchParams.get("search");
     const status = searchParams.get("status"); // GOOD | NEAR_EXPIRY | EXPIRED
@@ -17,9 +23,9 @@ export async function GET(req: Request) {
       let sqlSum = `
         SELECT
           COUNT(*) AS total,
-          COALESCE(SUM(CASE WHEN status != 'EXPIRED' THEN 1 ELSE 0 END), 0) AS active,
-          COALESCE(SUM(CASE WHEN status = 'NEAR_EXPIRY' THEN 1 ELSE 0 END), 0) AS expiring_soon,
-          COALESCE(SUM(CASE WHEN status = 'EXPIRED' THEN 1 ELSE 0 END), 0) AS expired
+          COALESCE(SUM(CASE WHEN expiry_status != 'EXPIRED' THEN 1 ELSE 0 END), 0) AS active,
+          COALESCE(SUM(CASE WHEN expiry_status = 'EXPIRING_SOON' THEN 1 ELSE 0 END), 0) AS expiring_soon,
+          COALESCE(SUM(CASE WHEN expiry_status = 'EXPIRED' THEN 1 ELSE 0 END), 0) AS expired
         FROM vw_batch_expiry_status
         WHERE 1=1
       `;
@@ -35,7 +41,7 @@ export async function GET(req: Request) {
     }
 
     // ---------- ROWS MODE (Directly from View) ----------
-    let sql = `SELECT *, status AS expiry_status FROM vw_batch_expiry_status WHERE 1=1`;
+    let sql = `SELECT * FROM vw_batch_expiry_status WHERE 1=1`;
     const params: any[] = [];
 
     if (branchId) {
@@ -54,8 +60,9 @@ export async function GET(req: Request) {
     }
 
     if (status && ["GOOD", "NEAR_EXPIRY", "EXPIRED"].includes(status)) {
-      sql += ` AND status = ?`;
-      params.push(status);
+      const viewStatus = status === "GOOD" ? "NORMAL" : status === "NEAR_EXPIRY" ? "EXPIRING_SOON" : "EXPIRED";
+      sql += ` AND expiry_status = ?`;
+      params.push(viewStatus);
     }
 
     sql += ` ORDER BY expiry_date ASC, quantity DESC`;
@@ -69,14 +76,27 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const auth = await authorizeRequest("manage_inventory");
+  if (auth.error) return auth.error;
+  const { session } = auth;
+
   try {
     const body = await req.json();
-    const { product_id, branch_id, batch_no, quantity, received_date, expiry_date } = body;
+    const { product_id, branch_id: requestedBranchId, batch_no, quantity, received_date, expiry_date } = body;
+    const productId = Number(product_id);
+    const branchId = session.role === "ADMIN" ? Number(requestedBranchId) : session.branch_id;
+    const qty = Number(quantity);
+
+    if (!Number.isInteger(productId) || productId <= 0 ||
+        !Number.isInteger(branchId) || branchId <= 0 ||
+        !Number.isInteger(qty) || qty <= 0) {
+      return NextResponse.json({ error: "Valid product, branch, and positive integer quantity are required." }, { status: 400 });
+    }
 
     const result: any = await query(
       `INSERT INTO product_batches (product_id, branch_id, batch_no, quantity, received_date, expiry_date)
        VALUES (?, ?, ?, ?, ?, ?)`,
-      [product_id, branch_id, batch_no, quantity, received_date || new Date().toISOString().split("T")[0], expiry_date || null]
+      [productId, branchId, batch_no, qty, received_date || new Date().toISOString().split("T")[0], expiry_date || null]
     );
 
     // Also increase inventory quantity_on_hand
@@ -84,7 +104,7 @@ export async function POST(req: Request) {
       `UPDATE inventory
        SET quantity_on_hand = quantity_on_hand + ?, last_updated = NOW()
        WHERE branch_id = ? AND product_id = ?`,
-      [quantity, branch_id, product_id]
+      [qty, branchId, productId]
     );
 
     return NextResponse.json({ success: true, batch_id: result.insertId });

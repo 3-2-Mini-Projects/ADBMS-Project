@@ -21,26 +21,37 @@ export async function POST(
     const body = await req.json().catch(() => ({}));
     const { expiry_date } = body;
 
+    await connection.beginTransaction();
+
     // 2. Validate Purchase Order
     const [poRows]: any = await connection.query(
-      "SELECT po_id, po_number, branch_id, status FROM purchase_orders WHERE po_id = ?",
+      "SELECT po_id, po_number, branch_id, status FROM purchase_orders WHERE po_id = ? FOR UPDATE",
       [id]
     );
 
     if (!poRows || poRows.length === 0) {
+      await connection.rollback();
       return NextResponse.json({ error: "Purchase order not found" }, { status: 404 });
     }
 
     const po = poRows[0];
     if (po.status === "RECEIVED") {
+      await connection.rollback();
       return NextResponse.json({ error: "Purchase order has already been received" }, { status: 400 });
     }
 
     if (po.status === "CANCELLED") {
+      await connection.rollback();
       return NextResponse.json({ error: "Cannot receive a cancelled purchase order" }, { status: 400 });
     }
 
+    if (!["SENT", "PENDING"].includes(po.status)) {
+      await connection.rollback();
+      return NextResponse.json({ error: "Only SENT or PENDING orders can be received" }, { status: 400 });
+    }
+
     if (session.role !== "ADMIN" && po.branch_id !== session.branch_id) {
+      await connection.rollback();
       return NextResponse.json(
         { error: "Forbidden: Cross-branch order receiving is not permitted" },
         { status: 403 }
@@ -54,6 +65,7 @@ export async function POST(
     );
 
     if (!items || items.length === 0) {
+      await connection.rollback();
       return NextResponse.json({ error: "Purchase order has no items to receive" }, { status: 400 });
     }
 
@@ -65,8 +77,6 @@ export async function POST(
         [po.branch_id, item.product_id]
       );
     }
-
-    await connection.beginTransaction();
 
     const { items: receivedItems, expiry_date: globalExpiryDate } = body;
     const defaultExpiry =
@@ -96,6 +106,11 @@ export async function POST(
         customItem && customItem.damaged_quantity !== undefined && customItem.damaged_quantity !== ""
           ? Math.max(0, Number(customItem.damaged_quantity))
           : 0;
+
+      if (!Number.isInteger(receivedQty) || !Number.isInteger(damagedQty) ||
+          receivedQty < 0 || damagedQty < 0 || receivedQty + damagedQty > Number(item.quantity)) {
+        throw new Error(`Invalid quantities for purchase-order item ${item.po_item_id}: received plus damaged cannot exceed ordered quantity.`);
+      }
 
       const discrepancyReason =
         customItem && customItem.discrepancy_reason
