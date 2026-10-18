@@ -23,9 +23,9 @@ export async function GET(req: Request) {
       let sqlSum = `
         SELECT
           COUNT(*) AS total,
-          COALESCE(SUM(CASE WHEN status != 'EXPIRED' THEN 1 ELSE 0 END), 0) AS active,
-          COALESCE(SUM(CASE WHEN status = 'NEAR_EXPIRY' THEN 1 ELSE 0 END), 0) AS expiring_soon,
-          COALESCE(SUM(CASE WHEN status = 'EXPIRED' THEN 1 ELSE 0 END), 0) AS expired
+          COALESCE(SUM(CASE WHEN expiry_status != 'EXPIRED' THEN 1 ELSE 0 END), 0) AS active,
+          COALESCE(SUM(CASE WHEN expiry_status = 'EXPIRING_SOON' THEN 1 ELSE 0 END), 0) AS expiring_soon,
+          COALESCE(SUM(CASE WHEN expiry_status = 'EXPIRED' THEN 1 ELSE 0 END), 0) AS expired
         FROM vw_batch_expiry_status
         WHERE 1=1
       `;
@@ -41,7 +41,7 @@ export async function GET(req: Request) {
     }
 
     // ---------- ROWS MODE (Directly from View) ----------
-    let sql = `SELECT *, status AS expiry_status FROM vw_batch_expiry_status WHERE 1=1`;
+    let sql = `SELECT * FROM vw_batch_expiry_status WHERE 1=1`;
     const params: any[] = [];
 
     if (branchId) {
@@ -60,8 +60,9 @@ export async function GET(req: Request) {
     }
 
     if (status && ["GOOD", "NEAR_EXPIRY", "EXPIRED"].includes(status)) {
-      sql += ` AND status = ?`;
-      params.push(status);
+      const viewStatus = status === "GOOD" ? "NORMAL" : status === "NEAR_EXPIRY" ? "EXPIRING_SOON" : "EXPIRED";
+      sql += ` AND expiry_status = ?`;
+      params.push(viewStatus);
     }
 
     sql += ` ORDER BY expiry_date ASC, quantity DESC`;

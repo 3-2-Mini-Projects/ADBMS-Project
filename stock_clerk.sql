@@ -14,17 +14,21 @@ USE supermarket_ADBMS;
 -- ------------------------------------------------------------
 CREATE OR REPLACE VIEW vw_branch_inventory AS
 SELECT
+    i.inventory_id,
     b.branch_id,
     b.name AS branch_name,
     p.product_id,
     p.barcode,
     p.name AS product_name,
+    p.brand,
     c.name AS category_name,
     s.name AS supplier_name,
     i.quantity_on_hand,
+    i.reserved_qty,
     i.reorder_level,
     p.unit_price,
     p.cost_price,
+    i.last_updated,
     CASE
         WHEN i.quantity_on_hand = 0 THEN 'OUT_OF_STOCK'
         WHEN i.quantity_on_hand <= i.reorder_level THEN 'LOW_STOCK'
