@@ -309,6 +309,15 @@ function CashierLayoutContent({ children }: { children: React.ReactNode }) {
             >
               Switch Cashier
             </button>
+
+            <Link
+              href="/logout"
+              className="btn btn-ghost"
+              style={{ padding: "5px 10px", fontSize: 11, color: "var(--accent-rose)" }}
+              title="Sign Out"
+            >
+              Sign Out
+            </Link>
           </div>
         </header>
 

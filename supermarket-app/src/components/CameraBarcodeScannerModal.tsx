@@ -70,6 +70,8 @@ export default function CameraBarcodeScannerModal({
     }
   }, []);
 
+  const isStoppingRef = useRef<boolean>(false);
+
   const clearCooldownTimers = useCallback(() => {
     if (cooldownTimerRef.current) {
       clearTimeout(cooldownTimerRef.current);
@@ -86,18 +88,35 @@ export default function CameraBarcodeScannerModal({
 
   const stopScanner = useCallback(async () => {
     clearCooldownTimers();
-    if (scannerRef.current) {
-      try {
-        if (scannerRef.current.isScanning) {
-          await scannerRef.current.stop();
+    if (isStoppingRef.current) return;
+
+    const instance = scannerRef.current;
+    if (!instance) {
+      setIsScanning(false);
+      return;
+    }
+
+    isStoppingRef.current = true;
+    scannerRef.current = null;
+    setIsScanning(false);
+
+    try {
+      if (instance.isScanning) {
+        try {
+          await instance.stop();
+        } catch {
+          // Camera already released
         }
-        await scannerRef.current.clear();
-      } catch (err) {
-        console.warn("Failed to stop scanner cleanly", err);
-      } finally {
-        scannerRef.current = null;
-        setIsScanning(false);
       }
+      try {
+        await instance.clear();
+      } catch {
+        // Container element was already unmounted
+      }
+    } catch {
+      // Safe cleanup fallback
+    } finally {
+      isStoppingRef.current = false;
     }
   }, [clearCooldownTimers]);
 
@@ -205,7 +224,7 @@ export default function CameraBarcodeScannerModal({
 
       setIsScanning(true);
     } catch (err: any) {
-      console.error("Camera scanner start error:", err);
+      console.warn("[Camera Scanner] Unable to start video stream:", err?.message || err);
       setErrorMsg(
         err?.message ||
           "Unable to access camera. Please allow camera permissions in your browser or select another video device."
@@ -237,7 +256,7 @@ export default function CameraBarcodeScannerModal({
       })
       .catch((err) => {
         if (!isMounted) return;
-        console.error("Error getting cameras", err);
+        console.warn("[Camera Scanner] Device query error:", err?.message || err);
         setErrorMsg("Camera permission denied or camera device is unavailable.");
       });
 

@@ -6,6 +6,7 @@ import PrintableReceipt, { ReceiptData } from "@/components/PrintableReceipt";
 import ManagerAuthModal from "@/components/ManagerAuthModal";
 import CameraBarcodeScannerModal from "@/components/CameraBarcodeScannerModal";
 import BarcodeGeneratorModal from "@/components/BarcodeGeneratorModal";
+import QuantityEntryModal, { QuantityModalProduct } from "@/components/QuantityEntryModal";
 
 interface Product {
   product_id: number;
@@ -83,6 +84,11 @@ export default function POSBillingPage() {
   const [showCameraScanner, setShowCameraScanner] = useState(false);
   const [showBarcodeModal, setShowBarcodeModal] = useState(false);
 
+  // Fast Keyboard Quantity Entry Modal
+  const [selectedProductForQty, setSelectedProductForQty] = useState<QuantityModalProduct | null>(null);
+  const [qtyModalMode, setQtyModalMode] = useState<"add" | "set">("add");
+  const [initialModalQty, setInitialModalQty] = useState<number>(1);
+
   const barcodeInputRef = useRef<HTMLInputElement>(null);
   const lastBarcodeSubmitRef = useRef<{ code: string; time: number }>({ code: "", time: 0 });
   const lastCameraScanRef = useRef<{ code: string; time: number }>({ code: "", time: 0 });
@@ -129,11 +135,59 @@ export default function POSBillingPage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  // Open Quantity Entry Modal
+  const openQuantityModal = (
+    prod: Product | QuantityModalProduct,
+    mode: "add" | "set" = "add",
+    defaultQty: number = 1
+  ) => {
+    if ("is_active" in prod && prod.is_active === 0) {
+      alert(`Product "${prod.name}" is inactive and cannot be sold.`);
+      return;
+    }
+    if (prod.available_stock <= 0) {
+      alert(`Product "${prod.name}" is out of stock at this branch.`);
+      return;
+    }
+    setSelectedProductForQty(prod);
+    setQtyModalMode(mode);
+    setInitialModalQty(defaultQty);
+  };
+
+  const handleQuantityConfirm = (quantity: number, mode: "add" | "set") => {
+    if (!selectedProductForQty) return;
+
+    if (mode === "set") {
+      updateQuantity(selectedProductForQty.product_id, quantity);
+    } else {
+      addProductToCart(selectedProductForQty as Product, quantity);
+    }
+
+    setSelectedProductForQty(null);
+    setTimeout(() => {
+      barcodeInputRef.current?.focus();
+    }, 50);
+  };
+
   // Handle direct barcode scanner enter
   const handleBarcodeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const code = barcodeInput.trim();
-    if (!code || !cashier) return;
+    const raw = barcodeInput.trim();
+    if (!raw || !cashier) return;
+
+    // Support multiplier syntax e.g. "5*4790010"
+    let multiplier = 1;
+    let code = raw;
+    if (raw.includes("*")) {
+      const parts = raw.split("*");
+      if (parts.length === 2) {
+        const parsedQty = parseInt(parts[0].trim(), 10);
+        if (!isNaN(parsedQty) && parsedQty > 0) {
+          multiplier = parsedQty;
+          code = parts[1].trim();
+        }
+      }
+    }
 
     // Guard against rapid duplicate enter / scanner bounce within 800ms
     const now = Date.now();
@@ -149,7 +203,8 @@ export default function POSBillingPage() {
       );
       const json = await res.json();
       if (json.products && json.products.length > 0) {
-        addProductToCart(json.products[0]);
+        const prod = json.products[0];
+        openQuantityModal(prod, "add", multiplier);
         setBarcodeInput("");
       } else {
         // Fallback: search by query
@@ -157,7 +212,7 @@ export default function POSBillingPage() {
           (p) => p.barcode === code || p.barcode.toLowerCase() === code.toLowerCase()
         );
         if (found) {
-          addProductToCart(found);
+          openQuantityModal(found, "add", multiplier);
           setBarcodeInput("");
         } else {
           setErrorMsg(`No active product found with barcode: "${code}"`);
@@ -187,13 +242,14 @@ export default function POSBillingPage() {
       );
       const json = await res.json();
       if (json.products && json.products.length > 0) {
-        addProductToCart(json.products[0]);
+        const prod = json.products[0];
+        openQuantityModal(prod, "add", 1);
       } else {
         const found = products.find(
           (p) => p.barcode === trimmed || p.barcode.toLowerCase() === trimmed.toLowerCase()
         );
         if (found) {
-          addProductToCart(found);
+          openQuantityModal(found, "add", 1);
         } else {
           setErrorMsg(`Scanned barcode "${trimmed}" not found in branch catalog.`);
           setTimeout(() => setErrorMsg(""), 4000);
@@ -205,7 +261,7 @@ export default function POSBillingPage() {
   };
 
   // Add Product to Temporary Cart
-  const addProductToCart = (prod: Product) => {
+  const addProductToCart = (prod: Product, qtyToAdd: number = 1) => {
     if (prod.is_active === 0) {
       alert(`Product "${prod.name}" is inactive and cannot be sold.`);
       return;
@@ -218,16 +274,17 @@ export default function POSBillingPage() {
     setCart((prev) => {
       const existing = prev.find((item) => item.product_id === prod.product_id);
       if (existing) {
-        if (existing.quantity + 1 > prod.available_stock) {
+        if (existing.quantity + qtyToAdd > prod.available_stock) {
           alert(`Cannot add more. Available branch stock: ${prod.available_stock} units.`);
           return prev;
         }
         return prev.map((item) =>
           item.product_id === prod.product_id
-            ? { ...item, quantity: item.quantity + 1 }
+            ? { ...item, quantity: item.quantity + qtyToAdd }
             : item
         );
       } else {
+        const finalQty = Math.min(qtyToAdd, prod.available_stock);
         return [
           ...prev,
           {
@@ -236,7 +293,7 @@ export default function POSBillingPage() {
             barcode: prod.barcode,
             unit_price: Number(prod.unit_price),
             tax_rate: Number(prod.tax_rate || 0),
-            quantity: 1,
+            quantity: finalQty,
             discount_amount: 0,
             available_stock: prod.available_stock,
           },
@@ -448,8 +505,8 @@ export default function POSBillingPage() {
         }}
       >
         {/* Barcode Scanner Input */}
-        <form onSubmit={handleBarcodeSubmit} style={{ display: "flex", gap: 6, flex: 1, minWidth: 320 }}>
-          <div style={{ position: "relative", width: "100%" }}>
+        <form onSubmit={handleBarcodeSubmit} style={{ display: "flex", gap: 6, flex: 1, minWidth: 260, alignItems: "center" }}>
+          <div style={{ position: "relative", width: "100%", flex: 1 }}>
             <input
               ref={barcodeInputRef}
               type="text"
@@ -457,30 +514,49 @@ export default function POSBillingPage() {
               placeholder="Scan Barcode (e.g. 4790001) & Enter..."
               value={barcodeInput}
               onChange={(e) => setBarcodeInput(e.target.value)}
-              style={{ paddingLeft: 34, borderColor: "var(--accent-emerald)" }}
+              style={{ paddingLeft: 34, borderColor: "var(--accent-emerald)", height: 38 }}
             />
-            <span style={{ position: "absolute", left: 10, top: 8, fontSize: 16 }}>🏷️</span>
+            <span style={{ position: "absolute", left: 10, top: 9, fontSize: 15 }}>🏷️</span>
           </div>
-          <button type="submit" className="btn btn-emerald">
-            Scan
-          </button>
+
           <button
             type="button"
-            className="btn btn-primary"
+            className="btn btn-ghost"
             onClick={() => setShowCameraScanner(true)}
             title="Scan barcode with computer webcam or camera"
-            style={{ display: "flex", alignItems: "center", gap: 6 }}
+            style={{
+              padding: "4px 8px",
+              fontSize: 11,
+              height: 38,
+              border: "1px solid var(--border)",
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              whiteSpace: "nowrap",
+            }}
           >
-            <span>📷</span> Camera Scan
+            <span>📷</span>
+            <span>Scan</span>
           </button>
+
           <button
             type="button"
             className="btn btn-ghost"
             onClick={() => setShowBarcodeModal(true)}
             title="Generate and view scannable barcodes for testing"
-            style={{ display: "flex", alignItems: "center", gap: 6 }}
+            style={{
+              padding: "4px 8px",
+              fontSize: 11,
+              height: 38,
+              border: "1px solid var(--border)",
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              whiteSpace: "nowrap",
+            }}
           >
-            <span>🏷️</span> Barcodes
+            <span>🏷️</span>
+            <span>Barcodes</span>
           </button>
         </form>
 
@@ -643,7 +719,7 @@ export default function POSBillingPage() {
               Product Catalog ({products.length} Items Available)
             </span>
             <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-              Click item card to add to cart
+              Click item to enter quantity (or press Enter ↵)
             </span>
           </div>
 
@@ -671,7 +747,7 @@ export default function POSBillingPage() {
                 return (
                   <div
                     key={p.product_id}
-                    onClick={() => inStock && addProductToCart(p)}
+                    onClick={() => inStock && openQuantityModal(p, "add")}
                     style={{
                       background: "var(--bg-surface)",
                       border: "1px solid var(--border)",
@@ -741,8 +817,12 @@ export default function POSBillingPage() {
                           background: inStock ? "var(--bg-card2)" : "transparent",
                         }}
                         disabled={!inStock}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (inStock) openQuantityModal(p, "add");
+                        }}
                       >
-                        + Add
+                        + Qty
                       </button>
                     </div>
                   </div>
@@ -856,7 +936,34 @@ export default function POSBillingPage() {
                         >
                           -
                         </button>
-                        <span style={{ fontWeight: 700, fontSize: 12, minWidth: 20, textAlign: "center" }}>
+                        <span
+                          title="Click to edit quantity with Enter key"
+                          style={{
+                            fontWeight: 700,
+                            fontSize: 12,
+                            minWidth: 24,
+                            textAlign: "center",
+                            cursor: "pointer",
+                            background: "rgba(88, 166, 255, 0.12)",
+                            padding: "2px 6px",
+                            borderRadius: 4,
+                            border: "1px dashed rgba(88, 166, 255, 0.4)",
+                          }}
+                          onClick={() => {
+                            const prod = products.find((p) => p.product_id === item.product_id) || {
+                              product_id: item.product_id,
+                              barcode: item.barcode,
+                              name: item.name,
+                              unit_price: item.unit_price,
+                              tax_rate: item.tax_rate,
+                              available_stock: item.available_stock,
+                              is_active: 1,
+                              quantity_on_hand: item.available_stock,
+                              reserved_qty: 0,
+                            };
+                            openQuantityModal(prod as Product, "set");
+                          }}
+                        >
                           {item.quantity}
                         </span>
                         <button
@@ -1054,37 +1161,9 @@ export default function POSBillingPage() {
               </div>
             </div>
 
-            {/* Quick Cash Buttons & Tendered Input */}
+            {/* Cash Tendered Input & Change Due */}
             {hasCash && (
               <div style={{ marginBottom: 16 }}>
-                <div style={{ fontSize: 11.5, color: "var(--text-secondary)", marginBottom: 6 }}>
-                  Quick Cash Denominations:
-                </div>
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
-                  {[500, 1000, 2000, 5000].map((denom) => (
-                    <button
-                      key={denom}
-                      type="button"
-                      className="btn btn-ghost"
-                      style={{ padding: "4px 10px", fontSize: 11 }}
-                      onClick={() => {
-                        const cur = Number(cashTendered || 0);
-                        setCashTendered(String(cur + denom));
-                      }}
-                    >
-                      +{denom}
-                    </button>
-                  ))}
-                  <button
-                    type="button"
-                    className="btn btn-ghost"
-                    style={{ padding: "4px 10px", fontSize: 11 }}
-                    onClick={() => setCashTendered(String(finalTotal))}
-                  >
-                    Exact ({fmt(finalTotal)})
-                  </button>
-                </div>
-
                 <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
                   <div style={{ flex: 1 }}>
                     <label style={{ fontSize: 11, color: "var(--text-muted)", display: "block", marginBottom: 4 }}>
@@ -1185,6 +1264,25 @@ export default function POSBillingPage() {
           price: p.unit_price,
           category: p.category_name,
         }))}
+      />
+      {/* Fast Keyboard Quantity Entry Modal */}
+      <QuantityEntryModal
+        isOpen={Boolean(selectedProductForQty)}
+        product={selectedProductForQty}
+        currentCartQty={
+          selectedProductForQty
+            ? cart.find((i) => i.product_id === selectedProductForQty.product_id)?.quantity || 0
+            : 0
+        }
+        initialMode={qtyModalMode}
+        defaultQuantity={initialModalQty}
+        onConfirm={handleQuantityConfirm}
+        onClose={() => {
+          setSelectedProductForQty(null);
+          setTimeout(() => {
+            barcodeInputRef.current?.focus();
+          }, 50);
+        }}
       />
     </div>
   );

@@ -182,13 +182,13 @@ export default function CashierProductsPage() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={10} style={{ textAlign: "center", padding: 40, color: "var(--text-muted)" }}>
+                <td colSpan={11} style={{ textAlign: "center", padding: 40, color: "var(--text-muted)" }}>
                   Loading product inventory...
                 </td>
               </tr>
             ) : products.length === 0 ? (
               <tr>
-                <td colSpan={10} style={{ textAlign: "center", padding: 40, color: "var(--text-muted)" }}>
+                <td colSpan={11} style={{ textAlign: "center", padding: 40, color: "var(--text-muted)" }}>
                   No products found for &quot;{search}&quot;
                 </td>
               </tr>
