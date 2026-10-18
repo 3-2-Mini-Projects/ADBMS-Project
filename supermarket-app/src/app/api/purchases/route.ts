@@ -84,14 +84,21 @@ export async function POST(req: Request) {
       totalCost += Number(item.quantity) * Number(item.unit_cost);
     }
 
+    const initialStatus = body.status === "DRAFT" ? "DRAFT" : "SENT";
+
     const [poRes]: any = await connection.query(
       `INSERT INTO purchase_orders (supplier_id, branch_id, order_date, expected_date, status, total_cost, created_by)
-       VALUES (?, ?, NOW(), ?, 'PENDING', ?, ?)`,
-      [supplier_id, branch_id, expected_date || null, totalCost.toFixed(2), created_by || 1]
+       VALUES (?, ?, NOW(), ?, ?, ?, ?)`,
+      [supplier_id, branch_id, expected_date || null, initialStatus, totalCost.toFixed(2), created_by || 1]
     );
 
     const poId = poRes.insertId;
     const poNumber = `PO-${String(poId).padStart(5, '0')}`;
+
+    await connection.query(
+      `UPDATE purchase_orders SET po_number = ? WHERE po_id = ?`,
+      [poNumber, poId]
+    );
 
     for (const item of items) {
       await connection.query(
