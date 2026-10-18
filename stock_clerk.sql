@@ -377,6 +377,11 @@ BEGIN
     WHERE po_id = p_po_id
     FOR UPDATE;
 
+    IF v_status IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Purchase order not found';
+    END IF;
+
     IF v_status NOT IN ('SENT', 'PENDING') THEN
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'Only SENT or PENDING orders can be received';
@@ -390,6 +395,19 @@ BEGIN
     IF v_item_count = 0 THEN
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'Purchase order has no items';
+    END IF;
+
+    IF EXISTS (
+        SELECT 1
+        FROM purchase_order_items poi
+        LEFT JOIN inventory i
+          ON i.product_id = poi.product_id
+         AND i.branch_id = v_branch_id
+        WHERE poi.po_id = p_po_id
+          AND i.inventory_id IS NULL
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Inventory record missing for one or more purchase-order items';
     END IF;
 
     -- Update inventory stock

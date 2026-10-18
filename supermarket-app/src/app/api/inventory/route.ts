@@ -5,9 +5,13 @@ import { authorizeRequest } from "@/lib/auth";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
+  const auth = await authorizeRequest("manage_inventory");
+  if (auth.error) return auth.error;
+  const { session } = auth;
+
   try {
     const { searchParams } = new URL(req.url);
-    const branchId = searchParams.get("branchId");
+    const branchId = session.role === "ADMIN" ? searchParams.get("branchId") : String(session.branch_id);
     const lowStock = searchParams.get("lowStock") === "true";
     const search = searchParams.get("search");
 
@@ -90,10 +94,34 @@ export async function PATCH(req: Request) {
       invId = existing[0].inventory_id;
     }
 
+    const ownedRows: any = await query(
+      "SELECT branch_id, quantity_on_hand FROM inventory WHERE inventory_id = ?",
+      [invId]
+    );
+    if (ownedRows.length === 0) {
+      return NextResponse.json({ error: "Inventory record not found" }, { status: 404 });
+    }
+    if (session.role !== "ADMIN" && Number(ownedRows[0].branch_id) !== Number(session.branch_id)) {
+      return NextResponse.json({ error: "Forbidden: inventory belongs to another branch" }, { status: 403 });
+    }
+    if (new_quantity !== undefined &&
+        (!Number.isInteger(Number(new_quantity)) || Number(new_quantity) < 0)) {
+      return NextResponse.json({ error: "new_quantity must be a non-negative integer" }, { status: 400 });
+    }
+    if (reorder_level !== undefined &&
+        (!Number.isInteger(Number(reorder_level)) || Number(reorder_level) < 0)) {
+      return NextResponse.json({ error: "reorder_level must be a non-negative integer" }, { status: 400 });
+    }
+    if (quantity_change !== undefined &&
+        (!Number.isInteger(Number(quantity_change)) ||
+          Number(ownedRows[0].quantity_on_hand) + Number(quantity_change) < 0)) {
+      return NextResponse.json({ error: "quantity_change must be an integer and cannot reduce stock below zero" }, { status: 400 });
+    }
+
     if (new_quantity !== undefined) {
       await query(
-        "UPDATE inventory SET quantity_on_hand = ?, last_updated = NOW() WHERE inventory_id = ?",
-        [new_quantity, invId]
+        "UPDATE inventory SET quantity_on_hand = ?, last_updated = NOW() WHERE inventory_id = ? AND (? = 'ADMIN' OR branch_id = ?)",
+        [new_quantity, invId, session.role, session.branch_id]
       );
     } else if (quantity_change !== undefined && Number(quantity_change) !== 0) {
       if (Number(quantity_change) > 0 && branch_id && product_id) {
@@ -101,16 +129,16 @@ export async function PATCH(req: Request) {
         await query("CALL sp_update_inventory(?, ?, ?)", [branch_id, product_id, Number(quantity_change)]);
       } else {
         await query(
-          "UPDATE inventory SET quantity_on_hand = quantity_on_hand + ?, last_updated = NOW() WHERE inventory_id = ?",
-          [quantity_change, invId]
+          "UPDATE inventory SET quantity_on_hand = quantity_on_hand + ?, last_updated = NOW() WHERE inventory_id = ? AND (? = 'ADMIN' OR branch_id = ?)",
+          [quantity_change, invId, session.role, session.branch_id]
         );
       }
     }
 
     if (reorder_level !== undefined) {
       await query(
-        "UPDATE inventory SET reorder_level = ?, last_updated = NOW() WHERE inventory_id = ?",
-        [reorder_level, invId]
+        "UPDATE inventory SET reorder_level = ?, last_updated = NOW() WHERE inventory_id = ? AND (? = 'ADMIN' OR branch_id = ?)",
+        [reorder_level, invId, session.role, session.branch_id]
       );
       // Keep product-level default reorder level synchronized
       await query(
@@ -126,7 +154,7 @@ export async function PATCH(req: Request) {
       [
         String(invId),
         JSON.stringify({ quantity_change, new_quantity, reorder_level, reason }),
-        `employee_${changed_by || 1}`,
+        changed_by,
       ]
     );
 

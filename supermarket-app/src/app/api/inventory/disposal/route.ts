@@ -83,6 +83,17 @@ export async function POST(req: Request) {
       );
     }
 
+    const [batchRows]: any = await connection.query(
+      "SELECT branch_id FROM product_batches WHERE batch_id = ?",
+      [batchId]
+    );
+    if (!batchRows || batchRows.length === 0) {
+      return NextResponse.json({ error: "Batch record not found." }, { status: 404 });
+    }
+    if (session.role !== "ADMIN" && Number(batchRows[0].branch_id) !== Number(session.branch_id)) {
+      return NextResponse.json({ error: "Forbidden: batch belongs to another branch." }, { status: 403 });
+    }
+
     // Try ADBMS Stored Procedure: sp_record_stock_disposal
     try {
       await connection.query("CALL sp_record_stock_disposal(?, ?, ?, ?)", [
