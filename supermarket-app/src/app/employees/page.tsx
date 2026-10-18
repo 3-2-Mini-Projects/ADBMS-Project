@@ -27,6 +27,10 @@ import {
   Users,
   UserX,
   AlertTriangle,
+  QrCode,
+  Printer,
+  Download,
+  Store,
 } from "lucide-react";
 
 export default function EmployeesPage() {
@@ -54,6 +58,35 @@ export default function EmployeesPage() {
     email: string;
     role: string;
   } | null>(null);
+  const [badgeModalOpen, setBadgeModalOpen] = useState(false);
+  const [badgeData, setBadgeData] = useState<{
+    employee_id: number;
+    full_name: string;
+    role: string;
+    email: string;
+    branch_name: string;
+    badge_code: string;
+    qr_data_url: string;
+  } | null>(null);
+  const [loadingBadge, setLoadingBadge] = useState(false);
+
+  const loadBadgeForEmployee = async (empId: number) => {
+    setLoadingBadge(true);
+    try {
+      const res = await fetch(`/api/employees/${empId}/badge`);
+      const data = await res.json();
+      if (res.ok && data.qr_data_url) {
+        setBadgeData(data);
+        setBadgeModalOpen(true);
+      } else {
+        showToast(data.error || "Failed to generate badge QR code", "error");
+      }
+    } catch {
+      showToast("Error generating staff badge", "error");
+    } finally {
+      setLoadingBadge(false);
+    }
+  };
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<"ACTIVE" | "DELETED">("ACTIVE");
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -166,11 +199,7 @@ export default function EmployeesPage() {
       if (res.ok && data.success) {
         showToast(`Staff member "${newEmp.full_name}" registered!`, "success");
         setAddModalOpen(false);
-        setCreatedActivation({
-          full_name: newEmp.full_name,
-          email: newEmp.email,
-          role: newEmp.role,
-        });
+        const empId = data.employee_id;
         setNewEmp({
           branch_id: "1",
           full_name: "",
@@ -182,6 +211,9 @@ export default function EmployeesPage() {
         });
         fetchEmployees();
         refreshAppData();
+        if (empId) {
+          loadBadgeForEmployee(empId);
+        }
       } else {
         showToast(data.error || "Failed to create employee", "error");
       }
@@ -440,6 +472,13 @@ export default function EmployeesPage() {
                         {emp.is_active === 1 ? (
                           <>
                             <button
+                              onClick={() => loadBadgeForEmployee(emp.employee_id)}
+                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-sky-600 text-slate-300 hover:text-white transition-colors"
+                              title="View & Print Staff QR Badge"
+                            >
+                              <QrCode className="w-3.5 h-3.5" />
+                            </button>
+                            <button
                               onClick={() => {
                                 setSelectedEmp(emp);
                                 setEditRole(emp.role);
@@ -691,43 +730,89 @@ export default function EmployeesPage() {
       )}
 
       {/* Activation Invitation Modal */}
-      {createdActivation && (
+      {/* Modal: Staff Identification Badge & QR Code */}
+      {badgeModalOpen && badgeData && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-lg shadow-2xl space-y-5 animate-in zoom-in-95 duration-200">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-md shadow-2xl space-y-5 animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <div className="flex items-center gap-2 text-white font-bold text-base">
-                <KeyRound className="w-5 h-5 text-amber-400" />
-                <span>Employee Account Activation</span>
+              <div className="flex items-center gap-2 text-white font-bold text-sm">
+                <QrCode className="w-4 h-4 text-sky-400" />
+                <span>Official Staff Identification Badge</span>
               </div>
               <button
-                onClick={() => setCreatedActivation(null)}
+                onClick={() => setBadgeModalOpen(false)}
                 className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="p-4 rounded-2xl bg-emerald-950/30 border border-emerald-800/40 space-y-2">
-              <div className="text-xs font-semibold text-emerald-300">
-                Account Created for {createdActivation.full_name} ({createdActivation.role})
+            {/* Printable ID Card Container */}
+            <div
+              id="staff-id-badge-card"
+              className="bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 border border-slate-700 rounded-2xl p-5 shadow-xl text-center space-y-4 relative overflow-hidden"
+            >
+              {/* Top Card Accent */}
+              <div className="flex items-center justify-between pb-3 border-b border-slate-800 text-left">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-sky-600 to-blue-600 flex items-center justify-center text-white">
+                    <Store className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-[11px] font-black text-white tracking-wider uppercase">Supermarket ADBMS</div>
+                    <div className="text-[9px] text-slate-400 font-medium">{badgeData.branch_name}</div>
+                  </div>
+                </div>
+                <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded bg-sky-950 text-sky-300 border border-sky-800/60">
+                  {badgeData.badge_code}
+                </span>
               </div>
-              <p className="text-[11px] text-slate-300 leading-relaxed">
-                The staff member has been registered with <strong>Pending Activation</strong> status. They can now activate their account directly by visiting the login page and entering their email:
-              </p>
-              <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 text-xs font-mono text-emerald-400 font-bold select-all">
-                {createdActivation.email}
+
+              {/* Avatar, Name & Role */}
+              <div className="space-y-1">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center text-white text-xl font-bold mx-auto shadow-md">
+                  {badgeData.full_name[0]}
+                </div>
+                <h2 className="text-base font-bold text-white pt-1">{badgeData.full_name}</h2>
+                <div className="flex items-center justify-center gap-1.5">
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-950/80 text-blue-300 border border-blue-800/60 font-bold uppercase tracking-wider">
+                    {badgeData.role}
+                  </span>
+                </div>
+                <div className="text-[10px] text-slate-400 font-mono">{badgeData.email}</div>
               </div>
-              <p className="text-[11px] text-slate-400 leading-relaxed">
-                Upon entering their email on the login screen, they will automatically be prompted to create and confirm their password.
-              </p>
+
+              {/* Scannable Cryptographic QR Code */}
+              <div className="p-3 bg-white rounded-2xl inline-block mx-auto shadow-md">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={badgeData.qr_data_url}
+                  alt="Staff Attendance QR Code"
+                  className="w-40 h-40 object-contain mx-auto"
+                />
+              </div>
+
+              <div className="text-[10px] text-slate-400 font-mono tracking-wider uppercase">
+                Hold under store scanner to clock in / out
+              </div>
             </div>
-            <div className="flex justify-end pt-2">
+
+            {/* Actions */}
+            <div className="flex items-center gap-3 pt-1">
               <button
                 type="button"
-                onClick={() => setCreatedActivation(null)}
-                className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold"
+                onClick={() => setBadgeModalOpen(false)}
+                className="w-1/3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
               >
                 Done
+              </button>
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="w-2/3 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-sky-950/50"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span>Print Staff ID Badge</span>
               </button>
             </div>
           </div>
