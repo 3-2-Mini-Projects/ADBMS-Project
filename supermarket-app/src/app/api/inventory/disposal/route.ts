@@ -4,6 +4,12 @@ import { authorizeRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
+function isMissingProcedureError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const dbError = error as { code?: string };
+  return dbError.code === "ER_SP_DOES_NOT_EXIST";
+}
+
 export async function GET(req: Request) {
   const auth = await authorizeRequest("manage_inventory");
   if (auth.error) {
@@ -103,7 +109,10 @@ export async function POST(req: Request) {
         session.employee_id,
       ]);
     } catch (spErr: any) {
-      console.warn("sp_record_stock_disposal fallback invoked:", spErr.message);
+      if (!isMissingProcedureError(spErr)) {
+        throw spErr;
+      }
+      console.warn("sp_record_stock_disposal is unavailable; using transactional fallback.");
 
       await connection.beginTransaction();
 
