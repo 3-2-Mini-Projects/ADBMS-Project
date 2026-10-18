@@ -63,12 +63,37 @@ body {
   box-shadow: 0 0 25px -5px rgba(16, 185, 129, 0.3);
 }
 
-/* Print Receipt Styles */
+/* Print Media Styles */
 @media print {
-  body * {
+  html, body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Hide interactive navigation chrome and buttons */
+  aside,
+  header,
+  nav,
+  button,
+  .no-print {
+    display: none !important;
+  }
+
+  main {
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+  }
+
+  /* 1. When printing POS Receipt */
+  body:has(#printable-receipt) * {
     visibility: hidden;
   }
-  #printable-receipt, #printable-receipt * {
+  body:has(#printable-receipt) #printable-receipt,
+  body:has(#printable-receipt) #printable-receipt * {
     visibility: visible;
   }
   #printable-receipt {
@@ -76,9 +101,61 @@ body {
     left: 0;
     top: 0;
     width: 80mm;
-    color: #000 !important;
-    background: #fff !important;
+    color: #000000 !important;
+    background: #ffffff !important;
     padding: 10px;
     font-family: monospace;
+  }
+
+  /* 2. When printing Staff ID Badge */
+  body:has(#staff-id-badge-card) * {
+    visibility: hidden;
+  }
+  body:has(#staff-id-badge-card) #staff-id-badge-card,
+  body:has(#staff-id-badge-card) #staff-id-badge-card * {
+    visibility: visible;
+  }
+  #staff-id-badge-card {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  /* 3. When printing Operational Reports */
+  #printable-report {
+    display: block !important;
+    width: 100% !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  #printable-report * {
+    color: #0f172a !important;
+    background-color: transparent !important;
+  }
+
+  #printable-report table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin-top: 10px !important;
+  }
+
+  #printable-report th {
+    background-color: #f1f5f9 !important;
+    color: #0f172a !important;
+    font-weight: 700 !important;
+    border: 1px solid #94a3b8 !important;
+    padding: 8px 10px !important;
+  }
+
+  #printable-report td {
+    border: 1px solid #cbd5e1 !important;
+    padding: 6px 10px !important;
+    color: #1e293b !important;
   }
 }

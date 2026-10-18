@@ -15,6 +15,8 @@ import {
   Sparkles,
   Download,
   Filter,
+  Printer,
+  FileSpreadsheet,
 } from "lucide-react";
 
 export default function ReportsPage() {
@@ -52,6 +54,238 @@ export default function ReportsPage() {
   const returnReport = reportData?.returnReport ?? [];
   const dailySummaryTable = reportData?.dailySummaryTable ?? [];
 
+  const handleExportCsv = () => {
+    let headers: string[] = [];
+    let rows: (string | number)[][] = [];
+    const filename = `supermarket_${activeReport}_${new Date().toISOString().split("T")[0]}.csv`;
+
+    if (activeReport === "daily_sales") {
+      headers = ["Sale Date", "Branch", "Transactions", "Subtotal (Rs)", "Discount (Rs)", "Tax (Rs)", "Total Sales (Rs)"];
+      rows = dailySales.map((r: any) => [
+        new Date(r.sale_date).toLocaleDateString(),
+        `"${r.branch_name || `Branch #${r.branch_id}`}"`,
+        r.transaction_count,
+        Number(r.subtotal).toFixed(2),
+        Number(r.total_discount).toFixed(2),
+        Number(r.total_tax).toFixed(2),
+        Number(r.total_sales).toFixed(2),
+      ]);
+    } else if (activeReport === "branch_sales") {
+      headers = ["Branch", "Location", "Transactions", "Subtotal (Rs)", "Discounts (Rs)", "Tax (Rs)", "Total Sales (Rs)"];
+      rows = branchSales.map((r: any) => [
+        `"${r.branch_name}"`,
+        `"${r.city || ""}, ${r.region || ""}"`,
+        r.transactions ?? 0,
+        Number(r.subtotal ?? 0).toFixed(2),
+        Number(r.total_discount ?? 0).toFixed(2),
+        Number(r.total_tax ?? 0).toFixed(2),
+        Number(r.total_sales ?? 0).toFixed(2),
+      ]);
+    } else if (activeReport === "cashier_sales") {
+      headers = ["Cashier", "Email", "Branch", "Receipts Count", "Subtotal (Rs)", "Discounts (Rs)", "Total Sales (Rs)"];
+      rows = cashierSales.map((r: any) => [
+        `"${r.cashier_name}"`,
+        `"${r.email || ""}"`,
+        `"${r.branch_name || ""}"`,
+        r.transaction_count ?? 0,
+        Number(r.subtotal ?? 0).toFixed(2),
+        Number(r.total_discount ?? 0).toFixed(2),
+        Number(r.total_sales ?? 0).toFixed(2),
+      ]);
+    } else if (activeReport === "payment_summary") {
+      headers = ["Payment Method", "Payment Count", "Total Amount Collected (Rs)"];
+      rows = paymentSummary.map((r: any) => [
+        r.method,
+        r.payment_count ?? 0,
+        Number(r.total_amount ?? 0).toFixed(2),
+      ]);
+    } else if (activeReport === "returns") {
+      headers = ["Return ID", "Date", "Sale Ref", "Product", "Unit Price (Rs)", "Quantity", "Reason", "Processed By", "Refund Amount (Rs)"];
+      rows = returnReport.map((r: any) => [
+        `"#RET-${r.return_id}"`,
+        r.return_date ? new Date(r.return_date).toLocaleDateString() : "—",
+        `"#SALE-${r.sale_id}"`,
+        `"${r.product_name}"`,
+        Number(r.unit_price ?? 0).toFixed(2),
+        r.quantity ?? 0,
+        `"${r.reason || ""}"`,
+        `"${r.processor_name || ""}"`,
+        Number(r.refund_amount ?? 0).toFixed(2),
+      ]);
+    } else if (activeReport === "daily_summary") {
+      headers = ["Summary Date", "Branch", "Transactions Count", "Total Sales (Rs)", "Total Tax (Rs)"];
+      rows = dailySummaryTable.map((r: any) => [
+        r.summary_date ? new Date(r.summary_date).toLocaleDateString() : "—",
+        `"${r.branch_name || `Branch #${r.branch_id}`}"`,
+        r.transactions_count ?? 0,
+        Number(r.total_sales ?? 0).toFixed(2),
+        Number(r.total_tax ?? 0).toFixed(2),
+      ]);
+    }
+
+    if (rows.length === 0) {
+      alert("No data available to export in this report.");
+      return;
+    }
+
+    const csvContent = [headers.join(","), ...rows.map((row) => row.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handlePrintReport = () => {
+    const reportEl = document.getElementById("printable-report");
+    if (!reportEl) {
+      window.print();
+      return;
+    }
+
+    const tableEl = reportEl.querySelector("table");
+    if (!tableEl) {
+      window.print();
+      return;
+    }
+
+    const printIframe = document.createElement("iframe");
+    printIframe.style.position = "fixed";
+    printIframe.style.right = "0";
+    printIframe.style.bottom = "0";
+    printIframe.style.width = "0";
+    printIframe.style.height = "0";
+    printIframe.style.border = "none";
+    document.body.appendChild(printIframe);
+
+    const doc = printIframe.contentWindow?.document;
+    if (!doc) {
+      window.print();
+      return;
+    }
+
+    const reportTitle = activeReport.toUpperCase().replace(/_/g, " ");
+    const branchName = currentBranch?.name ?? "All Branches";
+    const generatedDate = new Date().toLocaleString();
+
+    doc.open();
+    doc.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Supermarket ADBMS - ${reportTitle} Report</title>
+          <style>
+            @page {
+              size: landscape;
+              margin: 12mm;
+            }
+            body {
+              font-family: Arial, Helvetica, sans-serif;
+              color: #0f172a;
+              background: #ffffff;
+              margin: 0;
+              padding: 16px;
+              font-size: 10pt;
+            }
+            .report-header {
+              border-bottom: 2px solid #0f172a;
+              padding-bottom: 12px;
+              margin-bottom: 16px;
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-end;
+            }
+            .brand-title {
+              font-size: 18pt;
+              font-weight: 900;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+              margin: 0;
+              color: #0f172a;
+            }
+            .brand-subtitle {
+              font-size: 9pt;
+              color: #475569;
+              margin: 2px 0 0 0;
+            }
+            .meta-box {
+              text-align: right;
+              font-size: 9pt;
+              color: #475569;
+              font-family: monospace;
+            }
+            .view-badge {
+              margin-top: 8px;
+              padding: 4px 8px;
+              background-color: #f1f5f9;
+              border: 1px solid #cbd5e1;
+              display: inline-block;
+              font-weight: bold;
+              font-size: 9pt;
+              border-radius: 4px;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-top: 12px;
+            }
+            th, td {
+              border: 1px solid #cbd5e1;
+              padding: 8px 10px;
+              font-size: 9pt;
+              text-align: left;
+            }
+            th {
+              background-color: #f8fafc;
+              font-weight: 700;
+              color: #0f172a;
+            }
+            td {
+              color: #1e293b;
+            }
+            .text-right { text-align: right; }
+            .text-center { text-align: center; }
+            .font-mono { font-family: monospace; font-size: 8.5pt; }
+            .font-bold { font-weight: bold; }
+            .text-emerald-400, .text-emerald-500, .text-blue-400 { color: #047857 !important; }
+            .text-rose-400, .text-rose-500 { color: #b91c1c !important; }
+            .text-white { color: #0f172a !important; font-weight: bold; }
+            .text-slate-200, .text-slate-300, .text-slate-400 { color: #334155 !important; }
+          </style>
+        </head>
+        <body>
+          <div class="report-header">
+            <div>
+              <h1 class="brand-title">Supermarket ADBMS</h1>
+              <p class="brand-subtitle">Enterprise Operational & SQL View Reporting Hub</p>
+              <div class="view-badge">SQL VIEW: ${reportTitle}</div>
+            </div>
+            <div class="meta-box">
+              <div>Store Branch: <strong>${branchName}</strong></div>
+              <div>Export Timestamp: <strong>${generatedDate}</strong></div>
+            </div>
+          </div>
+          <table>
+            ${tableEl.innerHTML}
+          </table>
+        </body>
+      </html>
+    `);
+    doc.close();
+
+    setTimeout(() => {
+      printIframe.contentWindow?.focus();
+      printIframe.contentWindow?.print();
+      setTimeout(() => {
+        document.body.removeChild(printIframe);
+      }, 2000);
+    }, 250);
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Header */}
@@ -66,19 +300,31 @@ export default function ReportsPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 no-print">
           <button
-            onClick={() => window.print()}
+            type="button"
+            onClick={handleExportCsv}
             className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-colors border border-slate-700"
+            title="Export data as CSV file"
           >
-            <Download className="w-3.5 h-3.5 text-blue-400" />
-            <span>Export / Print</span>
+            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Export CSV</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handlePrintReport}
+            className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-md shadow-blue-900/30"
+            title="Print or Save as PDF"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            <span>Print / PDF</span>
           </button>
         </div>
       </div>
 
       {/* Report Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-800">
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-800 no-print">
         <button
           onClick={() => setActiveReport("daily_sales")}
           className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
@@ -159,7 +405,24 @@ export default function ReportsPage() {
           Querying SQL views from database...
         </div>
       ) : (
-        <div className="glass-card rounded-2xl border border-slate-800 overflow-hidden shadow-2xl">
+        <div id="printable-report" className="glass-card rounded-2xl border border-slate-800 overflow-hidden shadow-2xl">
+          {/* Report Print Header (visible only when printing) */}
+          <div className="hidden print:block p-4 border-b-2 border-slate-900 mb-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-xl font-black uppercase text-slate-900 tracking-wider">SUPERMARKET ADBMS</h1>
+                <p className="text-xs text-slate-600">Enterprise Multi-Branch Operational Analytics</p>
+              </div>
+              <div className="text-right text-xs text-slate-600 font-mono">
+                <div>Branch: {currentBranch?.name ?? "All Branches"}</div>
+                <div>Generated: {new Date().toLocaleString()}</div>
+              </div>
+            </div>
+            <div className="mt-2 text-sm font-bold text-slate-800 border-t border-slate-300 pt-2 flex items-center justify-between">
+              <span>Report: {activeReport.toUpperCase().replace("_", " ")}</span>
+              <span className="font-mono text-xs text-slate-500">Live Database SQL View</span>
+            </div>
+          </div>
           {/* TAB 1: DAILY SALES VIEW */}
           {activeReport === "daily_sales" && (
             <div>
