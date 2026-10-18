@@ -293,11 +293,8 @@ export default function ReportsPage() {
         <div>
           <h1 className="text-2xl font-black text-white flex items-center gap-2.5">
             <BarChart3 className="w-6 h-6 text-blue-400" />
-            <span>ADBMS Analytics & Reporting Hub</span>
+            <span>Analytics & Reporting Hub</span>
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
-            Real-time querying of the database views: daily_sales_vw, branch_sales_vw, cashier_sales_vw, payment_summary_vw, and return_report_vw.
-          </p>
         </div>
 
         <div className="flex items-center gap-2 no-print">
@@ -334,7 +331,7 @@ export default function ReportsPage() {
           }`}
         >
           <Calendar className="w-3.5 h-3.5" />
-          <span>daily_sales_vw</span>
+          <span>Daily Sales</span>
         </button>
 
         <button
@@ -346,7 +343,7 @@ export default function ReportsPage() {
           }`}
         >
           <Building2 className="w-3.5 h-3.5" />
-          <span>branch_sales_vw</span>
+          <span>Branch Sales</span>
         </button>
 
         <button
@@ -358,7 +355,7 @@ export default function ReportsPage() {
           }`}
         >
           <User className="w-3.5 h-3.5" />
-          <span>cashier_sales_vw</span>
+          <span>Cashier Sales</span>
         </button>
 
         <button
@@ -370,7 +367,7 @@ export default function ReportsPage() {
           }`}
         >
           <CreditCard className="w-3.5 h-3.5" />
-          <span>payment_summary_vw</span>
+          <span>Payment Summary</span>
         </button>
 
         <button
@@ -382,7 +379,7 @@ export default function ReportsPage() {
           }`}
         >
           <RotateCcw className="w-3.5 h-3.5" />
-          <span>return_report_vw</span>
+          <span>Return Report</span>
         </button>
 
         <button
@@ -394,7 +391,7 @@ export default function ReportsPage() {
           }`}
         >
           <Receipt className="w-3.5 h-3.5" />
-          <span>daily_sales_summary (Table)</span>
+          <span>Daily Sales Summary</span>
         </button>
       </div>
 
