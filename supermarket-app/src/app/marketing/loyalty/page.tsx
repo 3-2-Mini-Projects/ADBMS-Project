@@ -4,8 +4,6 @@ import React, { useEffect, useState, useMemo } from "react";
 import { useApp } from "@/lib/context";
 import {
   Award,
-  Coins,
-  History,
   Users,
   RefreshCw,
   Plus,
@@ -40,9 +38,8 @@ interface TopCustomerRow {
   card_no: string;
   full_name: string;
   tier: string;
-  total_spent: number;
-  total_orders: number;
   points_balance: number;
+  total_points_earned: number;
 }
 
 export default function LoyaltyManagementPage() {
@@ -56,8 +53,8 @@ export default function LoyaltyManagementPage() {
   const [recalculating, setRecalculating] = useState(false);
   const [submittingAction, setSubmittingAction] = useState(false);
 
-  // Active View Tab: 'summary' (customer_summary_vw) | 'ledger' (loyalty_transactions) | 'top' (top_customers_vw)
-  const [activeTab, setActiveTab] = useState<"summary" | "ledger" | "top">("summary");
+  // Active View Tab: 'summary' (customer_summary_vw) | 'top' (top_customers_vw)
+  const [activeTab, setActiveTab] = useState<"summary" | "top">("summary");
 
   // Filtering & Search
   const [selectedTierFilter, setSelectedTierFilter] = useState<string>("ALL");
@@ -84,7 +81,17 @@ export default function LoyaltyManagementPage() {
 
       if (dashRes && !dashRes.error) setData(dashRes);
       if (Array.isArray(summaryRes)) setCustomerSummaries(summaryRes);
-      if (Array.isArray(topRes)) setTopCustomers(topRes);
+      if (Array.isArray(topRes) && topRes.length > 0) {
+        const top3 = [...topRes]
+          .sort((a, b) => Number(b.total_points_earned || 0) - Number(a.total_points_earned || 0))
+          .slice(0, 3);
+        setTopCustomers(top3);
+      } else if (Array.isArray(summaryRes) && summaryRes.length > 0) {
+        const top3 = [...summaryRes]
+          .sort((a, b) => Number(b.total_points_earned || 0) - Number(a.total_points_earned || 0))
+          .slice(0, 3);
+        setTopCustomers(top3);
+      }
       if (Array.isArray(custRes)) setCustomersList(custRes);
     } catch (err) {
       console.error("Error loading loyalty management data:", err);
@@ -215,7 +222,6 @@ export default function LoyaltyManagementPage() {
   };
 
   const tierBreakdown = data?.tierBreakdown || [];
-  const recentLoyalty = data?.recentLoyaltyActivity || [];
 
   // Filtered Customer Summaries
   const filteredSummaries = useMemo(() => {
@@ -317,19 +323,6 @@ export default function LoyaltyManagementPage() {
               <span>Customer Summary</span>
             </button>
 
-            <button
-              onClick={() => setActiveTab("ledger")}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${activeTab === "ledger"
-                ? "bg-amber-500/10 text-amber-400 border border-amber-500/30 shadow-sm"
-                : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-                }`}
-            >
-              <History className="w-3.5 h-3.5" />
-              <span>Transaction Ledger (loyalty_transactions)</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-800 text-slate-300">
-                {recentLoyalty.length}
-              </span>
-            </button>
 
             <button
               onClick={() => setActiveTab("top")}
@@ -339,7 +332,7 @@ export default function LoyaltyManagementPage() {
                 }`}
             >
               <Trophy className="w-3.5 h-3.5" />
-              <span>Top Customers</span>
+              <span>Top 3 Customers</span>
             </button>
 
           </div>
@@ -404,20 +397,19 @@ export default function LoyaltyManagementPage() {
                     <th className="py-3 px-4 text-right">Points Redeemed</th>
                     <th className="py-3 px-4 text-right">Total Spent</th>
                     <th className="py-3 px-4 text-center">Orders</th>
-                    <th className="py-3 px-4 text-right">Quick Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60 font-mono">
                   {loading ? (
                     <tr>
-                      <td colSpan={9} className="py-12 text-center text-slate-500 font-sans">
+                      <td colSpan={8} className="py-12 text-center text-slate-500 font-sans">
                         <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-amber-500" />
                         Querying customer_summary_vw...
                       </td>
                     </tr>
                   ) : filteredSummaries.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="py-12 text-center text-slate-500 font-sans">
+                      <td colSpan={8} className="py-12 text-center text-slate-500 font-sans">
                         No customers found matching the filter criteria.
                       </td>
                     </tr>
@@ -456,24 +448,6 @@ export default function LoyaltyManagementPage() {
                           Rs. {Number(c.total_spent || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                         </td>
                         <td className="py-3 px-4 text-center text-slate-400 font-sans">{c.total_orders || 0}</td>
-                        <td className="py-3 px-4 text-right">
-                          <div className="flex items-center justify-end gap-1.5 font-sans">
-                            <button
-                              onClick={() => openAwardModal(c.customer_id)}
-                              className="px-2 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-[10px] font-bold border border-emerald-500/20 transition-all"
-                              title="Award points via add_ltpoints"
-                            >
-                              + Award
-                            </button>
-                            <button
-                              onClick={() => openRedeemModal(c.customer_id)}
-                              className="px-2 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-[10px] font-bold border border-rose-500/20 transition-all"
-                              title="Redeem points via redeem_points"
-                            >
-                              − Redeem
-                            </button>
-                          </div>
-                        </td>
                       </tr>
                     ))
                   )}
@@ -483,77 +457,9 @@ export default function LoyaltyManagementPage() {
           </div>
         )}
 
-        {/* ========================================================================= */}
-        {/* TAB 2: Points Transactions Ledger (loyalty_transactions) */}
-        {/* ========================================================================= */}
-        {activeTab === "ledger" && (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-slate-800 bg-slate-950/40 text-slate-400 font-semibold">
-                  <th className="py-3 px-4">Date & Time</th>
-                  <th className="py-3 px-4">Customer</th>
-                  <th className="py-3 px-4 font-mono">Card No</th>
-                  <th className="py-3 px-4">Tier</th>
-                  <th className="py-3 px-4">Transaction Type</th>
-                  <th className="py-3 px-4 text-right">Points Change</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60 font-mono">
-                {loading ? (
-                  <tr>
-                    <td colSpan={6} className="py-12 text-center text-slate-500 font-sans">
-                      <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-amber-500" />
-                      Loading loyalty_transactions ledger...
-                    </td>
-                  </tr>
-                ) : recentLoyalty.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="py-12 text-center text-slate-500 font-sans">
-                      <History className="w-8 h-8 text-slate-600 mx-auto mb-2" />
-                      No points transactions recorded yet. Use the <strong>&quot;Award Points&quot;</strong> or{" "}
-                      <strong>&quot;Redeem Points&quot;</strong> buttons above to record live transactions.
-                    </td>
-                  </tr>
-                ) : (
-                  recentLoyalty.map((lt: any) => (
-                    <tr key={lt.loyalty_id} className="hover:bg-slate-800/30 transition-colors">
-                      <td className="py-3 px-4 text-slate-400 text-[11px]">
-                        {new Date(lt.created_at).toLocaleString()}
-                      </td>
-                      <td className="py-3 px-4 font-sans font-medium text-white">{lt.customer_name}</td>
-                      <td className="py-3 px-4 text-amber-400 font-bold">{lt.card_no}</td>
-                      <td className="py-3 px-4">
-                        <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-slate-800 text-slate-300">
-                          {lt.tier}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span
-                          className={`text-[9px] px-2 py-0.5 rounded font-bold ${lt.transaction_type === "EARNED"
-                            ? "bg-emerald-950 text-emerald-300 border border-emerald-800/40"
-                            : "bg-rose-950 text-rose-300 border border-rose-800/40"
-                            }`}
-                        >
-                          {lt.transaction_type}
-                        </span>
-                      </td>
-                      <td
-                        className={`py-3 px-4 text-right font-bold ${lt.points_change > 0 ? "text-emerald-400" : "text-rose-400"
-                          }`}
-                      >
-                        {lt.points_change > 0 ? `+${lt.points_change}` : lt.points_change} pts
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
 
         {/* ========================================================================= */}
-        {/* TAB 3: Top Customers Leaderboard (top_customers_vw) */}
+        {/* TAB 3: Top 3 Customers by Highest Points Earned (top_customers_vw) */}
         {/* ========================================================================= */}
         {activeTab === "top" && (
           <div className="overflow-x-auto">
@@ -564,28 +470,26 @@ export default function LoyaltyManagementPage() {
                   <th className="py-3 px-4 font-mono">Card No</th>
                   <th className="py-3 px-4">Customer Name</th>
                   <th className="py-3 px-4">Tier</th>
-                  <th className="py-3 px-4 text-right">Total Spent (Sales)</th>
-                  <th className="py-3 px-4 text-center">Completed Orders</th>
+                  <th className="py-3 px-4 text-right">Points Earned (Highest)</th>
                   <th className="py-3 px-4 text-right">Points Balance</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60 font-mono">
                 {loading ? (
                   <tr>
-                    <td colSpan={8} className="py-12 text-center text-slate-500 font-sans">
+                    <td colSpan={6} className="py-12 text-center text-slate-500 font-sans">
                       <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-amber-500" />
                       Querying top_customers_vw...
                     </td>
                   </tr>
                 ) : topCustomers.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-12 text-center text-slate-500 font-sans">
+                    <td colSpan={6} className="py-12 text-center text-slate-500 font-sans">
                       No top customers found.
                     </td>
                   </tr>
                 ) : (
-                  topCustomers.map((c, index) => (
+                  topCustomers.slice(0, 3).map((c, index) => (
                     <tr key={c.customer_id} className="hover:bg-slate-800/30 transition-colors">
                       <td className="py-3 px-4 text-center">
                         {index === 0 ? (
@@ -611,20 +515,11 @@ export default function LoyaltyManagementPage() {
                           {c.tier}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-right text-emerald-400 font-sans font-bold">
-                        Rs. {Number(c.total_spent || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      <td className="py-3 px-4 text-right text-emerald-400 font-bold">
+                        +{Number(c.total_points_earned || 0).toLocaleString()} pts
                       </td>
-                      <td className="py-3 px-4 text-center text-slate-400 font-sans">{c.total_orders || 0}</td>
                       <td className="py-3 px-4 text-right text-amber-300 font-bold">
                         {Number(c.points_balance || 0).toLocaleString()} pts
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        <button
-                          onClick={() => openAwardModal(c.customer_id)}
-                          className="px-2 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-[10px] font-bold border border-emerald-500/20 transition-all font-sans"
-                        >
-                          + Award Points
-                        </button>
                       </td>
                     </tr>
                   ))

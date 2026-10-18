@@ -74,30 +74,32 @@ WHERE p.is_active = 1
   AND CURDATE() BETWEEN p.start_date AND p.end_date;
 
 -- ------------------------------------------------------------
--- VIEW 3: Top Customers Leaderboard by Sales & Orders
+-- VIEW 3: Top Customers Leaderboard by Points Earned
 -- ------------------------------------------------------------
-CREATE VIEW top_customers_vw AS
-SELECT 
+CREATE OR REPLACE VIEW top_customers_vw AS
+SELECT
     c.customer_id,
     c.card_no,
     c.full_name,
     c.tier,
-    COALESCE(SUM(CASE
-        WHEN s.status = 'COMPLETED' THEN s.total_amount
-        ELSE 0
-    END), 0) AS total_spent,
-    COUNT(CASE
-        WHEN s.status = 'COMPLETED' THEN s.sale_id
-    END) AS total_orders,
-    c.points_balance
+    c.points_balance,
+    COALESCE(SUM(
+        CASE
+            WHEN lt.transaction_type = 'EARNED'
+            THEN lt.points_change
+            ELSE 0
+        END
+    ), 0) AS total_points_earned
 FROM customers c
-LEFT JOIN sales s ON c.customer_id = s.customer_id 
+LEFT JOIN loyalty_transactions lt
+    ON c.customer_id = lt.customer_id
 GROUP BY
     c.customer_id,
     c.card_no,
     c.full_name,
     c.tier,
     c.points_balance;
+
 
 -- ------------------------------------------------------------
 -- VIEW 4: Comprehensive Customer Marketing & Points Summary
@@ -656,10 +658,16 @@ DELIMITER ;
 -- 7. VERIFICATION AND TEST QUERIES
 -- ============================================================
 
+-- Verification queries for views:
 -- SELECT * FROM customer_etl_vw LIMIT 5;
 -- SELECT * FROM active_promotions_vw LIMIT 5;
--- SELECT * FROM top_customers_vw LIMIT 5;
 -- SELECT * FROM customer_summary_vw LIMIT 5;
+
+-- Top 3 customers by points earned from top_customers_vw:
+SELECT *
+FROM top_customers_vw
+ORDER BY total_points_earned DESC
+LIMIT 3;
 
 -- SELECT lt_points_earned(500);
 -- SELECT get_discount(500, 1);

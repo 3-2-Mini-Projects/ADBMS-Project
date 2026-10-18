@@ -195,23 +195,55 @@ export async function GET(req: Request) {
 
     if (view === "top_customers") {
       try {
-        const rows = await query("SELECT * FROM top_customers_vw ORDER BY total_spent DESC LIMIT 10");
+        await query(`
+          CREATE OR REPLACE VIEW top_customers_vw AS
+          SELECT 
+            customer_id,
+            card_no,
+            full_name,
+            tier,
+            points_balance,
+            total_points_earned
+          FROM customer_summary_vw
+        `);
+      } catch (viewErr: any) {
+        console.warn("Notice: could not replace top_customers_vw:", viewErr.message);
+      }
+
+      try {
+        const rows = await query(`
+          SELECT * FROM top_customers_vw 
+          ORDER BY total_points_earned DESC 
+          LIMIT 3
+        `);
+        if (Array.isArray(rows) && rows.length > 0) {
+          return NextResponse.json(rows);
+        }
+      } catch (qErr: any) {
+        console.warn("Query top_customers_vw error:", qErr.message);
+      }
+
+      try {
+        const rows = await query(`
+          SELECT 
+            customer_id,
+            card_no,
+            full_name,
+            tier,
+            points_balance,
+            total_points_earned
+          FROM customer_summary_vw
+          ORDER BY total_points_earned DESC
+          LIMIT 3
+        `);
         return NextResponse.json(rows);
       } catch {
         const rows = await query(`
-          SELECT 
-            c.customer_id,
-            c.card_no,
-            c.full_name,
-            c.tier,
-            COALESCE(SUM(CASE WHEN s.status = 'COMPLETED' THEN s.total_amount ELSE 0 END), 0) AS total_spent,
-            COUNT(CASE WHEN s.status = 'COMPLETED' THEN s.sale_id END) AS total_orders,
-            c.points_balance
-          FROM customers c
-          LEFT JOIN sales s ON c.customer_id = s.customer_id 
-          GROUP BY c.customer_id, c.card_no, c.full_name, c.tier, c.points_balance
-          ORDER BY total_spent DESC
-          LIMIT 10
+          SELECT customer_id, card_no, full_name, tier, points_balance, points_balance AS total_points_earned
+          FROM customers
+          WHERE is_active = 1
+          ORDER BY points_balance DESC
+          LIMIT 3
         `);
         return NextResponse.json(rows);
       }
