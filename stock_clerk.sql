@@ -6,6 +6,60 @@ USE supermarket_ADBMS;
 -- ============================================================
 
 -- ============================================================
+-- 0. INVENTORY DATA-INTEGRITY CONSTRAINTS
+-- ============================================================
+-- Run the two checks below before applying the ALTER statements.
+-- Existing invalid rows must be corrected first; MySQL will reject
+-- the constraints rather than silently changing inventory data.
+SELECT COUNT(*) AS invalid_negative_inventory_rows
+FROM inventory
+WHERE quantity_on_hand < 0 OR reserved_qty < 0;
+
+SELECT branch_id, product_id, COUNT(*) AS duplicate_rows
+FROM inventory
+GROUP BY branch_id, product_id
+HAVING COUNT(*) > 1;
+
+-- MySQL does not support ADD CONSTRAINT IF NOT EXISTS. These checks
+-- make the migration safe to run again after the constraints exist.
+SET @has_inventory_nonnegative_check = (
+    SELECT COUNT(*)
+    FROM information_schema.table_constraints
+    WHERE constraint_schema = DATABASE()
+      AND table_name = 'inventory'
+      AND constraint_name = 'chk_inventory_nonnegative'
+      AND constraint_type = 'CHECK'
+);
+
+SET @add_inventory_nonnegative_check = IF(
+    @has_inventory_nonnegative_check = 0,
+    'ALTER TABLE inventory ADD CONSTRAINT chk_inventory_nonnegative CHECK (quantity_on_hand >= 0 AND reserved_qty >= 0)',
+    'SELECT 1'
+);
+
+PREPARE add_inventory_nonnegative_check FROM @add_inventory_nonnegative_check;
+EXECUTE add_inventory_nonnegative_check;
+DEALLOCATE PREPARE add_inventory_nonnegative_check;
+
+SET @has_inventory_branch_product_unique = (
+    SELECT COUNT(*)
+    FROM information_schema.statistics
+    WHERE table_schema = DATABASE()
+      AND table_name = 'inventory'
+      AND index_name = 'uq_inventory_branch_product'
+);
+
+SET @add_inventory_branch_product_unique = IF(
+    @has_inventory_branch_product_unique = 0,
+    'ALTER TABLE inventory ADD CONSTRAINT uq_inventory_branch_product UNIQUE (branch_id, product_id)',
+    'SELECT 1'
+);
+
+PREPARE add_inventory_branch_product_unique FROM @add_inventory_branch_product_unique;
+EXECUTE add_inventory_branch_product_unique;
+DEALLOCATE PREPARE add_inventory_branch_product_unique;
+
+-- ============================================================
 -- 1. VIEWS
 -- ============================================================
 
