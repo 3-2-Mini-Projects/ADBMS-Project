@@ -4,7 +4,6 @@ import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useCashier } from "@/lib/cashierContext";
 import PrintableReceipt, { ReceiptData } from "@/components/PrintableReceipt";
-import CameraBarcodeScannerModal from "@/components/CameraBarcodeScannerModal";
 
 interface DashboardData {
   cashierToday: {
@@ -34,6 +33,19 @@ interface DashboardData {
     payment_methods?: string;
     items_count: number;
   }>;
+  todayReturns: Array<{
+    return_id: number;
+    sale_item_id: number;
+    sale_id: number;
+    product_id: number;
+    product_name: string;
+    barcode: string;
+    quantity: number;
+    reason: string;
+    refund_amount: string | number;
+    return_date: string;
+    processor_name: string;
+  }>;
   branchSummaries: Array<{
     summary_id: number;
     summary_date: string;
@@ -44,28 +56,11 @@ interface DashboardData {
   lowStockCount: number;
 }
 
-interface ProductStock {
-  product_id: number;
-  barcode: string;
-  name: string;
-  brand?: string;
-  unit_price: string | number;
-  tax_rate: string | number;
-  category_name?: string;
-  quantity_on_hand: number;
-  reserved_qty: number;
-  available_stock: number;
-}
-
 export default function CashierDashboardPage() {
   const { cashier } = useCashier();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [stockSearch, setStockSearch] = useState("");
-  const [stockResults, setStockResults] = useState<ProductStock[]>([]);
-  const [stockLoading, setStockLoading] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState<ReceiptData | null>(null);
-  const [showCameraScanner, setShowCameraScanner] = useState(false);
 
   const fetchDashboardData = useCallback(async () => {
     if (!cashier) return;
@@ -86,27 +81,6 @@ export default function CashierDashboardPage() {
   useEffect(() => {
     fetchDashboardData();
   }, [fetchDashboardData]);
-
-  // Stock quick search
-  const handleStockSearch = async (q: string) => {
-    setStockSearch(q);
-    if (!q.trim() || !cashier) {
-      setStockResults([]);
-      return;
-    }
-    setStockLoading(true);
-    try {
-      const res = await fetch(
-        `/api/cashier/products?branchId=${cashier.branch_id}&search=${encodeURIComponent(q)}`
-      );
-      const json = await res.json();
-      setStockResults(json.products || []);
-    } catch (err) {
-      console.error("Stock search error", err);
-    } finally {
-      setStockLoading(false);
-    }
-  };
 
   const openReceipt = async (saleId: number) => {
     try {
@@ -255,366 +229,7 @@ export default function CashierDashboardPage() {
         </div>
       </div>
 
-      {/* Quick Actions Grid */}
-      <div>
-        <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginBottom: 12 }}>
-          ⚡ Quick Cashier Actions
-        </div>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-            gap: 14,
-          }}
-        >
-          <Link
-            href="/cashier/pos"
-            style={{
-              padding: "16px 18px",
-              borderRadius: 12,
-              background: "var(--bg-card)",
-              border: "1px solid var(--border)",
-              textDecoration: "none",
-              color: "inherit",
-              display: "flex",
-              alignItems: "center",
-              gap: 14,
-              transition: "transform 0.15s, border-color 0.15s",
-            }}
-          >
-            <div
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 10,
-                background: "rgba(16, 185, 129, 0.15)",
-                color: "var(--accent-emerald)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 22,
-              }}
-            >
-              🛒
-            </div>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 14, color: "var(--text-primary)" }}>New POS Sale</div>
-              <div style={{ fontSize: 11, color: "var(--text-muted)" }}>Fast billing & scanner</div>
-            </div>
-          </Link>
-
-          <Link
-            href="/cashier/history"
-            style={{
-              padding: "16px 18px",
-              borderRadius: 12,
-              background: "var(--bg-card)",
-              border: "1px solid var(--border)",
-              textDecoration: "none",
-              color: "inherit",
-              display: "flex",
-              alignItems: "center",
-              gap: 14,
-              transition: "transform 0.15s, border-color 0.15s",
-            }}
-          >
-            <div
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 10,
-                background: "rgba(88, 166, 255, 0.15)",
-                color: "var(--accent-blue)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 22,
-              }}
-            >
-              📋
-            </div>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 14, color: "var(--text-primary)" }}>Transaction History</div>
-              <div style={{ fontSize: 11, color: "var(--text-muted)" }}>Receipts & reprints</div>
-            </div>
-          </Link>
-
-          <Link
-            href="/cashier/products"
-            style={{
-              padding: "16px 18px",
-              borderRadius: 12,
-              background: "var(--bg-card)",
-              border: "1px solid var(--border)",
-              textDecoration: "none",
-              color: "inherit",
-              display: "flex",
-              alignItems: "center",
-              gap: 14,
-              transition: "transform 0.15s, border-color 0.15s",
-            }}
-          >
-            <div
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 10,
-                background: "rgba(188, 140, 255, 0.15)",
-                color: "var(--accent-purple)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 22,
-              }}
-            >
-              🔍
-            </div>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 14, color: "var(--text-primary)" }}>Stock Lookup</div>
-              <div style={{ fontSize: 11, color: "var(--text-muted)" }}>Price & branch stock</div>
-            </div>
-          </Link>
-
-          <Link
-            href="/cashier/returns"
-            style={{
-              padding: "16px 18px",
-              borderRadius: 12,
-              background: "var(--bg-card)",
-              border: "1px solid var(--border)",
-              textDecoration: "none",
-              color: "inherit",
-              display: "flex",
-              alignItems: "center",
-              gap: 14,
-              transition: "transform 0.15s, border-color 0.15s",
-            }}
-          >
-            <div
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 10,
-                background: "rgba(210, 153, 34, 0.15)",
-                color: "var(--accent-amber)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 22,
-              }}
-            >
-              ↩️
-            </div>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 14, color: "var(--text-primary)" }}>Returns & Refunds</div>
-              <div style={{ fontSize: 11, color: "var(--text-muted)" }}>Manager-authorized</div>
-            </div>
-          </Link>
-        </div>
-      </div>
-
-      {/* 2-Column Section: Stock Quick Lookup & Access Restriction Notice */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 20,
-        }}
-      >
-        {/* Component C: Stock Information & Price Check Widget */}
-        <div
-          style={{
-            background: "var(--bg-card)",
-            border: "1px solid var(--border)",
-            borderRadius: 14,
-            padding: 20,
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <div style={{ fontWeight: 700, fontSize: 14, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 8 }}>
-              <span>📦</span> Quick Price & Branch Stock Lookup
-            </div>
-            <span style={{ fontSize: 11, color: "var(--accent-cyan)" }}>
-              {cashier?.branch_name}
-            </span>
-          </div>
-
-          <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-            <div style={{ position: "relative", flex: 1 }}>
-              <input
-                type="text"
-                className="input"
-                placeholder="Scan barcode or enter product name (e.g. 4790001, Milk)..."
-                value={stockSearch}
-                onChange={(e) => handleStockSearch(e.target.value)}
-              />
-              {stockLoading && (
-                <span style={{ position: "absolute", right: 12, top: 10, fontSize: 11, color: "var(--text-muted)" }}>
-                  Searching...
-                </span>
-              )}
-            </div>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => setShowCameraScanner(true)}
-              title="Scan barcode with camera"
-              style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 12px" }}
-            >
-              <span>📷</span> Camera Scan
-            </button>
-          </div>
-
-          {/* Search Results List */}
-          <div style={{ flex: 1, minHeight: 180, maxHeight: 220, overflowY: "auto" }}>
-            {stockResults.length === 0 ? (
-              <div
-                style={{
-                  height: "100%",
-                  minHeight: 160,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "var(--text-muted)",
-                  fontSize: 12,
-                  textAlign: "center",
-                  flexDirection: "column",
-                  gap: 6,
-                }}
-              >
-                <span>🔍</span>
-                <span>Type product name or scan barcode to view price and available stock</span>
-              </div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {stockResults.map((p) => {
-                  const isAvailable = p.available_stock > 0;
-                  return (
-                    <div
-                      key={p.product_id}
-                      style={{
-                        padding: "8px 12px",
-                        borderRadius: 8,
-                        background: "var(--bg-surface)",
-                        border: "1px solid var(--border)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                      }}
-                    >
-                      <div>
-                        <div style={{ fontWeight: 600, fontSize: 13, color: "var(--text-primary)" }}>
-                          {p.name}
-                        </div>
-                        <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                          Barcode: <span className="mono">{p.barcode}</span> • Category: {p.category_name || "General"}
-                        </div>
-                      </div>
-
-                      <div style={{ textAlign: "right" }}>
-                        <div style={{ fontWeight: 700, fontSize: 13, color: "var(--accent-emerald)" }}>
-                          {fmt(p.unit_price)}
-                        </div>
-                        <div
-                          style={{
-                            fontSize: 10.5,
-                            fontWeight: 600,
-                            color: isAvailable ? "var(--text-secondary)" : "var(--accent-rose)",
-                          }}
-                        >
-                          Stock: {p.available_stock} units
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Access Restrictions & Permissions Guard */}
-        <div
-          style={{
-            background: "var(--bg-card)",
-            border: "1px solid var(--border)",
-            borderRadius: 14,
-            padding: 20,
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "space-between",
-          }}
-        >
-          <div>
-            <div style={{ fontWeight: 700, fontSize: 14, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-              <span>🛡️</span> Cashier Access & Security Boundaries
-            </div>
-
-            <p style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 14, lineHeight: 1.5 }}>
-              In accordance with supermarket ADBMS security specifications, accounts with the <strong>CASHIER</strong> role operate under strict operational boundaries:
-            </p>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {[
-                { label: "Sales & Checkout", allowed: true, desc: "Process payments, scan barcodes, print receipts" },
-                { label: "Branch Stock Lookup", allowed: true, desc: "View selling price and assigned branch stock" },
-                { label: "Returns & Voiding", allowed: "restricted", desc: "Requires Manager PIN authorization" },
-                { label: "Employee & Payroll Management", allowed: false, desc: "Restricted to HR & Admins" },
-                { label: "Supplier & Purchase Orders", allowed: false, desc: "Restricted to Stock Managers" },
-                { label: "Product & Price Editing", allowed: false, desc: "Restricted to Catalog Managers" },
-                { label: "Company-Wide Profit Reports", allowed: false, desc: "Restricted to Executives & Branch Managers" },
-              ].map((item, idx) => (
-                <div
-                  key={idx}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "6px 10px",
-                    borderRadius: 6,
-                    background: "rgba(255, 255, 255, 0.02)",
-                    fontSize: 11.5,
-                  }}
-                >
-                  <div>
-                    <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>{item.label}</span>
-                    <span style={{ color: "var(--text-muted)", marginLeft: 6 }}>— {item.desc}</span>
-                  </div>
-                  <span>
-                    {item.allowed === true && (
-                      <span className="badge badge-completed" style={{ fontSize: 9.5 }}>ALLOWED</span>
-                    )}
-                    {item.allowed === "restricted" && (
-                      <span className="badge badge-open" style={{ fontSize: 9.5 }}>MGR AUTH</span>
-                    )}
-                    {item.allowed === false && (
-                      <span className="badge badge-cancelled" style={{ fontSize: 9.5 }}>RESTRICTED</span>
-                    )}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div
-            style={{
-              marginTop: 16,
-              padding: "8px 12px",
-              borderRadius: 8,
-              background: "rgba(56, 189, 248, 0.08)",
-              border: "1px solid rgba(56, 189, 248, 0.2)",
-              fontSize: 11,
-              color: "var(--accent-blue)",
-            }}
-          >
-            💡 Note: Database transactions enforce branch isolation so cashiers only interact with their designated branch inventory.
-          </div>
-        </div>
-      </div>
-
-      {/* Component A: Recent Sales Processed by Logged-in Cashier */}
+      {/* Component A: Latest 50 Transactions of That Day */}
       <div
         style={{
           background: "var(--bg-card)",
@@ -625,11 +240,16 @@ export default function CashierDashboardPage() {
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <div>
-            <h3 style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>
-              Recent Sales by {cashier?.full_name}
-            </h3>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)" }}>
+                Latest 50 Transactions
+              </h3>
+              <span className="badge badge-completed" style={{ fontSize: 11 }}>
+                {data?.recentSales?.length || 0} Records
+              </span>
+            </div>
             <p style={{ fontSize: 11.5, color: "var(--text-muted)", marginTop: 2 }}>
-              Last 10 completed and processed checkout receipts
+              Latest transactions processed today for {cashier?.branch_name || "this branch"}
             </p>
           </div>
           <Link href="/cashier/history" className="btn btn-ghost" style={{ fontSize: 12, padding: "6px 12px" }}>
@@ -643,12 +263,12 @@ export default function CashierDashboardPage() {
           </div>
         ) : !data?.recentSales || data.recentSales.length === 0 ? (
           <div style={{ textAlign: "center", padding: 30, color: "var(--text-muted)" }}>
-            No sales processed yet for this cashier session. Launch POS to start selling!
+            No transactions found for today. Launch POS to start selling!
           </div>
         ) : (
-          <div className="table-wrapper">
+          <div className="table-wrapper" style={{ maxHeight: 420, overflowY: "auto" }}>
             <table className="data-table">
-              <thead>
+              <thead style={{ position: "sticky", top: 0, background: "var(--bg-card)", zIndex: 2 }}>
                 <tr>
                   <th>Sale ID</th>
                   <th>Date & Time</th>
@@ -719,6 +339,120 @@ export default function CashierDashboardPage() {
         )}
       </div>
 
+      {/* Component B: Latest 10 Return Details of That Day */}
+      <div
+        style={{
+          background: "var(--bg-card)",
+          border: "1px solid var(--border)",
+          borderRadius: 14,
+          padding: 20,
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 18 }}>↩️</span>
+              <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)" }}>
+                Latest 10 Returns of Today
+              </h3>
+              <span className="badge badge-open" style={{ fontSize: 11 }}>
+                {data?.todayReturns?.length || 0} Returns
+              </span>
+            </div>
+            <p style={{ fontSize: 11.5, color: "var(--text-muted)", marginTop: 2 }}>
+              Manager-authorized customer returns & refund items for {cashier?.branch_name || "this branch"}
+            </p>
+          </div>
+          <Link href="/cashier/returns" className="btn btn-ghost" style={{ fontSize: 12, padding: "6px 12px" }}>
+            Process Returns & Refunds →
+          </Link>
+        </div>
+
+        {loading ? (
+          <div style={{ textAlign: "center", padding: 30, color: "var(--text-muted)" }}>
+            Loading return details...
+          </div>
+        ) : !data?.todayReturns || data.todayReturns.length === 0 ? (
+          <div
+            style={{
+              textAlign: "center",
+              padding: "32px 16px",
+              color: "var(--text-muted)",
+              background: "rgba(255, 255, 255, 0.01)",
+              borderRadius: 10,
+              border: "1px dashed var(--border)",
+              fontSize: 13,
+            }}
+          >
+            <div style={{ fontSize: 24, marginBottom: 6 }}>✅</div>
+            <div>No returns or customer refunds processed today.</div>
+          </div>
+        ) : (
+          <div className="table-wrapper">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Return ID</th>
+                  <th>Return Time</th>
+                  <th>Sale ID</th>
+                  <th>Product</th>
+                  <th>Quantity</th>
+                  <th>Reason</th>
+                  <th>Refund Amount</th>
+                  <th>Authorized By</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.todayReturns.map((r) => (
+                  <tr key={r.return_id}>
+                    <td className="mono" style={{ fontWeight: 700, color: "var(--accent-amber)" }}>
+                      #RET-{r.return_id}
+                    </td>
+                    <td>
+                      {new Date(r.return_date).toLocaleString("en-LK", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                      })}
+                    </td>
+                    <td>
+                      <button
+                        className="btn btn-ghost"
+                        style={{ padding: "2px 6px", fontSize: 11, fontFamily: "monospace" }}
+                        onClick={() => openReceipt(r.sale_id)}
+                        title="Click to view original sale receipt"
+                      >
+                        #{r.sale_id} ↗
+                      </button>
+                    </td>
+                    <td>
+                      <div style={{ fontWeight: 600, color: "var(--text-primary)" }}>{r.product_name}</div>
+                      <div style={{ fontSize: 10.5, color: "var(--text-muted)", fontFamily: "monospace" }}>
+                        {r.barcode}
+                      </div>
+                    </td>
+                    <td style={{ fontWeight: 700 }}>
+                      {r.quantity} pcs
+                    </td>
+                    <td>
+                      <span className="badge badge-open" style={{ fontSize: 10.5 }}>
+                        {r.reason}
+                      </span>
+                    </td>
+                    <td style={{ fontWeight: 700, color: "var(--accent-rose)" }}>
+                      -{fmt(r.refund_amount)}
+                    </td>
+                    <td style={{ fontSize: 12, color: "var(--text-secondary)" }}>
+                      🛡️ {r.processor_name}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       {/* Receipt Modal */}
       {selectedReceipt && (
         <PrintableReceipt
@@ -726,15 +460,6 @@ export default function CashierDashboardPage() {
           onClose={() => setSelectedReceipt(null)}
         />
       )}
-
-      {/* Camera Barcode Scanner Modal */}
-      <CameraBarcodeScannerModal
-        isOpen={showCameraScanner}
-        onClose={() => setShowCameraScanner(false)}
-        onScan={(code) => {
-          handleStockSearch(code);
-        }}
-      />
     </div>
   );
 }

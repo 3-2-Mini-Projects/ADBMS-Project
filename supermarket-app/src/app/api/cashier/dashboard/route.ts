@@ -43,7 +43,7 @@ export async function GET(req: Request) {
         AND DATE(sale_date) = CURRENT_DATE()
     `, [branchId]);
 
-    // 3. Recent 10 sales processed by this cashier
+    // 3. Latest 50 transactions of that day
     const recentSales = await query<any>(`
       SELECT 
         s.sale_id,
@@ -59,12 +59,36 @@ export async function GET(req: Request) {
         (SELECT COUNT(*) FROM sale_items WHERE sale_id = s.sale_id) AS items_count
       FROM sales s
       LEFT JOIN customers c ON s.customer_id = c.customer_id
-      WHERE s.cashier_id = ?
-      ORDER BY s.sale_date DESC
-      LIMIT 10
-    `, [cashierId]);
+      WHERE s.branch_id = ?
+      ORDER BY (DATE(s.sale_date) = CURRENT_DATE()) DESC, s.sale_date DESC
+      LIMIT 50
+    `, [branchId]);
 
-    // 4. Latest Daily Sales Summary row for the branch
+    // 4. Latest 10 return details of that day
+    const todayReturns = await query<any>(`
+      SELECT 
+        r.return_id,
+        r.sale_item_id,
+        si.sale_id,
+        si.product_id,
+        p.name AS product_name,
+        p.barcode,
+        r.quantity,
+        r.reason,
+        r.refund_amount,
+        r.return_date,
+        COALESCE(e.full_name, 'Manager Authorized') AS processor_name
+      FROM returns r
+      JOIN sale_items si ON r.sale_item_id = si.sale_item_id
+      JOIN sales s ON si.sale_id = s.sale_id
+      JOIN products p ON si.product_id = p.product_id
+      LEFT JOIN employees e ON r.processed_by = e.employee_id
+      WHERE s.branch_id = ?
+      ORDER BY (DATE(r.return_date) = CURRENT_DATE()) DESC, r.return_date DESC
+      LIMIT 10
+    `, [branchId]);
+
+    // 5. Latest Daily Sales Summary row for the branch
     const branchSummaries = await query<any>(`
       SELECT summary_id, branch_id, summary_date, transactions_count, total_sales, total_tax
       FROM daily_sales_summary
@@ -73,7 +97,7 @@ export async function GET(req: Request) {
       LIMIT 5
     `, [branchId]);
 
-    // 5. Branch low stock count
+    // 6. Branch low stock count
     const [lowStock]: any = await query(`
       SELECT COUNT(*) AS low_stock_count
       FROM inventory i
@@ -97,6 +121,7 @@ export async function GET(req: Request) {
         total_tax: Number(branchToday?.total_tax || 0),
       },
       recentSales,
+      todayReturns,
       branchSummaries,
       lowStockCount: Number(lowStock?.low_stock_count || 0),
     });
