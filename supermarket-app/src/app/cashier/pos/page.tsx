@@ -7,6 +7,7 @@ import ManagerAuthModal from "@/components/ManagerAuthModal";
 import CameraBarcodeScannerModal from "@/components/CameraBarcodeScannerModal";
 import BarcodeGeneratorModal from "@/components/BarcodeGeneratorModal";
 import QuantityEntryModal, { QuantityModalProduct } from "@/components/QuantityEntryModal";
+import RegisterCustomerModal from "@/components/RegisterCustomerModal";
 
 interface Product {
   product_id: number;
@@ -88,6 +89,9 @@ export default function POSBillingPage() {
   const [selectedProductForQty, setSelectedProductForQty] = useState<QuantityModalProduct | null>(null);
   const [qtyModalMode, setQtyModalMode] = useState<"add" | "set">("add");
   const [initialModalQty, setInitialModalQty] = useState<number>(1);
+
+  // Register Customer Modal
+  const [showRegisterCustomerModal, setShowRegisterCustomerModal] = useState(false);
 
   const barcodeInputRef = useRef<HTMLInputElement>(null);
   const lastBarcodeSubmitRef = useRef<{ code: string; time: number }>({ code: "", time: 0 });
@@ -607,24 +611,41 @@ export default function POSBillingPage() {
                 fontSize: 12,
               }}
             >
-              <span>⭐ {customer.full_name}</span>
+              <span>⭐ <strong>{customer.full_name}</strong> ({customer.card_no})</span>
               <span className="badge badge-open" style={{ fontSize: 9.5 }}>{customer.tier}</span>
+              <span style={{ fontSize: 11, color: "var(--accent-emerald)", fontWeight: 700 }}>
+                {customer.points_balance || 0} pts
+              </span>
               <button
                 className="btn btn-ghost"
                 style={{ padding: "1px 4px", fontSize: 10 }}
                 onClick={() => setCustomer(null)}
+                title="Detach customer"
               >
                 ✕
               </button>
             </div>
           ) : (
-            <button
-              className="btn btn-ghost"
-              style={{ fontSize: 12, padding: "6px 12px" }}
-              onClick={() => setShowCustSearch(!showCustSearch)}
-            >
-              👤 Attach Customer
-            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                style={{ fontSize: 12, padding: "6px 12px" }}
+                onClick={() => setShowCustSearch(!showCustSearch)}
+              >
+                👤 Attach Customer
+              </button>
+              <button
+                type="button"
+                className="btn btn-emerald"
+                style={{ fontSize: 12, padding: "6px 12px", gap: 4 }}
+                onClick={() => setShowRegisterCustomerModal(true)}
+                title="Enroll walk-in customer into loyalty rewards program"
+              >
+                <span>⭐</span>
+                <span>+ Register Member</span>
+              </button>
+            </div>
           )}
 
           {/* Customer Dropdown search */}
@@ -1035,6 +1056,61 @@ export default function POSBillingPage() {
               <span>TOTAL DUE:</span>
               <span>{fmt(finalTotal)}</span>
             </div>
+
+            {/* Loyalty Points Earning Live Preview Banner */}
+            {customer ? (
+              <div
+                style={{
+                  marginTop: 10,
+                  padding: "10px 12px",
+                  borderRadius: 10,
+                  background: "linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(59, 130, 246, 0.08))",
+                  border: "1px solid rgba(16, 185, 129, 0.25)",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
+                    <span style={{ fontSize: 14 }}>⭐</span>
+                    <strong style={{ color: "var(--text-primary)" }}>{customer.full_name}</strong>
+                    <span className="badge badge-open" style={{ fontSize: 9.5 }}>{customer.tier}</span>
+                  </div>
+                  <span style={{ fontSize: 11, color: "var(--accent-emerald)", fontWeight: 800 }}>
+                    Bal: {customer.points_balance || 0} pts
+                  </span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11 }}>
+                  <span style={{ color: "var(--text-secondary)" }}>Earning on this purchase:</span>
+                  <span style={{ color: "var(--accent-emerald)", fontWeight: 900, fontSize: 12 }}>
+                    🪙 +{Math.floor((finalTotal / 100) * (customer.tier === 'SILVER' ? 1.1 : customer.tier === 'GOLD' ? 1.25 : customer.tier === 'PLATINUM' ? 1.5 : 1.0))} Points
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div
+                style={{
+                  marginTop: 10,
+                  padding: "8px 12px",
+                  borderRadius: 8,
+                  background: "rgba(255, 255, 255, 0.03)",
+                  border: "1px dashed var(--border)",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  fontSize: 11,
+                  color: "var(--text-muted)",
+                }}
+              >
+                <span>No loyalty member attached</span>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  style={{ padding: "2px 8px", fontSize: 11, color: "var(--accent-emerald)", fontWeight: 700 }}
+                  onClick={() => setShowRegisterCustomerModal(true)}
+                >
+                  ⭐ + Register Member
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Checkout Action Button */}
@@ -1085,6 +1161,50 @@ export default function POSBillingPage() {
                 {fmt(finalTotal)}
               </span>
             </div>
+
+            {/* Customer Loyalty Banner in Checkout */}
+            {customer && (
+              <div
+                style={{
+                  background: "rgba(59, 130, 246, 0.1)",
+                  border: "1px solid rgba(59, 130, 246, 0.3)",
+                  padding: "10px 14px",
+                  borderRadius: 10,
+                  marginBottom: 14,
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12.5 }}>
+                  <span>⭐ <strong>{customer.full_name}</strong> ({customer.card_no})</span>
+                  <span className="badge badge-open">{customer.tier} MEMBER</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11.5, marginTop: 4 }}>
+                  <span style={{ color: "var(--text-secondary)" }}>
+                    Available Points: <strong>{customer.points_balance || 0} pts</strong>
+                  </span>
+                  <span style={{ color: "var(--accent-emerald)", fontWeight: 700 }}>
+                    🪙 +{Math.floor((finalTotal / 100) * (customer.tier === 'SILVER' ? 1.1 : customer.tier === 'GOLD' ? 1.25 : customer.tier === 'PLATINUM' ? 1.5 : 1.0))} Points will be earned
+                  </span>
+                </div>
+                {customer.points_balance > 0 && (
+                  <div style={{ marginTop: 8, paddingTop: 6, borderTop: "1px dashed rgba(59, 130, 246, 0.3)", display: "flex", justifyContent: "flex-end" }}>
+                    <button
+                      type="button"
+                      className="btn btn-ghost"
+                      style={{ fontSize: 11, padding: "3px 8px", color: "var(--accent-blue)" }}
+                      onClick={() => {
+                        const redeemable = Math.min(customer.points_balance, finalTotal);
+                        setPaymentLines((prev) => [
+                          { method: "POINTS", amount: redeemable },
+                          ...(finalTotal > redeemable ? [{ method: "CASH" as const, amount: Number((finalTotal - redeemable).toFixed(2)) }] : []),
+                        ]);
+                      }}
+                    >
+                      🪙 Redeem Points (Max: Rs. {Math.min(customer.points_balance, finalTotal).toFixed(2)})
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Split Payment Lines */}
             <div style={{ marginBottom: 16 }}>
@@ -1282,6 +1402,17 @@ export default function POSBillingPage() {
           setTimeout(() => {
             barcodeInputRef.current?.focus();
           }, 50);
+        }}
+      />
+
+      {/* New Loyalty Customer Registration Modal */}
+      <RegisterCustomerModal
+        isOpen={showRegisterCustomerModal}
+        onClose={() => setShowRegisterCustomerModal(false)}
+        defaultCity={cashier?.city || "Galle"}
+        onSuccess={(newCustomer) => {
+          setCustomer(newCustomer);
+          setErrorMsg("");
         }}
       />
     </div>

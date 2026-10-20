@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
+import Link from "next/link";
 import { useApp } from "@/lib/context";
 import {
   Award,
@@ -250,8 +251,15 @@ export default function LoyaltyManagementPage() {
           </h1>
         </div>
 
-        {/* Action Buttons: Recalculate */}
+        {/* Action Buttons: Recalculate & Report */}
         <div className="flex items-center gap-2.5 flex-wrap">
+          <Link
+            href="/marketing/reports/top-loyalty-customers"
+            className="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 hover:text-amber-300 text-xs font-bold flex items-center gap-2 border border-slate-700 shadow-md transition-all"
+          >
+            <Trophy className="w-3.5 h-3.5 text-amber-400" />
+            <span>Top 10 Customers Report</span>
+          </Link>
 
           <button
             onClick={handleRecalculateTiers}
