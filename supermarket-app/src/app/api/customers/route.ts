@@ -38,6 +38,14 @@ export async function GET(req: Request) {
     }
 
     if (branchId && branchId !== "ALL" && branchId !== "0") {
+      const branchRows: any = await query(
+        `SELECT branch_id, branch_code, name, city FROM branches WHERE branch_id = ? LIMIT 1`,
+        [branchId]
+      );
+      const branchInfo = branchRows.length > 0 ? branchRows[0] : null;
+      const branchCity = branchInfo?.city ? String(branchInfo.city).trim() : "";
+      const branchName = branchInfo?.name ? String(branchInfo.name).trim() : "";
+
       let hasBranchCol = false;
       try {
         await query(`SELECT branch_id FROM customers LIMIT 1`);
@@ -46,19 +54,64 @@ export async function GET(req: Request) {
         hasBranchCol = false;
       }
 
-      if (hasBranchCol) {
-        sql += ` AND (
-          c.branch_id = ?
-          OR c.customer_id IN (SELECT DISTINCT s.customer_id FROM sales s WHERE s.branch_id = ? AND s.customer_id IS NOT NULL)
-          OR LOWER(TRIM(c.city)) = (SELECT LOWER(TRIM(b.city)) FROM branches b WHERE b.branch_id = ?)
-        )`;
-        params.push(branchId, branchId, branchId);
+      if (branchCity || branchName) {
+        if (hasBranchCol) {
+          sql += ` AND (
+            c.branch_id = ?
+            OR (
+              c.city IS NOT NULL AND TRIM(c.city) != ''
+              AND (
+                LOWER(TRIM(c.city)) = LOWER(?)
+                OR LOWER(?) LIKE CONCAT('%', LOWER(TRIM(c.city)), '%')
+                OR LOWER(TRIM(c.city)) LIKE CONCAT('%', LOWER(?), '%')
+              )
+            )
+          )`;
+          params.push(branchId, branchCity, branchName, branchCity);
+        } else {
+          sql += ` AND (
+            c.city IS NOT NULL AND TRIM(c.city) != ''
+            AND (
+              LOWER(TRIM(c.city)) = LOWER(?)
+              OR LOWER(?) LIKE CONCAT('%', LOWER(TRIM(c.city)), '%')
+              OR LOWER(TRIM(c.city)) LIKE CONCAT('%', LOWER(?), '%')
+            )
+          )`;
+          params.push(branchCity, branchName, branchCity);
+        }
       } else {
-        sql += ` AND (
-          c.customer_id IN (SELECT DISTINCT s.customer_id FROM sales s WHERE s.branch_id = ? AND s.customer_id IS NOT NULL)
-          OR LOWER(TRIM(c.city)) = (SELECT LOWER(TRIM(b.city)) FROM branches b WHERE b.branch_id = ?)
-        )`;
-        params.push(branchId, branchId);
+        if (hasBranchCol) {
+          sql += ` AND (
+            c.branch_id = ?
+            OR (
+              c.city IS NOT NULL AND TRIM(c.city) != ''
+              AND EXISTS (
+                SELECT 1 FROM branches b
+                WHERE b.branch_id = ?
+                  AND (
+                    LOWER(TRIM(c.city)) = LOWER(TRIM(b.city))
+                    OR LOWER(b.name) LIKE CONCAT('%', LOWER(TRIM(c.city)), '%')
+                    OR LOWER(TRIM(c.city)) LIKE CONCAT('%', LOWER(TRIM(b.city)), '%')
+                  )
+              )
+            )
+          )`;
+          params.push(branchId, branchId);
+        } else {
+          sql += ` AND (
+            c.city IS NOT NULL AND TRIM(c.city) != ''
+            AND EXISTS (
+              SELECT 1 FROM branches b
+              WHERE b.branch_id = ?
+                AND (
+                  LOWER(TRIM(c.city)) = LOWER(TRIM(b.city))
+                  OR LOWER(b.name) LIKE CONCAT('%', LOWER(TRIM(c.city)), '%')
+                  OR LOWER(TRIM(c.city)) LIKE CONCAT('%', LOWER(TRIM(b.city)), '%')
+                )
+            )
+          )`;
+          params.push(branchId);
+        }
       }
     }
 

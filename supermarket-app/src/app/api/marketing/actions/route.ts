@@ -203,13 +203,48 @@ export async function GET(req: Request) {
     }
 
     const hasBranch = Boolean(branchId && branchId !== "ALL" && branchId !== "0");
+    let branchInfo: any = null;
+    if (hasBranch) {
+      const branchRows: any = await query(
+        `SELECT branch_id, branch_code, name, city FROM branches WHERE branch_id = ? LIMIT 1`,
+        [branchId]
+      );
+      if (branchRows.length > 0) {
+        branchInfo = branchRows[0];
+      }
+    }
+    const branchCity = branchInfo?.city ? String(branchInfo.city).trim() : "";
+    const branchName = branchInfo?.name ? String(branchInfo.name).trim() : "";
+
     const branchFilter = hasBranch
-      ? `AND (
-          c.customer_id IN (SELECT DISTINCT s.customer_id FROM sales s WHERE s.branch_id = ? AND s.customer_id IS NOT NULL)
-          OR LOWER(TRIM(c.city)) = (SELECT LOWER(TRIM(b.city)) FROM branches b WHERE b.branch_id = ?)
-        )`
+      ? branchCity || branchName
+        ? `AND (
+            c.city IS NOT NULL AND TRIM(c.city) != ''
+            AND (
+              LOWER(TRIM(c.city)) = LOWER(?)
+              OR LOWER(?) LIKE CONCAT('%', LOWER(TRIM(c.city)), '%')
+              OR LOWER(TRIM(c.city)) LIKE CONCAT('%', LOWER(?), '%')
+            )
+          )`
+        : `AND (
+            c.city IS NOT NULL AND TRIM(c.city) != ''
+            AND EXISTS (
+              SELECT 1 FROM branches b
+              WHERE b.branch_id = ?
+                AND (
+                  LOWER(TRIM(c.city)) = LOWER(TRIM(b.city))
+                  OR LOWER(b.name) LIKE CONCAT('%', LOWER(TRIM(c.city)), '%')
+                  OR LOWER(TRIM(c.city)) LIKE CONCAT('%', LOWER(TRIM(b.city)), '%')
+                )
+            )
+          )`
       : "";
-    const branchParams = hasBranch ? [branchId, branchId] : [];
+
+    const branchParams = hasBranch
+      ? branchCity || branchName
+        ? [branchCity, branchName, branchCity]
+        : [branchId]
+      : [];
 
     if (view === "top_customers") {
       const month = searchParams.get("month"); // e.g., '2026-10' or 'ALL'

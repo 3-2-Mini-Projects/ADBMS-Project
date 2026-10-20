@@ -31,14 +31,39 @@ export async function GET(req: Request) {
     const branchFilter = branchId ? "AND s.branch_id = ?" : "";
     const salesParams = branchId ? [branchId] : [];
 
-    // Filter customers related to this branch (by sales transactions at this branch or city match)
+    const branchCity = branchInfo?.city ? String(branchInfo.city).trim() : "";
+    const branchName = branchInfo?.name ? String(branchInfo.name).trim() : "";
+
+    // Filter customers related to this branch strictly by branch name and customer city
     const custBranchFilter = branchId
-      ? `AND (
-          c.customer_id IN (SELECT DISTINCT s.customer_id FROM sales s WHERE s.branch_id = ? AND s.customer_id IS NOT NULL)
-          OR LOWER(TRIM(c.city)) = (SELECT LOWER(TRIM(b.city)) FROM branches b WHERE b.branch_id = ?)
-        )`
+      ? branchCity || branchName
+        ? `AND (
+            c.city IS NOT NULL AND TRIM(c.city) != ''
+            AND (
+              LOWER(TRIM(c.city)) = LOWER(?)
+              OR LOWER(?) LIKE CONCAT('%', LOWER(TRIM(c.city)), '%')
+              OR LOWER(TRIM(c.city)) LIKE CONCAT('%', LOWER(?), '%')
+            )
+          )`
+        : `AND (
+            c.city IS NOT NULL AND TRIM(c.city) != ''
+            AND EXISTS (
+              SELECT 1 FROM branches b
+              WHERE b.branch_id = ?
+                AND (
+                  LOWER(TRIM(c.city)) = LOWER(TRIM(b.city))
+                  OR LOWER(b.name) LIKE CONCAT('%', LOWER(TRIM(c.city)), '%')
+                  OR LOWER(TRIM(c.city)) LIKE CONCAT('%', LOWER(TRIM(b.city)), '%')
+                )
+            )
+          )`
       : "";
-    const custParams = branchId ? [branchId, branchId] : [];
+
+    const custParams = branchId
+      ? branchCity || branchName
+        ? [branchCity, branchName, branchCity]
+        : [branchId]
+      : [];
 
     // 1. Customer Loyalty Summary (Filtered by branch)
     const [custSummary]: any = await query(`
@@ -191,6 +216,7 @@ export async function GET(req: Request) {
             c.customer_id,
             c.card_no,
             c.full_name,
+            c.city,
             c.tier,
             COALESCE(s_agg.total_spent, 0) AS total_spent,
             COALESCE(s_agg.total_orders, 0) AS total_orders,
@@ -202,9 +228,10 @@ export async function GET(req: Request) {
             WHERE status = 'COMPLETED' AND branch_id = ? AND customer_id IS NOT NULL
             GROUP BY customer_id
           ) s_agg ON c.customer_id = s_agg.customer_id
+          WHERE c.is_active = 1 ${custBranchFilter}
           ORDER BY s_agg.total_spent DESC
           LIMIT 5
-        `, [branchId]);
+        `, [branchId, ...custParams]);
       } else {
         topCustomers = await query(`
           SELECT 
@@ -249,17 +276,8 @@ export async function GET(req: Request) {
       `;
       const loyaltyParams: any[] = [];
       if (branchId) {
-        loyaltySql += `
-          LEFT JOIN sales s ON lt.sale_id = s.sale_id
-          WHERE (
-            s.branch_id = ?
-            OR (lt.sale_id IS NULL AND (
-              c.customer_id IN (SELECT DISTINCT s2.customer_id FROM sales s2 WHERE s2.branch_id = ? AND s2.customer_id IS NOT NULL)
-              OR LOWER(TRIM(c.city)) = (SELECT LOWER(TRIM(b.city)) FROM branches b WHERE b.branch_id = ?)
-            ))
-          )
-        `;
-        loyaltyParams.push(branchId, branchId, branchId);
+        loyaltySql += ` WHERE 1=1 ${custBranchFilter}`;
+        loyaltyParams.push(...custParams);
       }
       loyaltySql += ` ORDER BY lt.created_at DESC LIMIT 50`;
       recentLoyaltyActivity = await query(loyaltySql, loyaltyParams);
@@ -284,13 +302,8 @@ export async function GET(req: Request) {
       `;
       const tierParams: any[] = [];
       if (branchId) {
-        tierHistorySql += `
-          WHERE (
-            c.customer_id IN (SELECT DISTINCT s.customer_id FROM sales s WHERE s.branch_id = ? AND s.customer_id IS NOT NULL)
-            OR LOWER(TRIM(c.city)) = (SELECT LOWER(TRIM(b.city)) FROM branches b WHERE b.branch_id = ?)
-          )
-        `;
-        tierParams.push(branchId, branchId);
+        tierHistorySql += ` WHERE 1=1 ${custBranchFilter}`;
+        tierParams.push(...custParams);
       }
       tierHistorySql += ` ORDER BY th.changed_at DESC LIMIT 100`;
       tierHistory = await query(tierHistorySql, tierParams);

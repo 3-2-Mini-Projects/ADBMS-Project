@@ -57,9 +57,18 @@ export default function CustomersPage() {
     full_name: "",
     phone: "",
     email: "",
-    city: "Colombo",
+    city: currentBranch?.city || "Colombo",
   });
   const [isAdding, setIsAdding] = useState(false);
+
+  useEffect(() => {
+    if (currentBranch?.city) {
+      setNewCust((prev) => ({
+        ...prev,
+        city: prev.city === "Colombo" || !prev.city ? currentBranch.city : prev.city,
+      }));
+    }
+  }, [currentBranch?.city]);
 
   const fetchCustomers = async (queryOverride?: string) => {
     setLoading(true);
@@ -183,6 +192,18 @@ export default function CustomersPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
+          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+            <span className="text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-blue-950/70 text-blue-300 border border-blue-800/60 font-semibold flex items-center gap-1.5">
+              <Store className="w-3.5 h-3.5 text-blue-400" />
+              <span>Assigned Branch: {currentBranch?.name || currentEmployee?.branch_name || "Colombo Main"}</span>
+              <span className="text-blue-400 font-normal">
+                (City: {currentBranch?.city || "Colombo"})
+              </span>
+            </span>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-800/80 text-slate-300 border border-slate-700">
+              Scoped by Branch Name & Customer City
+            </span>
+          </div>
           <h1 className="text-2xl font-black text-white flex items-center gap-2.5">
             <Users className="w-6 h-6 text-amber-400" />
             <span>Customers & Loyalty Management</span>
