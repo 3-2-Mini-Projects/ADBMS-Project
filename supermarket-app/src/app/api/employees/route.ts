@@ -200,7 +200,17 @@ export async function PATCH(req: Request) {
 
   try {
     const body = await req.json().catch(() => ({}));
-    const { employee_id, role, monthly_salary, is_active } = body;
+    const {
+      employee_id,
+      full_name,
+      email,
+      phone,
+      hire_date,
+      role,
+      branch_id,
+      monthly_salary,
+      is_active,
+    } = body;
 
     if (!employee_id) {
       return NextResponse.json({ error: "Employee ID is required" }, { status: 400 });
@@ -209,12 +219,64 @@ export async function PATCH(req: Request) {
     const updates: string[] = [];
     const params: unknown[] = [];
 
+    if (full_name !== undefined) {
+      if (typeof full_name !== "string" || full_name.trim().length === 0) {
+        return NextResponse.json({ error: "Full name cannot be empty" }, { status: 400 });
+      }
+      updates.push("full_name = ?");
+      params.push(full_name.trim());
+    }
+
+    if (email !== undefined) {
+      if (typeof email !== "string" || email.trim().length === 0 || !email.includes("@")) {
+        return NextResponse.json({ error: "A valid email address is required" }, { status: 400 });
+      }
+      const normalizedEmail = email.trim().toLowerCase();
+      const conflict = await queryOne<{ employee_id: number }>(
+        "SELECT employee_id FROM employees WHERE email = ? AND employee_id != ? LIMIT 1",
+        [normalizedEmail, employee_id]
+      );
+      if (conflict) {
+        return NextResponse.json(
+          { error: "Another employee already has this email address" },
+          { status: 409 }
+        );
+      }
+      updates.push("email = ?");
+      params.push(normalizedEmail);
+    }
+
+    if (phone !== undefined) {
+      updates.push("phone = ?");
+      params.push(typeof phone === "string" && phone.trim().length > 0 ? phone.trim() : null);
+    }
+
+    if (hire_date !== undefined) {
+      updates.push("hire_date = ?");
+      params.push(
+        typeof hire_date === "string" && hire_date.trim().length > 0
+          ? hire_date.trim()
+          : new Date().toISOString().split("T")[0]
+      );
+    }
     if (role !== undefined) {
       if (!ALLOWED_ROLES.includes(role as UserRole)) {
         return NextResponse.json({ error: "Invalid role value" }, { status: 400 });
       }
       updates.push("role = ?");
       params.push(role);
+    }
+    if (branch_id !== undefined) {
+      const branchIdNum = Number(branch_id);
+      const branch = await queryOne<{ branch_id: number }>(
+        "SELECT branch_id FROM branches WHERE branch_id = ? AND is_active = 1 LIMIT 1",
+        [branchIdNum]
+      );
+      if (!branch) {
+        return NextResponse.json({ error: "Invalid or inactive branch selected" }, { status: 400 });
+      }
+      updates.push("branch_id = ?");
+      params.push(branchIdNum);
     }
     if (monthly_salary !== undefined) {
       updates.push("monthly_salary = ?");
@@ -241,12 +303,15 @@ export async function PATCH(req: Request) {
       action: "UPDATE",
       details: {
         target_employee_id: employee_id,
+        updated_full_name: full_name,
+        updated_email: email,
         updated_role: role,
+        updated_branch_id: branch_id,
         updated_salary: monthly_salary,
         updated_active: is_active,
       },
     });
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, message: "Employee details updated successfully" });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("PATCH /api/employees error:", message);

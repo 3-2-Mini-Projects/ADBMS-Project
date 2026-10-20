@@ -186,7 +186,12 @@ export default function EmployeesPage() {
   // Edit Employee Modal
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedEmp, setSelectedEmp] = useState<Employee | null>(null);
+  const [editFullName, setEditFullName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editHireDate, setEditHireDate] = useState("");
   const [editRole, setEditRole] = useState<UserRole>("CASHIER");
+  const [editBranchId, setEditBranchId] = useState<string>("1");
   const [editSalary, setEditSalary] = useState("");
   const [editActive, setEditActive] = useState<number>(1);
   const [isSaving, setIsSaving] = useState(false);
@@ -262,7 +267,12 @@ export default function EmployeesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           employee_id: selectedEmp.employee_id,
+          full_name: editFullName,
+          email: editEmail,
+          phone: editPhone,
+          hire_date: editHireDate,
           role: editRole,
+          branch_id: Number(editBranchId),
           monthly_salary: Number(editSalary),
           is_active: editActive,
         }),
@@ -509,7 +519,14 @@ export default function EmployeesPage() {
                             <button
                               onClick={() => {
                                 setSelectedEmp(emp);
+                                setEditFullName(emp.full_name);
+                                setEditEmail(emp.email);
+                                setEditPhone(emp.phone || "");
+                                setEditHireDate(
+                                  emp.hire_date ? new Date(emp.hire_date).toISOString().split("T")[0] : ""
+                                );
                                 setEditRole(emp.role);
+                                setEditBranchId(String(emp.branch_id));
                                 setEditSalary(String(emp.monthly_salary));
                                 setEditActive(emp.is_active);
                                 setEditModalOpen(true);
@@ -692,7 +709,7 @@ export default function EmployeesPage() {
       {/* Modal: Edit Employee */}
       {editModalOpen && selectedEmp && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-xl p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <h3 className="font-bold text-sm text-white flex items-center gap-2">
                 <Edit2 className="w-4 h-4 text-purple-400" />
@@ -707,43 +724,111 @@ export default function EmployeesPage() {
             </div>
 
             <form onSubmit={handleEditEmployee} className="space-y-4">
-              <div>
-                <label className="text-xs text-slate-300 block mb-1">Role & Permissions</label>
-                <select
-                  value={editRole}
-                  onChange={(e) => setEditRole(e.target.value as any)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white"
-                >
-                  <option value="ADMIN">ADMIN</option>
-                  <option value="MANAGER">MANAGER</option>
-                  <option value="CASHIER">CASHIER</option>
-                  <option value="STOCK_CLERK">STOCK_CLERK</option>
-                  <option value="CATALOG_MANAGER">CATALOG_MANAGER</option>
-                  <option value="MARKETING">MARKETING</option>
-                  <option value="HR">HR</option>
-                </select>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs text-slate-300 block mb-1 font-medium">Full Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={editFullName}
+                    onChange={(e) => setEditFullName(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus:border-purple-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs text-slate-300 block mb-1 font-medium">Work Email Address</label>
+                  <input
+                    type="email"
+                    required
+                    value={editEmail}
+                    onChange={(e) => setEditEmail(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus:border-purple-500 font-mono"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="text-xs text-slate-300 block mb-1">Monthly Salary (Rs.)</label>
-                <input
-                  type="number"
-                  value={editSalary}
-                  onChange={(e) => setEditSalary(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 font-mono text-xs text-white font-bold"
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs text-slate-300 block mb-1 font-medium">Contact Phone</label>
+                  <input
+                    type="text"
+                    value={editPhone}
+                    onChange={(e) => setEditPhone(e.target.value)}
+                    placeholder="e.g. 0771234567"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs text-slate-300 block mb-1 font-medium">Hire Date</label>
+                  <input
+                    type="date"
+                    required
+                    value={editHireDate}
+                    onChange={(e) => setEditHireDate(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white font-mono"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="text-xs text-slate-300 block mb-1">Status</label>
-                <select
-                  value={editActive}
-                  onChange={(e) => setEditActive(Number(e.target.value))}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white"
-                >
-                  <option value={1}>ACTIVE</option>
-                  <option value={0}>INACTIVE</option>
-                </select>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs text-slate-300 block mb-1 font-medium">Role & Permissions</label>
+                  <select
+                    value={editRole}
+                    onChange={(e) => setEditRole(e.target.value as UserRole)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white"
+                  >
+                    <option value="ADMIN">ADMIN</option>
+                    <option value="MANAGER">MANAGER</option>
+                    <option value="CASHIER">CASHIER</option>
+                    <option value="STOCK_CLERK">STOCK_CLERK</option>
+                    <option value="CATALOG_MANAGER">CATALOG_MANAGER</option>
+                    <option value="MARKETING">MARKETING</option>
+                    <option value="HR">HR</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs text-slate-300 block mb-1 font-medium">Assigned Branch</label>
+                  <select
+                    value={editBranchId}
+                    onChange={(e) => setEditBranchId(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white"
+                  >
+                    {branches.map((b) => (
+                      <option key={b.branch_id} value={b.branch_id}>
+                        {b.name} ({b.city})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs text-slate-300 block mb-1 font-medium">Monthly Salary (Rs.)</label>
+                  <input
+                    type="number"
+                    required
+                    value={editSalary}
+                    onChange={(e) => setEditSalary(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 font-mono text-xs text-white font-bold"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs text-slate-300 block mb-1 font-medium">Operating Status</label>
+                  <select
+                    value={editActive}
+                    onChange={(e) => setEditActive(Number(e.target.value))}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white"
+                  >
+                    <option value={1}>ACTIVE</option>
+                    <option value={0}>INACTIVE</option>
+                  </select>
+                </div>
               </div>
 
               <div className="flex items-center gap-3 pt-2">
