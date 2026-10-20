@@ -212,6 +212,102 @@ export async function POST(req: Request) {
         );
       }
 
+      // Step F: Loyalty Points Processing (Atomic with transaction)
+      let pointsEarned = 0;
+      let pointsRedeemed = 0;
+      let updatedPointsBalance: number | null = null;
+      let updatedTier: string | null = null;
+
+      if (customerId) {
+        const [custRows]: any = await conn.query(
+          `SELECT customer_id, card_no, full_name, tier, points_balance, is_active FROM customers WHERE customer_id = ? FOR UPDATE`,
+          [customerId]
+        );
+
+        if (custRows && custRows.length > 0) {
+          const cust = custRows[0];
+          if (cust.is_active) {
+            let currentBal = Number(cust.points_balance || 0);
+
+            // 1. If customer redeemed points as payment
+            const pointsPayment = payments.find((p) => p.method === "POINTS");
+            if (pointsPayment && Number(pointsPayment.amount) > 0) {
+              pointsRedeemed = Math.round(Number(pointsPayment.amount));
+              if (currentBal < pointsRedeemed) {
+                throw new Error(
+                  `Insufficient loyalty points. Customer has ${currentBal} points, but attempted to redeem ${pointsRedeemed} points.`
+                );
+              }
+              currentBal -= pointsRedeemed;
+              await conn.query(
+                `INSERT INTO loyalty_transactions (
+                  customer_id, branch_id, sale_id, points, type, note, created_at
+                ) VALUES (?, ?, ?, ?, 'REDEEM', 'Points redeemed for POS purchase discount', NOW())`,
+                [customerId, branchId, saleId, -pointsRedeemed]
+              );
+            }
+
+            // 2. Calculate earned points: 1 point for every Rs. 100 spent (with tier multiplier)
+            let multiplier = 1.0;
+            if (cust.tier === "SILVER") multiplier = 1.1;
+            else if (cust.tier === "GOLD") multiplier = 1.25;
+            else if (cust.tier === "PLATINUM") multiplier = 1.5;
+
+            pointsEarned = Math.floor((calculatedGrandTotal / 100) * multiplier);
+
+            if (pointsEarned > 0) {
+              currentBal += pointsEarned;
+              await conn.query(
+                `INSERT INTO loyalty_transactions (
+                  customer_id, branch_id, sale_id, points, type, note, created_at
+                ) VALUES (?, ?, ?, ?, 'EARN', ?, NOW())`,
+                [
+                  customerId,
+                  branchId,
+                  saleId,
+                  pointsEarned,
+                  `Points earned from purchase (${cust.tier} tier: ${multiplier}x)`,
+                ]
+              );
+            }
+
+            // 3. Update customer balance
+            await conn.query(
+              `UPDATE customers SET points_balance = ? WHERE customer_id = ?`,
+              [currentBal, customerId]
+            );
+            updatedPointsBalance = currentBal;
+
+            // 4. Automatic tier progression check
+            const [spendRow]: any = await conn.query(
+              `SELECT COALESCE(SUM(total_amount), 0) AS total_spent FROM sales WHERE customer_id = ? AND status = 'COMPLETED'`,
+              [customerId]
+            );
+            const totalSpent = Number(spendRow[0]?.total_spent || 0) + calculatedGrandTotal;
+            let targetTier = "BRONZE";
+            if (totalSpent >= 100000) targetTier = "PLATINUM";
+            else if (totalSpent >= 50000) targetTier = "GOLD";
+            else if (totalSpent >= 20000) targetTier = "SILVER";
+
+            if (targetTier !== cust.tier) {
+              await conn.query(`UPDATE customers SET tier = ? WHERE customer_id = ?`, [targetTier, customerId]);
+              try {
+                await conn.query(
+                  `INSERT INTO customer_tier_history (customer_id, old_tier, new_tier, reason, changed_at)
+                   VALUES (?, ?, ?, 'Automatic tier progression upon purchase milestone', NOW())`,
+                  [customerId, cust.tier, targetTier]
+                );
+              } catch (thErr) {
+                console.warn("Tier history write error:", thErr);
+              }
+              updatedTier = targetTier;
+            } else {
+              updatedTier = cust.tier;
+            }
+          }
+        }
+      }
+
       return {
         saleId,
         subtotal: calculatedSubtotal,
@@ -222,6 +318,10 @@ export async function POST(req: Request) {
         changeDue,
         items: validatedItems,
         payments,
+        pointsEarned,
+        pointsRedeemed,
+        updatedPointsBalance,
+        updatedTier,
       };
     });
 
@@ -240,7 +340,15 @@ export async function POST(req: Request) {
         `SELECT customer_id, card_no, full_name, phone, tier, points_balance FROM customers WHERE customer_id = ?`,
         [customerId]
       );
-      customerInfo = cust || null;
+      if (cust) {
+        customerInfo = {
+          ...cust,
+          points_earned: saleResult.pointsEarned,
+          points_redeemed: saleResult.pointsRedeemed,
+          points_balance: saleResult.updatedPointsBalance ?? cust.points_balance,
+          tier: saleResult.updatedTier ?? cust.tier,
+        };
+      }
     }
 
     const receiptNumber = `REC-${branchInfo?.branch_code || "BR"}-${String(saleResult.saleId).padStart(6, "0")}`;
