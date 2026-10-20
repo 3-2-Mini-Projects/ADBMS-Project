@@ -19,10 +19,11 @@ import {
   ArrowUpRight,
   Pencil,
   Calendar,
+  Store,
 } from "lucide-react";
 
 export default function CustomersPage() {
-  const { showToast } = useApp();
+  const { showToast, currentBranch, currentEmployee } = useApp();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -63,8 +64,10 @@ export default function CustomersPage() {
     setLoading(true);
     try {
       const q = queryOverride !== undefined ? queryOverride : search;
+      const targetBranchId = currentBranch?.branch_id || currentEmployee?.branch_id;
       const params = new URLSearchParams();
       if (q.trim()) params.append("search", q.trim());
+      if (targetBranchId) params.append("branchId", String(targetBranchId));
       const res = await fetch(`/api/customers?${params.toString()}`);
       const data = await res.json();
       if (Array.isArray(data)) setCustomers(data);
@@ -75,13 +78,13 @@ export default function CustomersPage() {
     }
   };
 
-  // Debounce search and reload customers automatically on search change
+  // Debounce search and reload customers automatically on search change or branch change
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchCustomers(search);
     }, 250);
     return () => clearTimeout(timer);
-  }, [search]);
+  }, [search, currentBranch?.branch_id, currentEmployee?.branch_id]);
 
   const openCustomerEdit = (customer: Customer) => {
     let formattedDate = "";
@@ -183,6 +186,17 @@ export default function CustomersPage() {
             <Users className="w-6 h-6 text-amber-400" />
             <span>Customers & Loyalty Management</span>
           </h1>
+          {currentBranch && (
+            <div className="flex flex-wrap items-center gap-2 mt-1.5 text-xs">
+              <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 font-medium">
+                <Store className="w-3.5 h-3.5 text-amber-400" />
+                <span>Branch: <strong className="text-white font-semibold">{currentBranch.name}</strong></span>
+              </span>
+              <span className="text-[11px] text-emerald-400 font-mono">
+                Showing customers related to {currentBranch.name}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
