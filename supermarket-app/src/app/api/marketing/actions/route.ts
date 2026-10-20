@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
+import { getServerSession } from "@/lib/auth";
 
 export async function POST(req: Request) {
   try {
@@ -192,8 +193,56 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const view = searchParams.get("view");
+    let branchId = searchParams.get("branchId");
+
+    if (!branchId) {
+      const session = await getServerSession();
+      if (session?.branch_id) {
+        branchId = String(session.branch_id);
+      }
+    }
+
+    const hasBranch = Boolean(branchId && branchId !== "ALL" && branchId !== "0");
+    const branchFilter = hasBranch
+      ? `AND (
+          c.customer_id IN (SELECT DISTINCT s.customer_id FROM sales s WHERE s.branch_id = ? AND s.customer_id IS NOT NULL)
+          OR LOWER(TRIM(c.city)) = (SELECT LOWER(TRIM(b.city)) FROM branches b WHERE b.branch_id = ?)
+        )`
+      : "";
+    const branchParams = hasBranch ? [branchId, branchId] : [];
 
     if (view === "top_customers") {
+      if (hasBranch) {
+        try {
+          const rows = await query(`
+            SELECT csv.*
+            FROM customer_summary_vw csv
+            JOIN customers c ON csv.customer_id = c.customer_id
+            WHERE c.is_active = 1 ${branchFilter}
+            ORDER BY csv.total_points_earned DESC
+            LIMIT 3
+          `, branchParams);
+          if (Array.isArray(rows) && rows.length > 0) {
+            return NextResponse.json(rows);
+          }
+        } catch {
+          // fallback query with branch filter
+        }
+
+        try {
+          const rows = await query(`
+            SELECT c.customer_id, c.card_no, c.full_name, c.tier, c.points_balance, c.points_balance AS total_points_earned
+            FROM customers c
+            WHERE c.is_active = 1 ${branchFilter}
+            ORDER BY c.points_balance DESC
+            LIMIT 3
+          `, branchParams);
+          return NextResponse.json(rows);
+        } catch {
+          return NextResponse.json([]);
+        }
+      }
+
       try {
         await query(`
           CREATE OR REPLACE VIEW top_customers_vw AS
@@ -250,6 +299,48 @@ export async function GET(req: Request) {
     }
 
     if (view === "customer_summary") {
+      if (hasBranch) {
+        try {
+          const rows = await query(`
+            SELECT csv.*
+            FROM customer_summary_vw csv
+            JOIN customers c ON csv.customer_id = c.customer_id
+            WHERE c.is_active = 1 ${branchFilter}
+            ORDER BY csv.points_balance DESC
+            LIMIT 100
+          `, branchParams);
+          return NextResponse.json(rows);
+        } catch {
+          const rows = await query(`
+            SELECT 
+              c.customer_id, c.card_no, c.full_name, c.phone, c.email, c.tier, c.points_balance,
+              COALESCE(lt_agg.total_points_earned, 0) AS total_points_earned,
+              COALESCE(lt_agg.total_points_redeemed, 0) AS total_points_redeemed,
+              COALESCE(s.total_spent, 0) AS total_spent,
+              COALESCE(s.total_orders, 0) AS total_orders
+            FROM customers c
+            LEFT JOIN (
+              SELECT
+                customer_id,
+                SUM(CASE WHEN transaction_type = 'EARNED' THEN points_change ELSE 0 END) AS total_points_earned,
+                SUM(CASE WHEN transaction_type = 'REDEEMED' THEN ABS(points_change) ELSE 0 END) AS total_points_redeemed
+              FROM loyalty_transactions
+              GROUP BY customer_id
+            ) lt_agg ON c.customer_id = lt_agg.customer_id
+            LEFT JOIN (
+              SELECT customer_id, SUM(total_amount) AS total_spent, COUNT(sale_id) AS total_orders
+              FROM sales
+              WHERE status = 'COMPLETED' AND customer_id IS NOT NULL
+              GROUP BY customer_id
+            ) s ON c.customer_id = s.customer_id
+            WHERE c.is_active = 1 ${branchFilter}
+            ORDER BY c.points_balance DESC, c.full_name ASC
+            LIMIT 100
+          `, branchParams);
+          return NextResponse.json(rows);
+        }
+      }
+
       try {
         const rows = await query("SELECT * FROM customer_summary_vw ORDER BY points_balance DESC LIMIT 100");
         return NextResponse.json(rows);
@@ -286,7 +377,7 @@ export async function GET(req: Request) {
 
     if (view === "ledger") {
       try {
-        const rows = await query(`
+        let sql = `
           SELECT 
             lt.loyalty_id,
             lt.customer_id,
@@ -299,9 +390,15 @@ export async function GET(req: Request) {
             lt.created_at
           FROM loyalty_transactions lt
           JOIN customers c ON lt.customer_id = c.customer_id
-          ORDER BY lt.created_at DESC
-          LIMIT 100
-        `);
+          WHERE 1=1
+        `;
+        const params: any[] = [];
+        if (hasBranch) {
+          sql += ` ${branchFilter}`;
+          params.push(...branchParams);
+        }
+        sql += ` ORDER BY lt.created_at DESC LIMIT 100`;
+        const rows = await query(sql, params);
         return NextResponse.json(rows);
       } catch (err: any) {
         return NextResponse.json([]);
@@ -310,18 +407,36 @@ export async function GET(req: Request) {
 
     if (view === "customer_etl") {
       try {
-        const rows = await query("SELECT * FROM customer_etl_vw LIMIT 50");
+        let sql = "SELECT * FROM customer_etl_vw";
+        const params: any[] = [];
+        if (hasBranch) {
+          sql = `
+            SELECT cetl.*
+            FROM customer_etl_vw cetl
+            JOIN customers c ON cetl.customer_id = c.customer_id
+            WHERE c.is_active = 1 ${branchFilter}
+          `;
+          params.push(...branchParams);
+        }
+        sql += " LIMIT 50";
+        const rows = await query(sql, params);
         return NextResponse.json(rows);
       } catch {
-        const rows = await query(`
+        let sql = `
           SELECT 
             customer_id, card_no, full_name,
             CONCAT(LEFT(phone, 3), '****', RIGHT(phone, 3)) AS masked_phone,
             email, tier, points_balance, join_date
-          FROM customers
-          WHERE is_active = 1
-          LIMIT 50
-        `);
+          FROM customers c
+          WHERE c.is_active = 1
+        `;
+        const params: any[] = [];
+        if (hasBranch) {
+          sql += ` ${branchFilter}`;
+          params.push(...branchParams);
+        }
+        sql += " LIMIT 50";
+        const rows = await query(sql, params);
         return NextResponse.json(rows);
       }
     }

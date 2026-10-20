@@ -1,11 +1,19 @@
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
+import { getServerSession } from "@/lib/auth";
 
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const search = searchParams.get("search");
-    const branchId = searchParams.get("branchId");
+    let branchId = searchParams.get("branchId");
+
+    if (!branchId) {
+      const session = await getServerSession();
+      if (session?.branch_id) {
+        branchId = String(session.branch_id);
+      }
+    }
 
     let sql = `
       SELECT 

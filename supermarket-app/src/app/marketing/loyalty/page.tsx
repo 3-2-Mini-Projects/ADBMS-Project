@@ -43,7 +43,7 @@ interface TopCustomerRow {
 }
 
 export default function LoyaltyManagementPage() {
-  const { showToast } = useApp();
+  const { showToast, currentBranch, currentEmployee, authenticatedUser, isLoading: isAppLoading } = useApp();
   const [data, setData] = useState<any>(null);
   const [customerSummaries, setCustomerSummaries] = useState<CustomerSummaryRow[]>([]);
   const [topCustomers, setTopCustomers] = useState<TopCustomerRow[]>([]);
@@ -69,13 +69,21 @@ export default function LoyaltyManagementPage() {
   const [noteInput, setNoteInput] = useState<string>("");
 
   const loadData = async () => {
+    // If the application context is still restoring auth & branch details on initial page refresh, wait for it
+    if (isAppLoading && !currentBranch?.branch_id && !currentEmployee?.branch_id && !authenticatedUser?.branch_id) {
+      return;
+    }
     setLoading(true);
     try {
+      const targetBranchId = currentBranch?.branch_id || currentEmployee?.branch_id || authenticatedUser?.branch_id;
+      const branchParam = targetBranchId ? `&branchId=${targetBranchId}` : "";
+      const queryParam = targetBranchId ? `?branchId=${targetBranchId}` : "";
+
       const [dashRes, summaryRes, topRes, custRes] = await Promise.all([
-        fetch("/api/marketing/dashboard").then((r) => r.json()),
-        fetch("/api/marketing/actions?view=customer_summary").then((r) => r.json()),
-        fetch("/api/marketing/actions?view=top_customers").then((r) => r.json()),
-        fetch("/api/customers").then((r) => r.json()),
+        fetch(`/api/marketing/dashboard${queryParam}`).then((r) => r.json()),
+        fetch(`/api/marketing/actions?view=customer_summary${branchParam}`).then((r) => r.json()),
+        fetch(`/api/marketing/actions?view=top_customers${branchParam}`).then((r) => r.json()),
+        fetch(`/api/customers${queryParam}`).then((r) => r.json()),
       ]);
 
       if (dashRes && !dashRes.error) setData(dashRes);
@@ -100,8 +108,10 @@ export default function LoyaltyManagementPage() {
   };
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (!isAppLoading || currentBranch?.branch_id || currentEmployee?.branch_id || authenticatedUser?.branch_id) {
+      loadData();
+    }
+  }, [isAppLoading, currentBranch?.branch_id, currentEmployee?.branch_id, authenticatedUser?.branch_id]);
 
   // Open Award Modal (with optional pre-selected customer)
   const openAwardModal = (customerId?: number) => {

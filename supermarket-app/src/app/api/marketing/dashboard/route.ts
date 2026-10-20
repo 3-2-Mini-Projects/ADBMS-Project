@@ -1,12 +1,20 @@
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
+import { getServerSession } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const branchId = searchParams.get("branchId");
+    let branchId = searchParams.get("branchId");
+
+    if (!branchId) {
+      const session = await getServerSession();
+      if (session?.branch_id) {
+        branchId = String(session.branch_id);
+      }
+    }
 
     // Fetch branch info if branchId is provided
     let branchInfo: any = null;

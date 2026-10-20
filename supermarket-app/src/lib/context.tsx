@@ -29,11 +29,33 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [currentBranch, setCurrentBranch] = useState<Branch | null>(null);
+  const [currentBranch, setCurrentBranchState] = useState<Branch | null>(null);
   const [currentEmployee, setCurrentEmployee] = useState<Employee | null>(null);
   const [authenticatedUser, setAuthenticatedUser] = useState<Employee | null>(null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Restore cached branch after client hydration to prevent SSR mismatch
+  useEffect(() => {
+    try {
+      const cached = localStorage.getItem("adbms_current_branch");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed?.branch_id) {
+          setCurrentBranchState(parsed);
+        }
+      }
+    } catch {}
+  }, []);
+
+  const setCurrentBranch = (branch: Branch) => {
+    setCurrentBranchState(branch);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("adbms_current_branch", JSON.stringify(branch));
+      } catch {}
+    }
+  };
 
   const showToast = (message: string, type: "success" | "error" | "info" | "warning" = "info") => {
     const id = Math.random().toString(36).substring(2, 9);
@@ -62,9 +84,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       if (Array.isArray(dataBranches)) {
         setBranches(dataBranches);
-        if (!currentBranch && dataBranches.length > 0) {
-          setCurrentBranch(dataBranches[0]);
-        }
       }
 
       if (Array.isArray(dataEmployees)) {
@@ -106,7 +125,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               is_active: 1,
             };
             setCurrentBranch(fallbackBranch);
-          } else {
+          } else if (!currentBranch) {
             setCurrentBranch(dataBranches[0]);
           }
         }
