@@ -490,7 +490,7 @@ export default function POSBillingPage() {
     `Rs. ${Number(n || 0).toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 100px)", gap: 14 }}>
+    <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, height: "100%", gap: 12, overflow: "hidden" }}>
       {/* Top Search & Category Bar */}
       <div
         style={{
