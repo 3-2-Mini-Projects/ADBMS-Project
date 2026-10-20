@@ -207,7 +207,11 @@ export default function InventoryBatchesPage() {
   const handleOpenDisposal = (batch: ProductBatch) => {
     setSelectedDisposalBatch(batch);
     setDisposalQty(batch.quantity);
-    setDisposalReason(batch.expiry_status === "EXPIRED" ? "EXPIRED" : "DAMAGED");
+    const isExpired =
+      batch.expiry_status === "EXPIRED" ||
+      batch.status === "EXPIRED" ||
+      (batch.days_to_expiry !== undefined && Number(batch.days_to_expiry) < 0);
+    setDisposalReason(isExpired ? "EXPIRED" : "DAMAGED");
     setDisposalModalOpen(true);
   };
 

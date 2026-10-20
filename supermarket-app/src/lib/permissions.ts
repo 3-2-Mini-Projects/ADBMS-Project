@@ -115,7 +115,7 @@ export function getRoleDefaultPath(role?: UserRole | null): string {
     case "CATALOG_MANAGER":
       return "/products";
     case "MARKETING":
-      return "/promotions";
+      return "/marketing/dashboard";
     case "HR":
       return "/employees";
     default:

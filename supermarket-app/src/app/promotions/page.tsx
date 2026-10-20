@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import Link from "next/link";
 import { useApp } from "@/lib/context";
 import { Promotion } from "@/lib/types";
 import {
@@ -15,7 +14,6 @@ import {
   XCircle,
   Sparkles,
   X,
-  Ticket,
   Calculator,
   Trash2,
   Power,
@@ -26,7 +24,6 @@ import {
   ShieldCheck,
   AlertTriangle,
   Flame,
-  ArrowRight,
   Store,
 } from "lucide-react";
 
@@ -234,13 +231,6 @@ export default function PromotionsPage() {
     });
   }, [promotions, searchTerm, statusFilter]);
 
-  // Statistics
-  const activeCount = promotions.filter((p) => (p as any).status === "ACTIVE").length;
-  const scheduledCount = promotions.filter((p) => (p as any).status === "SCHEDULED").length;
-  const expiredCount = promotions.filter((p) => (p as any).status === "EXPIRED").length;
-  const categoryWideCount = promotions.filter((p) => p.category_id != null).length;
-  const productSpecificCount = promotions.filter((p) => p.product_id != null).length;
-
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Header */}
@@ -262,7 +252,7 @@ export default function PromotionsPage() {
             title="Execute get_discount() function calculation"
           >
             <Calculator className="w-4 h-4" />
-            <span>Discount Calculator (get_discount)</span>
+            <span>Calculate Discount </span>
           </button>
 
           <button
@@ -271,66 +261,8 @@ export default function PromotionsPage() {
             title="Create promotion via stored procedure create_promotion()"
           >
             <Plus className="w-4 h-4" />
-            <span>New Promotion (create_promotion)</span>
+            <span>New Promotion</span>
           </button>
-        </div>
-      </div>
-
-      {/* Cross-Link Banner to Dedicated Coupon Management */}
-      <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-950/40 via-slate-900 to-slate-900 border border-amber-800/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
-            <Ticket className="w-5 h-5" />
-          </div>
-          <div>
-            <h4 className="text-sm font-bold text-white flex items-center gap-2">
-              <span>Checkout Voucher & Coupon Management</span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-mono">
-                Dedicated Page
-              </span>
-            </h4>
-            <p className="text-xs text-slate-400">
-              Manage single or batch coupon codes, assign to loyalty customers, and test validation via{" "}
-              <code className="text-amber-300 font-mono">proc_apply_coupon()</code>.
-            </p>
-          </div>
-        </div>
-
-        <Link
-          href="/marketing/coupons"
-          className="px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs flex items-center gap-2 transition-all shrink-0 self-start sm:self-auto shadow-md shadow-amber-950/40"
-        >
-          <span>Open Coupon Management</span>
-          <ArrowRight className="w-3.5 h-3.5" />
-        </Link>
-      </div>
-
-      {/* KPI Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl space-y-1">
-          <span className="text-slate-400 text-xs font-semibold">Total Campaigns</span>
-          <div className="text-2xl font-black text-white font-mono">{promotions.length}</div>
-          <span className="text-[10px] text-slate-500">In database</span>
-        </div>
-
-        <div className="p-4 rounded-2xl bg-slate-900 border border-emerald-900/40 shadow-xl space-y-1">
-          <span className="text-emerald-400 text-xs font-semibold flex items-center gap-1">
-            <Flame className="w-3.5 h-3.5" /> Active Today
-          </span>
-          <div className="text-2xl font-black text-emerald-400 font-mono">{activeCount}</div>
-          <span className="text-[10px] text-emerald-500 font-mono">active_promotions_vw</span>
-        </div>
-
-        <div className="p-4 rounded-2xl bg-slate-900 border border-blue-900/40 shadow-xl space-y-1">
-          <span className="text-blue-400 text-xs font-semibold">Scheduled Ahead</span>
-          <div className="text-2xl font-black text-blue-400 font-mono">{scheduledCount}</div>
-          <span className="text-[10px] text-blue-500 font-mono">Start date in future</span>
-        </div>
-
-        <div className="p-4 rounded-2xl bg-slate-900 border border-purple-900/40 shadow-xl space-y-1">
-          <span className="text-purple-400 text-xs font-semibold">Category Campaigns</span>
-          <div className="text-2xl font-black text-purple-400 font-mono">{categoryWideCount}</div>
-          <span className="text-[10px] text-purple-500 font-mono">{productSpecificCount} product-specific</span>
         </div>
       </div>
 
@@ -340,26 +272,24 @@ export default function PromotionsPage() {
           <div className="flex items-center gap-2 overflow-x-auto">
             <button
               onClick={() => setActiveTab("all")}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
-                activeTab === "all"
-                  ? "bg-purple-500/10 text-purple-400 border border-purple-500/30 shadow-sm"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-              }`}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${activeTab === "all"
+                ? "bg-purple-500/10 text-purple-400 border border-purple-500/30 shadow-sm"
+                : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+                }`}
             >
-              <Percent className="w-3.5 h-3.5" />
+
               <span>All Promotions ({promotions.length})</span>
             </button>
 
             <button
               onClick={() => setActiveTab("active_vw")}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
-                activeTab === "active_vw"
-                  ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 shadow-sm"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-              }`}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${activeTab === "active_vw"
+                ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 shadow-sm"
+                : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+                }`}
             >
               <Flame className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Active View (active_promotions_vw)</span>
+              <span>Active Promotions</span>
               <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800/50">
                 {activePromotions.length}
               </span>
@@ -367,23 +297,21 @@ export default function PromotionsPage() {
 
             <button
               onClick={() => setActiveTab("matrix")}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
-                activeTab === "matrix"
-                  ? "bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 shadow-sm"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-              }`}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${activeTab === "matrix"
+                ? "bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 shadow-sm"
+                : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+                }`}
             >
               <Layers className="w-3.5 h-3.5" />
-              <span>Scope Matrix (Categories & Products)</span>
+              <span>Categories of promotion</span>
             </button>
 
             <button
               onClick={() => setActiveTab("sql_functions")}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
-                activeTab === "sql_functions"
-                  ? "bg-blue-500/10 text-blue-400 border border-blue-500/30 shadow-sm"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-              }`}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${activeTab === "sql_functions"
+                ? "bg-blue-500/10 text-blue-400 border border-blue-500/30 shadow-sm"
+                : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+                }`}
             >
               <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
               <span>ADBMS SQL Functions (get_discount, etc.)</span>
@@ -426,11 +354,10 @@ export default function PromotionsPage() {
                   <button
                     key={s}
                     onClick={() => setStatusFilter(s)}
-                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${
-                      statusFilter === s
-                        ? "bg-purple-500 text-white shadow-md"
-                        : "bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white"
-                    }`}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${statusFilter === s
+                      ? "bg-purple-500 text-white shadow-md"
+                      : "bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white"
+                      }`}
                   >
                     {s}
                   </button>
@@ -508,36 +435,25 @@ export default function PromotionsPage() {
                           </td>
                           <td className="py-3 px-4 text-center">
                             <span
-                              className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold ${
-                                status === "ACTIVE"
-                                  ? "bg-emerald-950 text-emerald-300 border border-emerald-800/50"
-                                  : status === "SCHEDULED"
+                              className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold ${status === "ACTIVE"
+                                ? "bg-emerald-950 text-emerald-300 border border-emerald-800/50"
+                                : status === "SCHEDULED"
                                   ? "bg-blue-950 text-blue-300 border border-blue-800/50"
                                   : "bg-slate-800 text-slate-400"
-                              }`}
+                                }`}
                             >
                               {status}
                             </span>
                           </td>
                           <td className="py-3 px-4 text-right">
                             <div className="flex items-center justify-end gap-1.5 font-sans">
-                              {/* Test get_discount */}
-                              <button
-                                onClick={() => openCalculator(pr.promo_id)}
-                                className="px-2 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-[10px] font-bold border border-emerald-500/20 transition-all"
-                                title="Calculate discount via get_discount() function"
-                              >
-                                Test Discount
-                              </button>
-
                               {/* Toggle active */}
                               <button
                                 onClick={() => handleToggleActive(pr.promo_id, pr.is_active)}
-                                className={`p-1.5 rounded-lg text-xs transition-colors ${
-                                  pr.is_active === 1
-                                    ? "text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300"
-                                    : "text-slate-500 hover:bg-slate-800 hover:text-slate-300"
-                                }`}
+                                className={`p-1.5 rounded-lg text-xs transition-colors ${pr.is_active === 1
+                                  ? "text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300"
+                                  : "text-slate-500 hover:bg-slate-800 hover:text-slate-300"
+                                  }`}
                                 title={pr.is_active === 1 ? "Deactivate Promotion" : "Activate Promotion"}
                               >
                                 <Power className="w-3.5 h-3.5" />

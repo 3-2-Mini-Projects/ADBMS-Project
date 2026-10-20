@@ -6,6 +6,60 @@ USE supermarket_ADBMS;
 -- ============================================================
 
 -- ============================================================
+-- 0. INVENTORY DATA-INTEGRITY CONSTRAINTS
+-- ============================================================
+-- Run the two checks below before applying the ALTER statements.
+-- Existing invalid rows must be corrected first; MySQL will reject
+-- the constraints rather than silently changing inventory data.
+SELECT COUNT(*) AS invalid_negative_inventory_rows
+FROM inventory
+WHERE quantity_on_hand < 0 OR reserved_qty < 0;
+
+SELECT branch_id, product_id, COUNT(*) AS duplicate_rows
+FROM inventory
+GROUP BY branch_id, product_id
+HAVING COUNT(*) > 1;
+
+-- MySQL does not support ADD CONSTRAINT IF NOT EXISTS. These checks
+-- make the migration safe to run again after the constraints exist.
+SET @has_inventory_nonnegative_check = (
+    SELECT COUNT(*)
+    FROM information_schema.table_constraints
+    WHERE constraint_schema = DATABASE()
+      AND table_name = 'inventory'
+      AND constraint_name = 'chk_inventory_nonnegative'
+      AND constraint_type = 'CHECK'
+);
+
+SET @add_inventory_nonnegative_check = IF(
+    @has_inventory_nonnegative_check = 0,
+    'ALTER TABLE inventory ADD CONSTRAINT chk_inventory_nonnegative CHECK (quantity_on_hand >= 0 AND reserved_qty >= 0)',
+    'SELECT 1'
+);
+
+PREPARE add_inventory_nonnegative_check FROM @add_inventory_nonnegative_check;
+EXECUTE add_inventory_nonnegative_check;
+DEALLOCATE PREPARE add_inventory_nonnegative_check;
+
+SET @has_inventory_branch_product_unique = (
+    SELECT COUNT(*)
+    FROM information_schema.statistics
+    WHERE table_schema = DATABASE()
+      AND table_name = 'inventory'
+      AND index_name = 'uq_inventory_branch_product'
+);
+
+SET @add_inventory_branch_product_unique = IF(
+    @has_inventory_branch_product_unique = 0,
+    'ALTER TABLE inventory ADD CONSTRAINT uq_inventory_branch_product UNIQUE (branch_id, product_id)',
+    'SELECT 1'
+);
+
+PREPARE add_inventory_branch_product_unique FROM @add_inventory_branch_product_unique;
+EXECUTE add_inventory_branch_product_unique;
+DEALLOCATE PREPARE add_inventory_branch_product_unique;
+
+-- ============================================================
 -- 1. VIEWS
 -- ============================================================
 
@@ -14,17 +68,21 @@ USE supermarket_ADBMS;
 -- ------------------------------------------------------------
 CREATE OR REPLACE VIEW vw_branch_inventory AS
 SELECT
+    i.inventory_id,
     b.branch_id,
     b.name AS branch_name,
     p.product_id,
     p.barcode,
     p.name AS product_name,
+    p.brand,
     c.name AS category_name,
     s.name AS supplier_name,
     i.quantity_on_hand,
+    i.reserved_qty,
     i.reorder_level,
     p.unit_price,
     p.cost_price,
+    i.last_updated,
     CASE
         WHEN i.quantity_on_hand = 0 THEN 'OUT_OF_STOCK'
         WHEN i.quantity_on_hand <= i.reorder_level THEN 'LOW_STOCK'
@@ -78,9 +136,15 @@ SELECT
     b.name AS branch_name,
     e.employee_id,
     e.full_name AS created_by,
+    poi.po_item_id,
     p.product_id,
     p.name AS product_name,
     poi.quantity AS ordered_qty,
+    poi.received_quantity,
+    poi.damaged_quantity,
+    poi.shortage_quantity,
+    poi.discrepancy_reason,
+    poi.discrepancy_notes,
     poi.unit_cost,
     (poi.quantity * poi.unit_cost) AS line_cost,
     po.total_cost AS order_total
@@ -256,6 +320,26 @@ BEGIN
     RETURN DATEDIFF(p_expiry_date, CURRENT_DATE);
 END $$
 
+-- FUNCTION 6: Estimated Branch Replenishment Cost (Total budget required to restock)
+CREATE FUNCTION fn_branch_replenishment_cost(
+    p_branch_id INT
+)
+RETURNS DECIMAL(12,2)
+READS SQL DATA
+BEGIN
+    DECLARE v_total_cost DECIMAL(12,2) DEFAULT 0.00;
+
+    SELECT COALESCE(SUM(
+        fn_suggested_reorder_qty(i.branch_id, i.product_id, 4, 1) * p.cost_price
+    ), 0.00)
+    INTO v_total_cost
+    FROM inventory i
+    JOIN products p ON p.product_id = i.product_id
+    WHERE (p_branch_id IS NULL OR i.branch_id = p_branch_id);
+
+    RETURN v_total_cost;
+END $$
+
 DELIMITER ;
 
 
@@ -351,6 +435,11 @@ BEGIN
     WHERE po_id = p_po_id
     FOR UPDATE;
 
+    IF v_status IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Purchase order not found';
+    END IF;
+
     IF v_status NOT IN ('SENT', 'PENDING') THEN
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'Only SENT or PENDING orders can be received';
@@ -364,6 +453,19 @@ BEGIN
     IF v_item_count = 0 THEN
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'Purchase order has no items';
+    END IF;
+
+    IF EXISTS (
+        SELECT 1
+        FROM purchase_order_items poi
+        LEFT JOIN inventory i
+          ON i.product_id = poi.product_id
+         AND i.branch_id = v_branch_id
+        WHERE poi.po_id = p_po_id
+          AND i.inventory_id IS NULL
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Inventory record missing for one or more purchase-order items';
     END IF;
 
     -- Update inventory stock

@@ -65,6 +65,14 @@ const ADMIN_NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    group: "INVENTORY & PURCHASING",
+    items: [
+      { title: "Inventory", href: "/inventory", icon: Boxes },
+      { title: "Stock Transfers", href: "/inventory/transfers", icon: ArrowLeftRight, badge: "Live" },
+      { title: "Purchase Orders", href: "/purchases", icon: FileSpreadsheet },
+    ],
+  },
+  {
     group: "SECURITY & AUDIT",
     items: [
       { title: "Audit Trail & Logs", href: "/audit", icon: ShieldAlert, badge: "Security", permission: "view_audit_log" },
@@ -137,11 +145,11 @@ const CLERK_NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    group: "PURCHASING",
+    group: "PURCHASING & TRANSFERS",
     items: [
       { title: "Purchase Orders", href: "/purchases", icon: FileSpreadsheet },
       { title: "Create Purchase Order", href: "/purchases/new", icon: ClipboardCheck },
-      { title: "Receive Stock", href: "/purchases?tab=pending", icon: PackagePlus },
+      { title: "Stock Transfers", href: "/inventory/transfers", icon: ArrowLeftRight, badge: "Live" },
     ],
   },
   {
@@ -245,20 +253,19 @@ export function Sidebar() {
     isAdmin
       ? ADMIN_NAV_GROUPS
       : role === "STOCK_CLERK"
-      ? CLERK_NAV_GROUPS
-      : role === "CATALOG_MANAGER"
-      ? CATALOG_NAV_GROUPS
-      : role === "MARKETING"
-      ? MARKETING_NAV_GROUPS
-      : role === "CASHIER"
-      ? CASHIER_NAV_GROUPS
-      : NAV_GROUPS;
+        ? CLERK_NAV_GROUPS
+        : role === "CATALOG_MANAGER"
+          ? CATALOG_NAV_GROUPS
+          : role === "MARKETING"
+            ? MARKETING_NAV_GROUPS
+            : role === "CASHIER"
+              ? CASHIER_NAV_GROUPS
+              : NAV_GROUPS;
 
   return (
     <aside
-      className={`relative z-40 bg-slate-950 border-r border-slate-800 transition-all duration-300 flex flex-col justify-between select-none ${
-        collapsed ? "w-20" : "w-64"
-      }`}
+      className={`relative z-40 bg-slate-950 border-r border-slate-800 transition-all duration-300 flex flex-col justify-between select-none ${collapsed ? "w-20" : "w-64"
+        }`}
     >
       {/* Brand Header */}
       <div>
@@ -293,11 +300,10 @@ export function Sidebar() {
             </Link>
           ) : (
             <div
-              className={`mx-auto w-9 h-9 rounded-xl flex items-center justify-center text-white ${
-                isAdmin
+              className={`mx-auto w-9 h-9 rounded-xl flex items-center justify-center text-white ${isAdmin
                   ? "bg-gradient-to-tr from-purple-600 to-indigo-600"
                   : "bg-gradient-to-tr from-blue-600 to-emerald-500"
-              }`}
+                }`}
             >
               {isAdmin ? <ShieldCheck className="w-5 h-5" /> : <Sparkles className="w-5 h-5" />}
             </div>
@@ -361,32 +367,30 @@ export function Sidebar() {
                     <Link
                       key={`${item.href}-${item.title}`}
                       href={item.href}
-                      className={`group relative flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
-                        active
+                      className={`group relative flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all ${active
                           ? isAdmin
                             ? item.highlight
                               ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-900/40 font-semibold"
                               : "bg-purple-600 text-white shadow-lg shadow-purple-900/30 font-semibold"
                             : item.highlight
-                            ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-900/30 font-semibold"
-                            : "bg-blue-600 text-white shadow-lg shadow-blue-900/30 font-semibold"
+                              ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-900/30 font-semibold"
+                              : "bg-blue-600 text-white shadow-lg shadow-blue-900/30 font-semibold"
                           : item.highlight
-                          ? isAdmin
-                            ? "bg-purple-950/40 text-purple-300 border border-purple-800/50 hover:bg-purple-900/40"
-                            : "bg-emerald-950/30 text-emerald-300 border border-emerald-800/40 hover:bg-emerald-900/40"
-                          : "text-slate-400 hover:text-slate-100 hover:bg-slate-900"
-                      } ${!allowed ? "opacity-60" : ""}`}
+                            ? isAdmin
+                              ? "bg-purple-950/40 text-purple-300 border border-purple-800/50 hover:bg-purple-900/40"
+                              : "bg-emerald-950/30 text-emerald-300 border border-emerald-800/40 hover:bg-emerald-900/40"
+                            : "text-slate-400 hover:text-slate-100 hover:bg-slate-900"
+                        } ${!allowed ? "opacity-60" : ""}`}
                     >
                       <Icon
-                        className={`w-4 h-4 shrink-0 ${
-                          active
+                        className={`w-4 h-4 shrink-0 ${active
                             ? "text-white"
                             : item.highlight
-                            ? isAdmin
-                              ? "text-purple-400"
-                              : "text-emerald-400"
-                            : "text-slate-400 group-hover:text-slate-200"
-                        }`}
+                              ? isAdmin
+                                ? "text-purple-400"
+                                : "text-emerald-400"
+                              : "text-slate-400 group-hover:text-slate-200"
+                          }`}
                       />
                       {!collapsed && (
                         <div className="flex items-center justify-between w-full">
@@ -395,15 +399,14 @@ export function Sidebar() {
                             {!allowed && <Lock className="w-3 h-3 text-amber-500/80" />}
                             {item.badge && (
                               <span
-                                className={`text-[10px] px-1.5 py-0.2 rounded font-mono font-bold ${
-                                  isAdmin
+                                className={`text-[10px] px-1.5 py-0.2 rounded font-mono font-bold ${isAdmin
                                     ? item.highlight
                                       ? "bg-purple-300 text-purple-950"
                                       : "bg-purple-400/20 text-purple-300 border border-purple-500/30"
                                     : item.highlight
-                                    ? "bg-emerald-400 text-emerald-950"
-                                    : "bg-blue-400/20 text-blue-300"
-                                }`}
+                                      ? "bg-emerald-400 text-emerald-950"
+                                      : "bg-blue-400/20 text-blue-300"
+                                  }`}
                               >
                                 {item.badge}
                               </span>
@@ -425,11 +428,10 @@ export function Sidebar() {
         <div className="p-3 border-t border-slate-800 bg-slate-900/50">
           <div className="flex items-center gap-2.5">
             <div
-              className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ${
-                isAdmin
+              className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ${isAdmin
                   ? "bg-gradient-to-tr from-purple-600 to-indigo-600"
                   : "bg-gradient-to-tr from-blue-600 to-indigo-500"
-              }`}
+                }`}
             >
               {currentEmployee?.full_name ? currentEmployee.full_name[0] : "A"}
             </div>
@@ -438,9 +440,8 @@ export function Sidebar() {
                 {currentEmployee?.full_name ?? "Administrator"}
               </div>
               <div
-                className={`text-[10px] font-mono font-semibold ${
-                  isAdmin ? "text-purple-400" : "text-emerald-400"
-                }`}
+                className={`text-[10px] font-mono font-semibold ${isAdmin ? "text-purple-400" : "text-emerald-400"
+                  }`}
               >
                 {isAdmin ? "SUPER ADMIN" : currentEmployee?.role ?? "STAFF"}
               </div>
@@ -450,9 +451,8 @@ export function Sidebar() {
       ) : (
         <div className="p-3 border-t border-slate-800 flex justify-center">
           <div
-            className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ${
-              isAdmin ? "bg-purple-600" : "bg-blue-600"
-            }`}
+            className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ${isAdmin ? "bg-purple-600" : "bg-blue-600"
+              }`}
           >
             {currentEmployee?.full_name ? currentEmployee.full_name[0] : "A"}
           </div>
