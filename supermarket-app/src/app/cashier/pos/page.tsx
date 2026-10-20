@@ -70,6 +70,7 @@ export default function POSBillingPage() {
   // Checkout modal
   const [showCheckout, setShowCheckout] = useState(false);
   const [paymentLines, setPaymentLines] = useState<PaymentLine[]>([{ method: "CASH", amount: 0 }]);
+  const [customPointsInput, setCustomPointsInput] = useState<string>("");
   const [cashTendered, setCashTendered] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -409,32 +410,47 @@ export default function POSBillingPage() {
       return;
     }
     setPaymentLines([{ method: "CASH", amount: finalTotal }]);
+    setCustomPointsInput("");
     setCashTendered(String(finalTotal));
     setShowCheckout(true);
   };
 
-  // Split payment helper
-  const addSplitPayment = () => {
-    const currentSum = paymentLines.reduce((acc, p) => acc + Number(p.amount || 0), 0);
-    const remaining = Math.max(0, Number((finalTotal - currentSum).toFixed(2)));
-    setPaymentLines((prev) => [...prev, { method: "CARD", amount: remaining }]);
-  };
+  const applyPointsRedemption = (pts: number) => {
+    const maxPts = Math.min(Number(customer?.points_balance || 0), Math.floor(finalTotal));
+    const validPts = Math.max(0, Math.min(Math.floor(pts || 0), maxPts));
+    const remaining = Math.max(0, Number((finalTotal - validPts).toFixed(2)));
+    setCustomPointsInput(validPts > 0 ? String(validPts) : "");
 
-  const removeSplitPayment = (index: number) => {
-    setPaymentLines((prev) => prev.filter((_, idx) => idx !== index));
+    if (validPts > 0) {
+      setPaymentLines([
+        { method: "POINTS", amount: validPts, reference: `PTS-REDEEM-${customer?.card_no || "CUST"}` },
+        ...(remaining > 0 ? [{ method: "CASH" as const, amount: remaining }] : []),
+      ]);
+    } else {
+      setPaymentLines([{ method: "CASH", amount: finalTotal }]);
+    }
+    setCashTendered(remaining > 0 ? remaining.toFixed(2) : "0");
   };
 
   const updatePaymentLine = (index: number, field: keyof PaymentLine, val: any) => {
+    // If it's a POINTS line, do not allow changing method or amount
+    if (paymentLines[index]?.method === "POINTS" && (field === "method" || field === "amount")) {
+      return;
+    }
     setPaymentLines((prev) =>
       prev.map((line, idx) => (idx === index ? { ...line, [field]: val } : line))
     );
   };
 
-  // Calculate Change
+  // Calculate Payments & Change Breakdown
   const totalPaidSum = paymentLines.reduce((acc, p) => acc + Number(p.amount || 0), 0);
   const hasCash = paymentLines.some((p) => p.method === "CASH");
-  const effectiveCashTendered = hasCash && cashTendered ? Number(cashTendered) : totalPaidSum;
-  const changeDue = Math.max(0, Number((effectiveCashTendered - finalTotal).toFixed(2)));
+  const cashLine = paymentLines.find((p) => p.method === "CASH");
+  const cashAmount = cashLine ? Number(cashLine.amount || 0) : 0;
+  const effectiveCashTendered = hasCash && cashTendered ? Number(cashTendered) : cashAmount;
+  const changeDue = hasCash && effectiveCashTendered > cashAmount
+    ? Number((effectiveCashTendered - cashAmount).toFixed(2))
+    : 0;
 
   // Complete Sale Submission
   const handleCompleteSale = async () => {
@@ -1130,11 +1146,31 @@ export default function POSBillingPage() {
       {/* Checkout & Split Payment Modal */}
       {showCheckout && (
         <div className="modal-overlay">
-          <div className="modal-box" style={{ maxWidth: 520, width: "100%", padding: 24 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <div
+            className="modal-box"
+            style={{
+              maxWidth: 520,
+              width: "100%",
+              maxHeight: "92vh",
+              display: "flex",
+              flexDirection: "column",
+              padding: 0,
+              overflow: "hidden",
+            }}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: "16px 20px",
+                borderBottom: "1px solid var(--border)",
+              }}
+            >
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ fontSize: 20 }}>💳</span>
-                <h3 style={{ fontSize: 17, fontWeight: 800, color: "var(--text-primary)" }}>
+                <h3 style={{ fontSize: 17, fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
                   Payment & Final Checkout
                 </h3>
               </div>
@@ -1143,181 +1179,386 @@ export default function POSBillingPage() {
               </button>
             </div>
 
-            {/* Total Due Banner */}
-            <div
-              style={{
-                background: "rgba(16, 185, 129, 0.12)",
-                border: "1px solid rgba(16, 185, 129, 0.25)",
-                padding: "12px 16px",
-                borderRadius: 10,
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: 16,
-              }}
-            >
-              <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>Grand Total Due</span>
-              <span style={{ fontSize: 22, fontWeight: 900, color: "var(--accent-emerald)" }}>
-                {fmt(finalTotal)}
-              </span>
-            </div>
+            {/* Scrollable Modal Content */}
+            <div style={{ padding: "16px 20px", overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 14 }}>
 
-            {/* Customer Loyalty Banner in Checkout */}
-            {customer && (
-              <div
-                style={{
-                  background: "rgba(59, 130, 246, 0.1)",
-                  border: "1px solid rgba(59, 130, 246, 0.3)",
-                  padding: "10px 14px",
-                  borderRadius: 10,
-                  marginBottom: 14,
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12.5 }}>
-                  <span>⭐ <strong>{customer.full_name}</strong> ({customer.card_no})</span>
-                  <span className="badge badge-open">{customer.tier} MEMBER</span>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11.5, marginTop: 4 }}>
-                  <span style={{ color: "var(--text-secondary)" }}>
-                    Available Points: <strong>{customer.points_balance || 0} pts</strong>
-                  </span>
-                  <span style={{ color: "var(--accent-emerald)", fontWeight: 700 }}>
-                    🪙 +{Math.floor((finalTotal / 100) * (customer.tier === 'SILVER' ? 1.1 : customer.tier === 'GOLD' ? 1.25 : customer.tier === 'PLATINUM' ? 1.5 : 1.0))} Points will be earned
-                  </span>
-                </div>
-                {customer.points_balance > 0 && (
-                  <div style={{ marginTop: 8, paddingTop: 6, borderTop: "1px dashed rgba(59, 130, 246, 0.3)", display: "flex", justifyContent: "flex-end" }}>
-                    <button
-                      type="button"
-                      className="btn btn-ghost"
-                      style={{ fontSize: 11, padding: "3px 8px", color: "var(--accent-blue)" }}
-                      onClick={() => {
-                        const redeemable = Math.min(customer.points_balance, finalTotal);
-                        setPaymentLines((prev) => [
-                          { method: "POINTS", amount: redeemable },
-                          ...(finalTotal > redeemable ? [{ method: "CASH" as const, amount: Number((finalTotal - redeemable).toFixed(2)) }] : []),
-                        ]);
+            {/* Bill & Discount Summary Banner */}
+            {(() => {
+              const activePoints = paymentLines.find((p) => p.method === "POINTS");
+              const redeemedPts = activePoints ? Number(activePoints.amount || 0) : 0;
+              const remainingPurchaseVal = Math.max(0, Number((finalTotal - redeemedPts).toFixed(2)));
+
+              return (
+                <div
+                  style={{
+                    background: "rgba(16, 185, 129, 0.08)",
+                    border: "1px solid rgba(16, 185, 129, 0.25)",
+                    padding: "12px 16px",
+                    borderRadius: 10,
+                    marginBottom: 16,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 6,
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--text-secondary)" }}>
+                    <span>Gross Purchase Value</span>
+                    <span style={{ fontFamily: "monospace", color: "var(--text-primary)", fontWeight: 600 }}>{fmt(finalTotal)}</span>
+                  </div>
+                  {redeemedPts > 0 && (
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        fontSize: 12,
+                        color: "#c084fc",
+                        fontWeight: 700,
+                        background: "rgba(147, 51, 234, 0.12)",
+                        padding: "4px 8px",
+                        borderRadius: 6,
+                        border: "1px solid rgba(147, 51, 234, 0.3)",
                       }}
                     >
-                      🪙 Redeem Points (Max: Rs. {Math.min(customer.points_balance, finalTotal).toFixed(2)})
-                    </button>
+                      <span>⭐ Loyalty Point Discount ({redeemedPts} pts):</span>
+                      <span style={{ fontFamily: "monospace" }}>-{fmt(redeemedPts)}</span>
+                    </div>
+                  )}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 6, borderTop: "1px solid rgba(255, 255, 255, 0.08)" }}>
+                    <div>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>
+                        {redeemedPts > 0 ? "Remaining Purchase Value" : "Grand Total Due"}
+                      </span>
+                      {redeemedPts > 0 && (
+                        <div style={{ fontSize: 10.5, color: "var(--text-muted)" }}>Payable amount after loyalty point discount</div>
+                      )}
+                    </div>
+                    <span style={{ fontSize: 22, fontWeight: 900, color: redeemedPts > 0 ? "#a855f7" : "var(--accent-emerald)" }}>
+                      {fmt(remainingPurchaseVal)}
+                    </span>
                   </div>
-                )}
-              </div>
-            )}
+                </div>
+              );
+            })()}
 
-            {/* Split Payment Lines */}
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                <label style={{ fontSize: 12, fontWeight: 700, color: "var(--text-secondary)" }}>
-                  Payment Methods (Split payments supported)
-                </label>
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  style={{ fontSize: 11, padding: "3px 8px" }}
-                  onClick={addSplitPayment}
+            {/* Customer Loyalty Banner in Checkout */}
+            {customer && (() => {
+              const currentPoints = Number(customer.points_balance || 0);
+              const maxRedeemable = Math.min(currentPoints, Math.floor(finalTotal));
+              const activePointsPayment = paymentLines.find((p) => p.method === "POINTS");
+              const currentRedeemedPoints = activePointsPayment ? Number(activePointsPayment.amount) : 0;
+              const remainingDue = Math.max(0, Number((finalTotal - currentRedeemedPoints).toFixed(2)));
+
+              return (
+                <div
+                  style={{
+                    background: "rgba(147, 51, 234, 0.08)",
+                    border: "1px solid rgba(147, 51, 234, 0.3)",
+                    padding: "12px 14px",
+                    borderRadius: 10,
+                    marginBottom: 14,
+                  }}
                 >
-                  + Add Split Method
-                </button>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12.5 }}>
+                    <span>⭐ <strong>{customer.full_name}</strong> ({customer.card_no})</span>
+                    <span className="badge badge-open" style={{ borderColor: "#a855f7", color: "#c084fc" }}>
+                      {customer.tier} MEMBER
+                    </span>
+                  </div>
+
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11.5, marginTop: 4 }}>
+                    <span style={{ color: "var(--text-secondary)" }}>
+                      Available Balance: <strong>{currentPoints} pts</strong> (Value: Rs. {currentPoints.toFixed(2)})
+                    </span>
+                    {currentRedeemedPoints === 0 ? (
+                      <span style={{ color: "var(--accent-emerald)", fontWeight: 700 }}>
+                        🪙 +{Math.floor((finalTotal / 100) * (customer.tier === 'SILVER' ? 1.1 : customer.tier === 'GOLD' ? 1.25 : customer.tier === 'PLATINUM' ? 1.5 : 1.0))} pts will be earned
+                      </span>
+                    ) : (
+                      <span style={{ color: "var(--accent-amber)", fontWeight: 700 }}>
+                        ⚠️ 0 pts earned (points redeemed)
+                      </span>
+                    )}
+                  </div>
+
+                  {currentPoints > 0 ? (
+                    <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px dashed rgba(147, 51, 234, 0.3)" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: "#d8b4fe" }}>
+                          Spend Points at Checkout (Full or Partial):
+                        </span>
+                        {currentRedeemedPoints > 0 && (
+                          <span style={{ fontSize: 11, fontWeight: 800, color: "#c084fc" }}>
+                            -{currentRedeemedPoints} pts applied (-Rs. {currentRedeemedPoints.toFixed(2)})
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Quick Point Spend Chips */}
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+                        <button
+                          type="button"
+                          className="btn btn-ghost"
+                          style={{
+                            fontSize: 10,
+                            padding: "3px 8px",
+                            border: "1px solid var(--border)",
+                            background: currentRedeemedPoints === 0 ? "rgba(255,255,255,0.1)" : "transparent",
+                          }}
+                          onClick={() => applyPointsRedemption(0)}
+                        >
+                          None (0 pts)
+                        </button>
+
+                        {/* Pay Full Bill if customer balance covers the full bill */}
+                        {currentPoints >= Math.floor(finalTotal) && (
+                          <button
+                            type="button"
+                            className="btn btn-ghost"
+                            style={{
+                              fontSize: 10,
+                              padding: "3px 8px",
+                              fontWeight: 700,
+                              border: currentRedeemedPoints === Math.floor(finalTotal) ? "1px solid #10b981" : "1px solid rgba(16, 185, 129, 0.5)",
+                              background: currentRedeemedPoints === Math.floor(finalTotal) ? "rgba(16, 185, 129, 0.3)" : "rgba(16, 185, 129, 0.15)",
+                              color: "#a7f3d0",
+                            }}
+                            onClick={() => applyPointsRedemption(Math.floor(finalTotal))}
+                          >
+                            ✨ Pay Full Bill ({Math.floor(finalTotal)} pts)
+                          </button>
+                        )}
+
+                        {[50, 100, 250, 500].map((preset) => {
+                          if (preset > currentPoints || preset >= Math.floor(finalTotal)) return null;
+                          return (
+                            <button
+                              key={preset}
+                              type="button"
+                              className="btn btn-ghost"
+                              style={{
+                                fontSize: 10,
+                                padding: "3px 8px",
+                                border: currentRedeemedPoints === preset ? "1px solid #a855f7" : "1px solid rgba(147, 51, 234, 0.4)",
+                                background: currentRedeemedPoints === preset ? "rgba(168, 85, 247, 0.25)" : "rgba(147, 51, 234, 0.1)",
+                                color: "#e9d5ff",
+                              }}
+                              onClick={() => applyPointsRedemption(preset)}
+                            >
+                              Partial: {preset} pts (-Rs.{preset})
+                            </button>
+                          );
+                        })}
+
+                        {/* Partial Max if balance < finalTotal */}
+                        {maxRedeemable > 0 && currentPoints < Math.floor(finalTotal) && (
+                          <button
+                            type="button"
+                            className="btn btn-ghost"
+                            style={{
+                              fontSize: 10,
+                              padding: "3px 8px",
+                              fontWeight: 700,
+                              border: currentRedeemedPoints === maxRedeemable ? "1px solid #a855f7" : "1px solid rgba(168, 85, 247, 0.5)",
+                              background: currentRedeemedPoints === maxRedeemable ? "rgba(168, 85, 247, 0.3)" : "rgba(168, 85, 247, 0.15)",
+                              color: "#f3e8ff",
+                            }}
+                            onClick={() => applyPointsRedemption(maxRedeemable)}
+                          >
+                            Partial Max ({maxRedeemable} pts)
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Custom Points Input */}
+                      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                        <input
+                          type="number"
+                          className="input"
+                          min="0"
+                          max={maxRedeemable}
+                          style={{ width: 140, padding: "4px 8px", fontSize: 11 }}
+                          placeholder={`Custom pts (max ${maxRedeemable})`}
+                          value={customPointsInput}
+                          onChange={(e) => setCustomPointsInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              applyPointsRedemption(Number(customPointsInput));
+                            }
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          style={{ padding: "4px 10px", fontSize: 11 }}
+                          onClick={() => applyPointsRedemption(Number(customPointsInput))}
+                        >
+                          Apply Points
+                        </button>
+                        <span style={{ fontSize: 10.5, color: "var(--text-muted)", marginLeft: "auto" }}>
+                          Remaining balance after spend: <strong>{currentPoints - currentRedeemedPoints} pts</strong>
+                        </span>
+                      </div>
+
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 6, fontStyle: "italic" }}>
+                      Customer has 0 points available. Points will be automatically earned from this purchase.
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Payment Method Section */}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ marginBottom: 8 }}>
+                <label style={{ fontSize: 12, fontWeight: 700, color: "var(--text-secondary)" }}>
+                  {paymentLines.some((p) => p.method === "POINTS")
+                    ? "Payment Settlement"
+                    : "Payment Method"}
+                </label>
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {paymentLines.map((line, idx) => (
-                  <div
-                    key={idx}
-                    style={{
-                      display: "flex",
-                      gap: 8,
-                      alignItems: "center",
-                      background: "var(--bg-surface)",
-                      padding: 8,
-                      borderRadius: 8,
-                      border: "1px solid var(--border)",
-                    }}
-                  >
-                    <select
-                      className="input"
-                      style={{ width: 110, padding: "6px 8px" }}
-                      value={line.method}
-                      onChange={(e) => updatePaymentLine(idx, "method", e.target.value)}
+                {paymentLines.map((line, idx) => {
+                  const isPoints = line.method === "POINTS";
+
+                  return (
+                    <div
+                      key={idx}
+                      style={{
+                        display: "flex",
+                        gap: 8,
+                        alignItems: "center",
+                        background: isPoints ? "rgba(147, 51, 234, 0.08)" : "var(--bg-surface)",
+                        padding: 8,
+                        borderRadius: 8,
+                        border: isPoints ? "1px solid rgba(147, 51, 234, 0.3)" : "1px solid var(--border)",
+                      }}
                     >
-                      <option value="CASH">CASH</option>
-                      <option value="CARD">CARD</option>
-                      <option value="MOBILE">MOBILE</option>
-                      <option value="POINTS">POINTS</option>
-                    </select>
+                      {isPoints ? (
+                        <div
+                          style={{
+                            width: 110,
+                            padding: "6px 8px",
+                            background: "rgba(147, 51, 234, 0.2)",
+                            color: "#d8b4fe",
+                            fontWeight: 700,
+                            fontSize: 12,
+                            borderRadius: 6,
+                            textAlign: "center",
+                            border: "1px solid rgba(147, 51, 234, 0.4)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: 4,
+                          }}
+                        >
+                          ⭐ POINTS
+                        </div>
+                      ) : (
+                        <select
+                          className="input"
+                          style={{ width: 110, padding: "6px 8px" }}
+                          value={line.method}
+                          onChange={(e) => updatePaymentLine(idx, "method", e.target.value)}
+                        >
+                          <option value="CASH">CASH</option>
+                          <option value="CARD">CARD</option>
+                          <option value="MOBILE">MOBILE</option>
+                        </select>
+                      )}
 
-                    <input
-                      type="number"
-                      className="input"
-                      style={{ width: 120, padding: "6px 8px" }}
-                      placeholder="Amount"
-                      value={line.amount || ""}
-                      onChange={(e) => updatePaymentLine(idx, "amount", Number(e.target.value))}
-                    />
+                      <input
+                        type="number"
+                        className="input"
+                        style={{
+                          width: 120,
+                          padding: "6px 8px",
+                          ...(isPoints ? { background: "rgba(255,255,255,0.05)", cursor: "not-allowed", color: "#c084fc", fontWeight: 700 } : {}),
+                        }}
+                        placeholder="Amount"
+                        value={line.amount || ""}
+                        disabled={isPoints}
+                        onChange={(e) => updatePaymentLine(idx, "amount", Number(e.target.value))}
+                      />
 
-                    <input
-                      type="text"
-                      className="input"
-                      style={{ flex: 1, padding: "6px 8px" }}
-                      placeholder={line.method === "CASH" ? "Cash notes..." : "Approval code / Ref #"}
-                      value={line.reference || ""}
-                      onChange={(e) => updatePaymentLine(idx, "reference", e.target.value)}
-                    />
-
-                    {paymentLines.length > 1 && (
-                      <button
-                        type="button"
-                        className="btn btn-ghost"
-                        style={{ padding: "4px 8px", color: "var(--accent-rose)" }}
-                        onClick={() => removeSplitPayment(idx)}
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
-                ))}
+                      <input
+                        type="text"
+                        className="input"
+                        style={{
+                          flex: 1,
+                          padding: "6px 8px",
+                          ...(isPoints ? { background: "rgba(255,255,255,0.05)", cursor: "not-allowed", color: "var(--text-muted)" } : {}),
+                        }}
+                        placeholder={
+                          isPoints
+                            ? "Loyalty Points Redemption"
+                            : line.method === "CASH"
+                            ? "Cash notes..."
+                            : "Approval code / Ref #"
+                        }
+                        value={line.reference || ""}
+                        disabled={isPoints}
+                        onChange={(e) => updatePaymentLine(idx, "reference", e.target.value)}
+                      />
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Cash Tendered Input & Change Due */}
+            {/* Cash Tendered Input & Remaining Purchase Value Reduction */}
             {hasCash && (
-              <div style={{ marginBottom: 16 }}>
+              <div style={{ marginBottom: 16, background: "rgba(255, 255, 255, 0.02)", padding: "12px", borderRadius: 10, border: "1px solid var(--border)" }}>
                 <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
                   <div style={{ flex: 1 }}>
                     <label style={{ fontSize: 11, color: "var(--text-muted)", display: "block", marginBottom: 4 }}>
-                      Cash Tendered from Customer (Rs.)
+                      Customer Tendered Cash (Rs.)
                     </label>
                     <input
                       type="number"
                       className="input"
                       value={cashTendered}
                       onChange={(e) => setCashTendered(e.target.value)}
-                      placeholder="e.g. 5000"
+                      placeholder={`e.g. ${cashAmount.toFixed(2)}`}
                     />
                   </div>
 
                   <div
                     style={{
                       flex: 1,
-                      background: "rgba(255, 255, 255, 0.03)",
+                      background: "rgba(16, 185, 129, 0.08)",
                       padding: "8px 12px",
                       borderRadius: 8,
-                      border: "1px solid var(--border)",
+                      border: "1px solid rgba(16, 185, 129, 0.25)",
                     }}
                   >
-                    <div style={{ fontSize: 11, color: "var(--text-muted)" }}>Change Due</div>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: "var(--accent-emerald)" }}>
+                    <div style={{ fontSize: 10.5, color: "var(--text-muted)" }}>Change to Return</div>
+                    <div style={{ fontSize: 18, fontWeight: 900, color: "var(--accent-emerald)" }}>
                       {fmt(changeDue)}
                     </div>
                   </div>
                 </div>
+
               </div>
             )}
 
-            {/* Complete Sale Button */}
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 16 }}>
+            {/* Complete Sale Button - Inside Sticky Footer */}
+            </div>
+
+            {/* Sticky Action Footer */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 10,
+                padding: "12px 20px",
+                borderTop: "1px solid var(--border)",
+                background: "var(--bg-surface)",
+              }}
+            >
               <button
                 type="button"
                 className="btn btn-ghost"

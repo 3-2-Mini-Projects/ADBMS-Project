@@ -139,16 +139,26 @@ export async function POST(req: Request) {
       // Step B: Validate payments sum matches or covers total
       const totalPayments = payments.reduce((acc, p) => acc + Number(p.amount), 0);
       const isCashPayment = payments.some((p) => p.method === "CASH");
-      const effectiveTendered = amountTendered ? Number(amountTendered) : totalPayments;
+      const nonCashTotal = payments
+        .filter((p) => p.method !== "CASH")
+        .reduce((acc, p) => acc + Number(p.amount), 0);
+      const cashLine = payments.find((p) => p.method === "CASH");
+      const cashLineAmount = cashLine ? Number(cashLine.amount) : 0;
 
-      if (effectiveTendered < calculatedGrandTotal - 0.05) {
+      // When split payment is used (e.g. POINTS + CASH), effective total tendered includes non-cash payments plus cash tendered
+      const effectiveCashTendered = amountTendered !== undefined && amountTendered !== null
+        ? Number(amountTendered)
+        : cashLineAmount;
+      const totalEffectiveTendered = nonCashTotal + effectiveCashTendered;
+
+      if (totalPayments < calculatedGrandTotal - 0.05 && totalEffectiveTendered < calculatedGrandTotal - 0.05) {
         throw new Error(
-          `Total payment (Rs. ${effectiveTendered.toFixed(2)}) is less than total amount due (Rs. ${calculatedGrandTotal.toFixed(2)})`
+          `Total payment (Rs. ${Math.max(totalPayments, totalEffectiveTendered).toFixed(2)}) is less than total amount due (Rs. ${calculatedGrandTotal.toFixed(2)})`
         );
       }
 
-      const changeDue = isCashPayment && effectiveTendered > calculatedGrandTotal
-        ? Number((effectiveTendered - calculatedGrandTotal).toFixed(2))
+      const changeDue = isCashPayment && effectiveCashTendered > cashLineAmount
+        ? Number((effectiveCashTendered - cashLineAmount).toFixed(2))
         : 0;
 
       // Step C: Create the sale record
@@ -238,6 +248,11 @@ export async function POST(req: Request) {
                   `Insufficient loyalty points. Customer has ${currentBal} points, but attempted to redeem ${pointsRedeemed} points.`
                 );
               }
+              if (pointsRedeemed > Math.floor(calculatedGrandTotal)) {
+                throw new Error(
+                  `Cannot redeem more points (${pointsRedeemed}) than the total bill amount (Rs. ${calculatedGrandTotal.toFixed(2)}).`
+                );
+              }
               currentBal -= pointsRedeemed;
               await conn.query(
                 `INSERT INTO loyalty_transactions (
@@ -248,27 +263,32 @@ export async function POST(req: Request) {
             }
 
             // 2. Calculate earned points: 1 point for every Rs. 100 spent (with tier multiplier)
-            let multiplier = 1.0;
-            if (cust.tier === "SILVER") multiplier = 1.1;
-            else if (cust.tier === "GOLD") multiplier = 1.25;
-            else if (cust.tier === "PLATINUM") multiplier = 1.5;
+            // Business Rule: If customer redeemed points (partial or full payment), no points are earned on this transaction.
+            if (pointsRedeemed === 0) {
+              let multiplier = 1.0;
+              if (cust.tier === "SILVER") multiplier = 1.1;
+              else if (cust.tier === "GOLD") multiplier = 1.25;
+              else if (cust.tier === "PLATINUM") multiplier = 1.5;
 
-            pointsEarned = Math.floor((calculatedGrandTotal / 100) * multiplier);
+              pointsEarned = Math.floor((calculatedGrandTotal / 100) * multiplier);
 
-            if (pointsEarned > 0) {
-              currentBal += pointsEarned;
-              await conn.query(
-                `INSERT INTO loyalty_transactions (
-                  customer_id, branch_id, sale_id, points, type, note, created_at
-                ) VALUES (?, ?, ?, ?, 'EARN', ?, NOW())`,
-                [
-                  customerId,
-                  branchId,
-                  saleId,
-                  pointsEarned,
-                  `Points earned from purchase (${cust.tier} tier: ${multiplier}x)`,
-                ]
-              );
+              if (pointsEarned > 0) {
+                currentBal += pointsEarned;
+                await conn.query(
+                  `INSERT INTO loyalty_transactions (
+                    customer_id, branch_id, sale_id, points, type, note, created_at
+                  ) VALUES (?, ?, ?, ?, 'EARN', ?, NOW())`,
+                  [
+                    customerId,
+                    branchId,
+                    saleId,
+                    pointsEarned,
+                    `Points earned from purchase (${cust.tier} tier: ${multiplier}x)`,
+                  ]
+                );
+              }
+            } else {
+              pointsEarned = 0;
             }
 
             // 3. Update customer balance
@@ -314,7 +334,7 @@ export async function POST(req: Request) {
         discountTotal: calculatedDiscountTotal,
         taxTotal: calculatedTaxTotal,
         totalAmount: calculatedGrandTotal,
-        amountTendered: effectiveTendered,
+        amountTendered: totalEffectiveTendered,
         changeDue,
         items: validatedItems,
         payments,

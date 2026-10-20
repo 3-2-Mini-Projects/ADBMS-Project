@@ -239,65 +239,86 @@ export default function PrintableReceipt({
 
           <div style={{ borderBottom: "1px dashed #6b7280", margin: "10px 0" }} />
 
-          {/* Totals */}
-          <div style={{ fontSize: 12, lineHeight: 1.7, marginBottom: 14 }}>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span>Subtotal:</span>
-              <span>{fmt(receipt.subtotal)}</span>
-            </div>
-            {Number(receipt.discountTotal) > 0 && (
-              <div style={{ display: "flex", justifyContent: "space-between", color: "#b91c1c" }}>
-                <span>Total Discount:</span>
-                <span>-{fmt(receipt.discountTotal)}</span>
-              </div>
-            )}
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span>Tax Total (18% / Item Tax):</span>
-              <span>{fmt(receipt.taxTotal)}</span>
-            </div>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                fontSize: 15,
-                fontWeight: 900,
-                borderTop: "1px solid #111827",
-                borderBottom: "1px solid #111827",
-                padding: "6px 0",
-                margin: "6px 0",
-              }}
-            >
-              <span>TOTAL DUE:</span>
-              <span>{fmt(receipt.totalAmount)}</span>
-            </div>
-          </div>
+          {/* Totals & Loyalty Point Discount */}
+          {(() => {
+            const pointsRedeemed = Number(receipt.customer?.points_redeemed || 0);
+            const remainingPurchaseValue = Math.max(0, Number(receipt.totalAmount) - pointsRedeemed);
 
-          {/* Payment breakdown */}
-          <div style={{ fontSize: 11.5, lineHeight: 1.6, marginBottom: 14 }}>
-            <div style={{ fontWeight: 700, textTransform: "uppercase", fontSize: 11, marginBottom: 4 }}>
-              Payment Breakdown
-            </div>
-            {receipt.payments.map((p, idx) => (
-              <div key={idx} style={{ display: "flex", justifyContent: "space-between" }}>
-                <span>
-                  {p.method} {p.reference ? `(${p.reference})` : ""}:
-                </span>
-                <span>{fmt(p.amount)}</span>
-              </div>
-            ))}
-            {receipt.amountTendered && Number(receipt.amountTendered) > 0 && (
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span>Amount Tendered:</span>
-                <span>{fmt(receipt.amountTendered)}</span>
-              </div>
-            )}
-            {receipt.changeDue !== undefined && Number(receipt.changeDue) > 0 && (
-              <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800, color: "#047857" }}>
-                <span>Change Given:</span>
-                <span>{fmt(receipt.changeDue)}</span>
-              </div>
-            )}
-          </div>
+            return (
+              <>
+                <div style={{ fontSize: 12, lineHeight: 1.7, marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span>Gross Subtotal:</span>
+                    <span>{fmt(receipt.subtotal)}</span>
+                  </div>
+                  {Number(receipt.discountTotal) > 0 && (
+                    <div style={{ display: "flex", justifyContent: "space-between", color: "#b91c1c" }}>
+                      <span>Promotional Discounts:</span>
+                      <span>-{fmt(receipt.discountTotal)}</span>
+                    </div>
+                  )}
+                  {pointsRedeemed > 0 && (
+                    <div style={{ display: "flex", justifyContent: "space-between", color: "#7c3aed", fontWeight: 700 }}>
+                      <span>Loyalty Point Discount ({pointsRedeemed} pts):</span>
+                      <span>-{fmt(pointsRedeemed)}</span>
+                    </div>
+                  )}
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span>Tax (18% / Item Tax):</span>
+                    <span>{fmt(receipt.taxTotal)}</span>
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      fontSize: 14,
+                      fontWeight: 900,
+                      borderTop: "1px solid #111827",
+                      borderBottom: "1px solid #111827",
+                      padding: "6px 0",
+                      margin: "6px 0",
+                    }}
+                  >
+                    <span>REMAINING PURCHASE VALUE:</span>
+                    <span>{fmt(remainingPurchaseValue)}</span>
+                  </div>
+                </div>
+
+                {/* Payment & Cash Settlement Breakdown */}
+                <div style={{ fontSize: 11.5, lineHeight: 1.6, marginBottom: 14 }}>
+                  <div style={{ fontWeight: 700, textTransform: "uppercase", fontSize: 11, marginBottom: 4 }}>
+                    Payment & Cash Settlement
+                  </div>
+                  {receipt.payments.filter((p) => p.method !== "POINTS").map((p, idx) => (
+                    <div key={idx} style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span>
+                        Paid via {p.method} {p.reference ? `(${p.reference})` : ""}:
+                      </span>
+                      <span>{fmt(p.amount)}</span>
+                    </div>
+                  ))}
+                  {receipt.amountTendered && Number(receipt.amountTendered) > 0 && (
+                    <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, paddingTop: 2 }}>
+                      <span>Customer Tendered Cash:</span>
+                      <span>{fmt(receipt.amountTendered)}</span>
+                    </div>
+                  )}
+                  {pointsRedeemed > 0 && (
+                    <div style={{ display: "flex", justifyContent: "space-between", color: "#6b7280" }}>
+                      <span>Less Remaining Purchase Value:</span>
+                      <span>-{fmt(remainingPurchaseValue)}</span>
+                    </div>
+                  )}
+                  {receipt.changeDue !== undefined && Number(receipt.changeDue) >= 0 && (
+                    <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 900, color: "#047857", fontSize: 13, borderTop: "1px dotted #9ca3af", paddingTop: 4, marginTop: 4 }}>
+                      <span>Change Given to Customer:</span>
+                      <span>{fmt(receipt.changeDue)}</span>
+                    </div>
+                  )}
+                </div>
+              </>
+            );
+          })()}
 
           {/* Loyalty Program Summary on Receipt */}
           {receipt.customer?.card_no && (
@@ -316,17 +337,24 @@ export default function PrintableReceipt({
                 <span>LOYALTY REWARDS ({receipt.customer.tier}):</span>
                 <span>{receipt.customer.card_no}</span>
               </div>
-              {receipt.customer.points_earned !== undefined && Number(receipt.customer.points_earned) > 0 && (
-                <div style={{ display: "flex", justifyContent: "space-between", color: "#047857", fontWeight: 600 }}>
-                  <span>⭐ Points Earned Today:</span>
-                  <span>+{receipt.customer.points_earned} pts</span>
-                </div>
-              )}
-              {receipt.customer.points_redeemed !== undefined && Number(receipt.customer.points_redeemed) > 0 && (
-                <div style={{ display: "flex", justifyContent: "space-between", color: "#b91c1c", fontWeight: 600 }}>
-                  <span>Points Redeemed:</span>
-                  <span>-{receipt.customer.points_redeemed} pts</span>
-                </div>
+              {receipt.customer.points_redeemed !== undefined && Number(receipt.customer.points_redeemed) > 0 ? (
+                <>
+                  <div style={{ display: "flex", justifyContent: "space-between", color: "#b91c1c", fontWeight: 600 }}>
+                    <span>Points Redeemed:</span>
+                    <span>-{receipt.customer.points_redeemed} pts</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", color: "#6b7280", fontStyle: "italic", fontSize: 10 }}>
+                    <span>Points Earned:</span>
+                    <span>0 pts (Loyalty points redeemed)</span>
+                  </div>
+                </>
+              ) : (
+                receipt.customer.points_earned !== undefined && Number(receipt.customer.points_earned) > 0 && (
+                  <div style={{ display: "flex", justifyContent: "space-between", color: "#047857", fontWeight: 600 }}>
+                    <span>⭐ Points Earned Today:</span>
+                    <span>+{receipt.customer.points_earned} pts</span>
+                  </div>
+                )
               )}
               {receipt.customer.points_balance !== undefined && (
                 <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, color: "#1f2937", borderTop: "1px dotted #d1d5db", marginTop: 4, paddingTop: 4 }}>
