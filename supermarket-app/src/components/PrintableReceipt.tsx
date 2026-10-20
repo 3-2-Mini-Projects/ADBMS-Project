@@ -23,6 +23,8 @@ export interface ReceiptData {
     card_no?: string;
     tier?: string;
     points_balance?: number;
+    points_earned?: number;
+    points_redeemed?: number;
   } | null;
   items: Array<{
     product_name: string;
@@ -296,6 +298,44 @@ export default function PrintableReceipt({
               </div>
             )}
           </div>
+
+          {/* Loyalty Program Summary on Receipt */}
+          {receipt.customer?.card_no && (
+            <div
+              style={{
+                background: "#f9fafb",
+                border: "1px dashed #9ca3af",
+                padding: "8px 10px",
+                borderRadius: 4,
+                marginBottom: 12,
+                fontSize: 11,
+                lineHeight: 1.6,
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, color: "#111827" }}>
+                <span>LOYALTY REWARDS ({receipt.customer.tier}):</span>
+                <span>{receipt.customer.card_no}</span>
+              </div>
+              {receipt.customer.points_earned !== undefined && Number(receipt.customer.points_earned) > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", color: "#047857", fontWeight: 600 }}>
+                  <span>⭐ Points Earned Today:</span>
+                  <span>+{receipt.customer.points_earned} pts</span>
+                </div>
+              )}
+              {receipt.customer.points_redeemed !== undefined && Number(receipt.customer.points_redeemed) > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", color: "#b91c1c", fontWeight: 600 }}>
+                  <span>Points Redeemed:</span>
+                  <span>-{receipt.customer.points_redeemed} pts</span>
+                </div>
+              )}
+              {receipt.customer.points_balance !== undefined && (
+                <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, color: "#1f2937", borderTop: "1px dotted #d1d5db", marginTop: 4, paddingTop: 4 }}>
+                  <span>New Available Balance:</span>
+                  <span>{receipt.customer.points_balance} pts</span>
+                </div>
+              )}
+            </div>
+          )}
 
           <div style={{ borderBottom: "1px dashed #6b7280", margin: "12px 0" }} />
 
