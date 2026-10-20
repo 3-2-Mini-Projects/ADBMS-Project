@@ -334,7 +334,7 @@ export async function POST(req: Request) {
         discountTotal: calculatedDiscountTotal,
         taxTotal: calculatedTaxTotal,
         totalAmount: calculatedGrandTotal,
-        amountTendered: totalEffectiveTendered,
+        amountTendered: effectiveCashTendered,
         changeDue,
         items: validatedItems,
         payments,
