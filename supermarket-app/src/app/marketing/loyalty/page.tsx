@@ -40,6 +40,7 @@ interface TopCustomerRow {
   tier: string;
   points_balance: number;
   total_points_earned: number;
+  transaction_month?: string;
 }
 
 export default function LoyaltyManagementPage() {
@@ -88,17 +89,26 @@ export default function LoyaltyManagementPage() {
 
       if (dashRes && !dashRes.error) setData(dashRes);
       if (Array.isArray(summaryRes)) setCustomerSummaries(summaryRes);
-      if (Array.isArray(topRes) && topRes.length > 0) {
-        const top3 = [...topRes]
-          .sort((a, b) => Number(b.total_points_earned || 0) - Number(a.total_points_earned || 0))
-          .slice(0, 3);
-        setTopCustomers(top3);
+
+      // Handle topRes format: either { customers: [...], months: [...] } or array
+      const custArray = Array.isArray(topRes)
+        ? topRes
+        : Array.isArray(topRes?.customers)
+        ? topRes.customers
+        : [];
+
+      if (custArray.length > 0) {
+        setTopCustomers(custArray.slice(0, 10));
       } else if (Array.isArray(summaryRes) && summaryRes.length > 0) {
-        const top3 = [...summaryRes]
+        const top10 = [...summaryRes]
+          .filter((c) => Number(c.points_balance || 0) > 0)
           .sort((a, b) => Number(b.total_points_earned || 0) - Number(a.total_points_earned || 0))
-          .slice(0, 3);
-        setTopCustomers(top3);
+          .slice(0, 10);
+        setTopCustomers(top10);
+      } else {
+        setTopCustomers([]);
       }
+
       if (Array.isArray(custRes)) setCustomersList(custRes);
     } catch (err) {
       console.error("Error loading loyalty management data:", err);
@@ -304,7 +314,7 @@ export default function LoyaltyManagementPage() {
                 }`}
             >
               <Trophy className="w-3.5 h-3.5" />
-              <span>Top 3 Customers</span>
+              <span>Top 10 Customers</span>
             </button>
 
           </div>
@@ -431,7 +441,7 @@ export default function LoyaltyManagementPage() {
 
 
         {/* ========================================================================= */}
-        {/* TAB 3: Top 3 Customers by Highest Points Earned (top_customers_vw) */}
+        {/* TAB 2: Top 10 Customers by Points Earned (top_customers_vw) */}
         {/* ========================================================================= */}
         {activeTab === "top" && (
           <div className="overflow-x-auto">
@@ -447,58 +457,70 @@ export default function LoyaltyManagementPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60 font-mono">
-                {loading ? (
-                  <tr>
-                    <td colSpan={6} className="py-12 text-center text-slate-500 font-sans">
-                      <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-amber-500" />
-                      Querying top_customers_vw...
-                    </td>
-                  </tr>
-                ) : topCustomers.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="py-12 text-center text-slate-500 font-sans">
-                      No top customers found.
-                    </td>
-                  </tr>
-                ) : (
-                  topCustomers.slice(0, 3).map((c, index) => (
-                    <tr key={c.customer_id} className="hover:bg-slate-800/30 transition-colors">
-                      <td className="py-3 px-4 text-center">
-                        {index === 0 ? (
-                          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-400 text-slate-950 font-black text-xs">
-                            🥇
-                          </span>
-                        ) : index === 1 ? (
-                          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-300 text-slate-950 font-black text-xs">
-                            🥈
-                          </span>
-                        ) : index === 2 ? (
-                          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-700 text-white font-black text-xs">
-                            🥉
-                          </span>
-                        ) : (
-                          <span className="text-slate-500 font-bold">#{index + 1}</span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 text-amber-400 font-bold">{c.card_no}</td>
-                      <td className="py-3 px-4 font-sans font-medium text-white">{c.full_name}</td>
-                      <td className="py-3 px-4">
-                        <span className="text-[10px] px-2 py-0.5 rounded font-bold bg-slate-800 text-slate-300">
-                          {c.tier}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-right text-emerald-400 font-bold">
-                        +{Number(c.total_points_earned || 0).toLocaleString()} pts
-                      </td>
-                      <td className="py-3 px-4 text-right text-amber-300 font-bold">
-                        {Number(c.points_balance || 0).toLocaleString()} pts
+                  {loading ? (
+                    <tr>
+                      <td colSpan={6} className="py-12 text-center text-slate-500 font-sans">
+                        <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-amber-500" />
+                        Loading top 10 customers...
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                  ) : topCustomers.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-12 text-center text-slate-500 font-sans">
+                        No customers found for this period.
+                      </td>
+                    </tr>
+                  ) : (
+                    topCustomers.slice(0, 10).map((c, index) => (
+                      <tr key={c.customer_id} className="hover:bg-slate-800/30 transition-colors">
+                        <td className="py-3 px-4 text-center">
+                          {index === 0 ? (
+                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-400 text-slate-950 font-black text-xs shadow-md shadow-amber-400/20" title="Rank 1">
+                              🥇
+                            </span>
+                          ) : index === 1 ? (
+                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-300 text-slate-950 font-black text-xs shadow-md shadow-slate-300/20" title="Rank 2">
+                              🥈
+                            </span>
+                          ) : index === 2 ? (
+                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-700 text-white font-black text-xs shadow-md shadow-amber-700/20" title="Rank 3">
+                              🥉
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-slate-800 text-slate-400 font-bold text-xs border border-slate-700">
+                              #{index + 1}
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-amber-400 font-bold">{c.card_no}</td>
+                        <td className="py-3 px-4 font-sans font-medium text-white">{c.full_name}</td>
+                        <td className="py-3 px-4">
+                          <span
+                            className={`text-[10px] px-2 py-0.5 rounded font-bold ${
+                              c.tier === "PLATINUM"
+                                ? "bg-purple-950 text-purple-300 border border-purple-800/40"
+                                : c.tier === "GOLD"
+                                ? "bg-amber-950 text-amber-300 border border-amber-800/40"
+                                : c.tier === "SILVER"
+                                ? "bg-slate-800 text-slate-200 border border-slate-700"
+                                : "bg-orange-950 text-orange-300 border border-orange-800/40"
+                            }`}
+                          >
+                            {c.tier}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-right text-emerald-400 font-bold">
+                          +{Number(c.total_points_earned || 0).toLocaleString()} pts
+                        </td>
+                        <td className="py-3 px-4 text-right text-amber-300 font-bold">
+                          {Number(c.points_balance || 0).toLocaleString()} pts
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
         )}
       </div>
 

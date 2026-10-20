@@ -50,8 +50,8 @@ export default function PromotionsPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Tab State: 'all' | 'active_vw' | 'matrix' | 'sql_functions'
-  const [activeTab, setActiveTab] = useState<"all" | "active_vw" | "matrix" | "sql_functions">("all");
+  // Tab State: 'all' | 'active_vw' | 'sql_functions'
+  const [activeTab, setActiveTab] = useState<"all" | "active_vw" | "sql_functions">("all");
 
   // Filters & Search
   const [searchTerm, setSearchTerm] = useState("");
@@ -295,16 +295,7 @@ export default function PromotionsPage() {
               </span>
             </button>
 
-            <button
-              onClick={() => setActiveTab("matrix")}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${activeTab === "matrix"
-                ? "bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 shadow-sm"
-                : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-                }`}
-            >
-              <Layers className="w-3.5 h-3.5" />
-              <span>Categories of promotion</span>
-            </button>
+
 
             <button
               onClick={() => setActiveTab("sql_functions")}
@@ -579,84 +570,7 @@ export default function PromotionsPage() {
           </div>
         )}
 
-        {/* ========================================================================= */}
-        {/* TAB 3: Scope Matrix (Categories & Products) */}
-        {/* ========================================================================= */}
-        {activeTab === "matrix" && (
-          <div className="p-6 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Category-Wide Discounts */}
-              <div className="p-5 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-3">
-                <div className="flex items-center gap-2 pb-2 border-b border-slate-800 text-indigo-400 font-bold text-sm">
-                  <Layers className="w-4 h-4" />
-                  <span>Category-Wide Discount Campaigns</span>
-                </div>
-                <div className="space-y-2">
-                  {promotions.filter((p) => p.category_id != null).length === 0 ? (
-                    <p className="text-xs text-slate-500">No category-level campaigns active.</p>
-                  ) : (
-                    promotions
-                      .filter((p) => p.category_id != null)
-                      .map((p) => (
-                        <div
-                          key={p.promo_id}
-                          className="p-3 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between text-xs"
-                        >
-                          <div>
-                            <span className="font-bold text-white block">{p.category_name}</span>
-                            <span className="text-slate-400 text-[11px]">{p.name}</span>
-                          </div>
-                          <div className="text-right">
-                            <span className="text-emerald-400 font-bold text-sm font-mono">
-                              {Number(p.discount_percent)}% OFF
-                            </span>
-                            <span className="text-[10px] text-slate-500 block">
-                              Until {new Date(p.end_date).toLocaleDateString()}
-                            </span>
-                          </div>
-                        </div>
-                      ))
-                  )}
-                </div>
-              </div>
 
-              {/* Product-Specific Discounts */}
-              <div className="p-5 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-3">
-                <div className="flex items-center gap-2 pb-2 border-b border-slate-800 text-blue-400 font-bold text-sm">
-                  <Package className="w-4 h-4" />
-                  <span>Product-Specific Discount Campaigns</span>
-                </div>
-                <div className="space-y-2">
-                  {promotions.filter((p) => p.product_id != null).length === 0 ? (
-                    <p className="text-xs text-slate-500">No product-specific campaigns active.</p>
-                  ) : (
-                    promotions
-                      .filter((p) => p.product_id != null)
-                      .map((p) => (
-                        <div
-                          key={p.promo_id}
-                          className="p-3 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between text-xs"
-                        >
-                          <div>
-                            <span className="font-bold text-white block">{p.product_name}</span>
-                            <span className="text-slate-400 text-[11px]">{p.name}</span>
-                          </div>
-                          <div className="text-right">
-                            <span className="text-emerald-400 font-bold text-sm font-mono">
-                              {Number(p.discount_percent)}% OFF
-                            </span>
-                            <span className="text-[10px] text-slate-500 block">
-                              Until {new Date(p.end_date).toLocaleDateString()}
-                            </span>
-                          </div>
-                        </div>
-                      ))
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* ========================================================================= */}
         {/* TAB 4: ADBMS Functions & Procedures Playground */}
