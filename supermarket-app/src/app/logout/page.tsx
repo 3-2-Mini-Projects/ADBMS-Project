@@ -16,6 +16,9 @@ export default function LogoutPage() {
     try {
       await fetch("/api/auth/logout", { method: "POST" });
       setCurrentEmployee(null);
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("nexus_cashier_id");
+      }
       await refreshAppData().catch(() => {});
       showToast("You have been signed out successfully.", "info");
       router.push("/login");
@@ -23,6 +26,9 @@ export default function LogoutPage() {
     } catch {
       showToast("Network error while signing out. Cookie cleared.", "warning");
       setCurrentEmployee(null);
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("nexus_cashier_id");
+      }
       router.push("/login");
     } finally {
       setIsLoggingOut(false);
