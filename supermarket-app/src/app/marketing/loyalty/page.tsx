@@ -50,7 +50,6 @@ export default function LoyaltyManagementPage() {
   const [customersList, setCustomersList] = useState<any[]>([]);
 
   const [loading, setLoading] = useState(true);
-  const [recalculating, setRecalculating] = useState(false);
   const [submittingAction, setSubmittingAction] = useState(false);
 
   // Active View Tab: 'summary' (customer_summary_vw) | 'top' (top_customers_vw)
@@ -103,29 +102,6 @@ export default function LoyaltyManagementPage() {
   useEffect(() => {
     loadData();
   }, []);
-
-  // Recalculate Tiers procedure handler
-  const handleRecalculateTiers = async () => {
-    setRecalculating(true);
-    try {
-      const res = await fetch("/api/marketing/actions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "recalculate_tiers" }),
-      });
-      const result = await res.json();
-      if (res.ok && result.success) {
-        showToast(result.message || "Customer tiers recalculated successfully via recalculate_tiers()!", "success");
-        await loadData();
-      } else {
-        showToast(result.error || "Failed to recalculate tiers", "error");
-      }
-    } catch {
-      showToast("Error executing recalculate_tiers procedure", "error");
-    } finally {
-      setRecalculating(false);
-    }
-  };
 
   // Open Award Modal (with optional pre-selected customer)
   const openAwardModal = (customerId?: number) => {
@@ -248,20 +224,6 @@ export default function LoyaltyManagementPage() {
             <Award className="w-6 h-6 text-amber-400" />
             <span>Loyalty Points Management</span>
           </h1>
-        </div>
-
-        {/* Action Buttons: Recalculate */}
-        <div className="flex items-center gap-2.5 flex-wrap">
-
-          <button
-            onClick={handleRecalculateTiers}
-            disabled={recalculating}
-            className="px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white text-xs font-semibold flex items-center gap-2 shadow-lg shadow-amber-950/40 border border-amber-500/30 transition-all disabled:opacity-50"
-            title="Executes stored procedure recalculate_tiers()"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${recalculating ? "animate-spin" : ""}`} />
-            <span>{recalculating ? "Recalculating..." : "Recalculate Tiers (recalculate_tiers)"}</span>
-          </button>
         </div>
       </div>
 

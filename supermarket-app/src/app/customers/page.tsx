@@ -19,17 +19,13 @@ import {
   ArrowUpRight,
   Pencil,
   Calendar,
-  Lock,
-  Store,
-  ChevronDown,
 } from "lucide-react";
 
 export default function CustomersPage() {
-  const { showToast, branches } = useApp();
+  const { showToast } = useApp();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [selectedBranchId, setSelectedBranchId] = useState<string>("ALL");
 
   // Customer Loyalty Ledger Modal State
   const [ledgerModalOpen, setLedgerModalOpen] = useState(false);
@@ -63,14 +59,12 @@ export default function CustomersPage() {
   });
   const [isAdding, setIsAdding] = useState(false);
 
-  const fetchCustomers = async (queryOverride?: string, branchOverride?: string) => {
+  const fetchCustomers = async (queryOverride?: string) => {
     setLoading(true);
     try {
       const q = queryOverride !== undefined ? queryOverride : search;
-      const bId = branchOverride !== undefined ? branchOverride : selectedBranchId;
       const params = new URLSearchParams();
       if (q.trim()) params.append("search", q.trim());
-      if (bId && bId !== "ALL") params.append("branchId", bId);
       const res = await fetch(`/api/customers?${params.toString()}`);
       const data = await res.json();
       if (Array.isArray(data)) setCustomers(data);
@@ -81,13 +75,13 @@ export default function CustomersPage() {
     }
   };
 
-  // Debounce search and reload customers automatically on search or branch change
+  // Debounce search and reload customers automatically on search change
   useEffect(() => {
     const timer = setTimeout(() => {
-      fetchCustomers(search, selectedBranchId);
+      fetchCustomers(search);
     }, 250);
     return () => clearTimeout(timer);
-  }, [search, selectedBranchId]);
+  }, [search]);
 
   const openCustomerEdit = (customer: Customer) => {
     let formattedDate = "";
@@ -192,13 +186,13 @@ export default function CustomersPage() {
         </div>
       </div>
 
-      {/* Search & Branch Filter Controls */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+      {/* Search Controls */}
+      <div className="flex items-center gap-3">
         {/* Search Bar */}
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            fetchCustomers(search, selectedBranchId);
+            fetchCustomers(search);
           }}
           className="relative flex-1"
         >
@@ -210,7 +204,7 @@ export default function CustomersPage() {
               const val = e.target.value;
               setSearch(val);
               if (!val.trim()) {
-                fetchCustomers("", selectedBranchId);
+                fetchCustomers("");
               }
             }}
             placeholder="Search customer by name, card number, or phone..."
@@ -221,7 +215,7 @@ export default function CustomersPage() {
               type="button"
               onClick={() => {
                 setSearch("");
-                fetchCustomers("", selectedBranchId);
+                fetchCustomers("");
               }}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-0.5 rounded transition-colors"
               title="Clear search and show all customers"
@@ -230,37 +224,6 @@ export default function CustomersPage() {
             </button>
           )}
         </form>
-
-        {/* Branch-Wise Filter Dropdown */}
-        <div className="relative min-w-[220px] sm:min-w-[260px]">
-          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 hover:border-slate-600 transition-colors">
-            <Store className="w-4 h-4 text-amber-400 shrink-0" />
-            <div className="flex-1 min-w-0">
-              <div className="text-[10px] text-slate-400 font-medium uppercase tracking-wider leading-none mb-0.5">
-                Branch Wise
-              </div>
-              <select
-                value={selectedBranchId}
-                onChange={(e) => {
-                  const bId = e.target.value;
-                  setSelectedBranchId(bId);
-                  fetchCustomers(search, bId);
-                }}
-                className="w-full bg-transparent text-xs text-white font-bold focus:outline-none cursor-pointer truncate"
-              >
-                <option value="ALL" className="bg-slate-900 text-slate-200">
-                  All Branches (All Customers)
-                </option>
-                {branches.map((b) => (
-                  <option key={b.branch_id} value={String(b.branch_id)} className="bg-slate-900 text-slate-200">
-                    {b.name} ({b.city})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0 pointer-events-none" />
-          </div>
-        </div>
       </div>
 
       {/* Customers Cards / Table */}

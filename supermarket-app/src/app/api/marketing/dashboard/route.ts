@@ -7,58 +7,79 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const branchId = searchParams.get("branchId");
-    const params: any[] = [];
-    const branchFilter = branchId ? "AND s.branch_id = ?" : "";
-    if (branchId) params.push(branchId);
 
-    // 1. Customer Loyalty Summary
+    // Fetch branch info if branchId is provided
+    let branchInfo: any = null;
+    if (branchId) {
+      const branchRows: any = await query(
+        `SELECT branch_id, branch_code, name, city, region FROM branches WHERE branch_id = ? LIMIT 1`,
+        [branchId]
+      );
+      if (branchRows.length > 0) {
+        branchInfo = branchRows[0];
+      }
+    }
+
+    const branchFilter = branchId ? "AND s.branch_id = ?" : "";
+    const salesParams = branchId ? [branchId] : [];
+
+    // Filter customers related to this branch (by sales transactions at this branch or city match)
+    const custBranchFilter = branchId
+      ? `AND (
+          c.customer_id IN (SELECT DISTINCT s.customer_id FROM sales s WHERE s.branch_id = ? AND s.customer_id IS NOT NULL)
+          OR LOWER(TRIM(c.city)) = (SELECT LOWER(TRIM(b.city)) FROM branches b WHERE b.branch_id = ?)
+        )`
+      : "";
+    const custParams = branchId ? [branchId, branchId] : [];
+
+    // 1. Customer Loyalty Summary (Filtered by branch)
     const [custSummary]: any = await query(`
       SELECT 
         COUNT(*) AS total_customers,
-        COALESCE(SUM(points_balance), 0) AS total_points_balance,
-        COALESCE(AVG(points_balance), 0) AS avg_points_per_customer,
-        COALESCE(SUM(CASE WHEN join_date >= DATE_SUB(CURRENT_DATE, INTERVAL 30 DAY) THEN 1 ELSE 0 END), 0) AS new_customers_30d
-      FROM customers
-      WHERE is_active = 1
-    `);
+        COALESCE(SUM(c.points_balance), 0) AS total_points_balance,
+        COALESCE(AVG(c.points_balance), 0) AS avg_points_per_customer,
+        COALESCE(SUM(CASE WHEN c.join_date >= DATE_SUB(CURRENT_DATE, INTERVAL 30 DAY) THEN 1 ELSE 0 END), 0) AS new_customers_30d
+      FROM customers c
+      WHERE c.is_active = 1 ${custBranchFilter}
+    `, custParams);
 
-    // 2. Customer Tier Breakdown
+    // 2. Customer Tier Breakdown (Filtered by branch)
     const tierBreakdown = await query(`
       SELECT 
-        tier,
+        c.tier,
         COUNT(*) AS customer_count,
-        COALESCE(SUM(points_balance), 0) AS tier_points
-      FROM customers
-      WHERE is_active = 1
-      GROUP BY tier
+        COALESCE(SUM(c.points_balance), 0) AS tier_points
+      FROM customers c
+      WHERE c.is_active = 1 ${custBranchFilter}
+      GROUP BY c.tier
       ORDER BY 
-        CASE tier
+        CASE c.tier
           WHEN 'PLATINUM' THEN 1
           WHEN 'GOLD' THEN 2
           WHEN 'SILVER' THEN 3
           WHEN 'BRONZE' THEN 4
           ELSE 5
         END
-    `);
+    `, custParams);
 
-    // 2b. Detailed Customers per tier
+    // 2b. Detailed Customers per tier (Filtered by branch)
     let tierCustomers: any[] = [];
     try {
       tierCustomers = await query(`
         SELECT 
-          customer_id,
-          card_no,
-          full_name,
-          phone,
-          email,
-          city,
-          tier,
-          points_balance,
-          join_date
-        FROM customers
-        WHERE is_active = 1
-        ORDER BY points_balance DESC, full_name ASC
-      `);
+          c.customer_id,
+          c.card_no,
+          c.full_name,
+          c.phone,
+          c.email,
+          c.city,
+          c.tier,
+          c.points_balance,
+          c.join_date
+        FROM customers c
+        WHERE c.is_active = 1 ${custBranchFilter}
+        ORDER BY c.points_balance DESC, c.full_name ASC
+      `, custParams);
     } catch {
       tierCustomers = [];
     }
@@ -83,7 +104,7 @@ export async function GET(req: Request) {
       FROM coupons
     `);
 
-    // 5. Loyalty vs Regular Sales Impact (from sales table)
+    // 5. Loyalty vs Regular Sales Impact (from sales table for branch)
     const [salesImpact]: any = await query(`
       SELECT 
         COUNT(s.sale_id) AS total_sales_count,
@@ -95,16 +116,26 @@ export async function GET(req: Request) {
         COALESCE(AVG(CASE WHEN s.customer_id IS NULL THEN s.total_amount ELSE NULL END), 0) AS avg_non_member_basket
       FROM sales s
       WHERE s.status = 'COMPLETED' ${branchFilter}
-    `, params);
+    `, salesParams);
 
-    // 6. Points payments from payments table
-    const [pointsPayment]: any = await query(`
+    // 6. Points payments from payments table (Filtered by branch sale)
+    let pointsPaymentSql = `
       SELECT 
         COUNT(*) AS points_redemption_count,
-        COALESCE(SUM(amount), 0) AS total_points_currency_redeemed
-      FROM payments
-      WHERE method = 'POINTS'
-    `);
+        COALESCE(SUM(p.amount), 0) AS total_points_currency_redeemed
+      FROM payments p
+    `;
+    const pointsParams: any[] = [];
+    if (branchId) {
+      pointsPaymentSql += `
+        JOIN sales s ON p.sale_id = s.sale_id
+        WHERE p.method = 'POINTS' AND s.branch_id = ?
+      `;
+      pointsParams.push(branchId);
+    } else {
+      pointsPaymentSql += ` WHERE p.method = 'POINTS'`;
+    }
+    const [pointsPayment]: any = await query(pointsPaymentSql, pointsParams);
 
     // 7. Active Campaign Promotions List (using active_promotions_vw)
     let activePromotions: any[] = [];
@@ -143,23 +174,58 @@ export async function GET(req: Request) {
       `);
     }
 
-    // 7b. Top Customers from top_customers_vw
+    // 7b. Top Customers (Calculated for branch)
     let topCustomers: any[] = [];
     try {
-      topCustomers = await query(`
-        SELECT customer_id, card_no, full_name, tier, total_spent, total_orders, points_balance
-        FROM top_customers_vw
-        ORDER BY total_spent DESC
-        LIMIT 5
-      `);
+      if (branchId) {
+        topCustomers = await query(`
+          SELECT 
+            c.customer_id,
+            c.card_no,
+            c.full_name,
+            c.tier,
+            COALESCE(s_agg.total_spent, 0) AS total_spent,
+            COALESCE(s_agg.total_orders, 0) AS total_orders,
+            c.points_balance
+          FROM customers c
+          JOIN (
+            SELECT customer_id, SUM(total_amount) AS total_spent, COUNT(sale_id) AS total_orders
+            FROM sales
+            WHERE status = 'COMPLETED' AND branch_id = ? AND customer_id IS NOT NULL
+            GROUP BY customer_id
+          ) s_agg ON c.customer_id = s_agg.customer_id
+          ORDER BY s_agg.total_spent DESC
+          LIMIT 5
+        `, [branchId]);
+      } else {
+        topCustomers = await query(`
+          SELECT 
+            c.customer_id,
+            c.card_no,
+            c.full_name,
+            c.tier,
+            COALESCE(s_agg.total_spent, 0) AS total_spent,
+            COALESCE(s_agg.total_orders, 0) AS total_orders,
+            c.points_balance
+          FROM customers c
+          JOIN (
+            SELECT customer_id, SUM(total_amount) AS total_spent, COUNT(sale_id) AS total_orders
+            FROM sales
+            WHERE status = 'COMPLETED' AND customer_id IS NOT NULL
+            GROUP BY customer_id
+          ) s_agg ON c.customer_id = s_agg.customer_id
+          ORDER BY s_agg.total_spent DESC
+          LIMIT 5
+        `);
+      }
     } catch {
       topCustomers = [];
     }
 
-    // 8. Recent Loyalty Points Transactions
+    // 8. Recent Loyalty Points Transactions (Filtered by branch sale/customer)
     let recentLoyaltyActivity: any[] = [];
     try {
-      recentLoyaltyActivity = await query(`
+      let loyaltySql = `
         SELECT 
           lt.loyalty_id,
           lt.customer_id,
@@ -172,17 +238,31 @@ export async function GET(req: Request) {
           lt.created_at
         FROM loyalty_transactions lt
         JOIN customers c ON lt.customer_id = c.customer_id
-        ORDER BY lt.created_at DESC
-        LIMIT 50
-      `);
+      `;
+      const loyaltyParams: any[] = [];
+      if (branchId) {
+        loyaltySql += `
+          LEFT JOIN sales s ON lt.sale_id = s.sale_id
+          WHERE (
+            s.branch_id = ?
+            OR (lt.sale_id IS NULL AND (
+              c.customer_id IN (SELECT DISTINCT s2.customer_id FROM sales s2 WHERE s2.branch_id = ? AND s2.customer_id IS NOT NULL)
+              OR LOWER(TRIM(c.city)) = (SELECT LOWER(TRIM(b.city)) FROM branches b WHERE b.branch_id = ?)
+            ))
+          )
+        `;
+        loyaltyParams.push(branchId, branchId, branchId);
+      }
+      loyaltySql += ` ORDER BY lt.created_at DESC LIMIT 50`;
+      recentLoyaltyActivity = await query(loyaltySql, loyaltyParams);
     } catch {
       recentLoyaltyActivity = [];
     }
 
-    // 9. Recent Customer Tier Upgrades (from customer_tier_history)
+    // 9. Recent Customer Tier Upgrades (Filtered by branch customers)
     let tierHistory: any[] = [];
     try {
-      tierHistory = await query(`
+      let tierHistorySql = `
         SELECT 
           th.history_id,
           c.full_name AS customer_name,
@@ -193,32 +273,58 @@ export async function GET(req: Request) {
           th.changed_at
         FROM customer_tier_history th
         JOIN customers c ON th.customer_id = c.customer_id
-        ORDER BY th.changed_at DESC
-        LIMIT 100
-      `);
+      `;
+      const tierParams: any[] = [];
+      if (branchId) {
+        tierHistorySql += `
+          WHERE (
+            c.customer_id IN (SELECT DISTINCT s.customer_id FROM sales s WHERE s.branch_id = ? AND s.customer_id IS NOT NULL)
+            OR LOWER(TRIM(c.city)) = (SELECT LOWER(TRIM(b.city)) FROM branches b WHERE b.branch_id = ?)
+          )
+        `;
+        tierParams.push(branchId, branchId);
+      }
+      tierHistorySql += ` ORDER BY th.changed_at DESC LIMIT 100`;
+      tierHistory = await query(tierHistorySql, tierParams);
     } catch {
       tierHistory = [];
     }
 
-    // 10. Daily Discount and Revenue trend (using daily_sales_vw)
+    // 10. Daily Discount and Revenue trend (using daily_sales_vw with branch filter)
     let discountTrend: any[] = [];
     try {
-      discountTrend = await query(`
-        SELECT 
-          DATE(sale_date) AS sale_date,
-          SUM(total_discount) AS total_discount,
-          SUM(total_sales) AS total_sales,
-          SUM(transaction_count) AS transactions
-        FROM daily_sales_vw
-        GROUP BY DATE(sale_date)
-        ORDER BY sale_date DESC
-        LIMIT 7
-      `);
+      if (branchId) {
+        discountTrend = await query(`
+          SELECT 
+            DATE(sale_date) AS sale_date,
+            SUM(total_discount) AS total_discount,
+            SUM(total_sales) AS total_sales,
+            SUM(transaction_count) AS transactions
+          FROM daily_sales_vw
+          WHERE branch_id = ?
+          GROUP BY DATE(sale_date)
+          ORDER BY sale_date DESC
+          LIMIT 7
+        `, [branchId]);
+      } else {
+        discountTrend = await query(`
+          SELECT 
+            DATE(sale_date) AS sale_date,
+            SUM(total_discount) AS total_discount,
+            SUM(total_sales) AS total_sales,
+            SUM(transaction_count) AS transactions
+          FROM daily_sales_vw
+          GROUP BY DATE(sale_date)
+          ORDER BY sale_date DESC
+          LIMIT 7
+        `);
+      }
     } catch {
       discountTrend = [];
     }
 
     return NextResponse.json({
+      branch: branchInfo,
       summary: {
         total_customers: custSummary?.total_customers ?? 0,
         total_points_balance: custSummary?.total_points_balance ?? 0,

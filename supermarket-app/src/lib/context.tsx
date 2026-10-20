@@ -90,30 +90,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setCurrentEmployee(authEmp);
 
         if (Array.isArray(dataBranches) && dataBranches.length > 0) {
-          if (dataMe.user.role === "MARKETING") {
-            // Marketing Manager automatically defaults to Colombo Main
-            const colomboBranch = dataBranches.find(
-              (b: Branch) =>
-                b.name?.toLowerCase().includes("colombo main") ||
-                b.branch_code === "BR01" ||
-                b.city?.toLowerCase() === "colombo" ||
-                b.branch_id === 1
-            );
-            if (colomboBranch) {
-              setCurrentBranch(colomboBranch);
-            } else {
-              const userBranch = dataBranches.find(
-                (b: Branch) => b.branch_id === dataMe.user.branch_id
-              );
-              setCurrentBranch(userBranch || dataBranches[0]);
-            }
+          const userBranch = dataBranches.find(
+            (b: Branch) => b.branch_id === dataMe.user.branch_id
+          );
+          if (userBranch) {
+            setCurrentBranch(userBranch);
+          } else if (dataMe.user.branch_id) {
+            const fallbackBranch: Branch = {
+              branch_id: dataMe.user.branch_id,
+              branch_code: `BR${String(dataMe.user.branch_id).padStart(2, "0")}`,
+              name: dataMe.user.branch_name || `Branch #${dataMe.user.branch_id}`,
+              city: "",
+              region: "",
+              opened_date: "",
+              is_active: 1,
+            };
+            setCurrentBranch(fallbackBranch);
           } else {
-            const userBranch = dataBranches.find(
-              (b: Branch) => b.branch_id === dataMe.user.branch_id
-            );
-            if (userBranch) {
-              setCurrentBranch(userBranch);
-            }
+            setCurrentBranch(dataBranches[0]);
           }
         }
       } else {
