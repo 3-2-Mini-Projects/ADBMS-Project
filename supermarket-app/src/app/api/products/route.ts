@@ -122,11 +122,26 @@ export async function PATCH(req: Request) {
     return auth.error;
   }
   const changed_by = auth.session.employee_id;
+  const userRole = auth.session.role;
 
   const connection = await pool.getConnection();
   try {
     const body = await req.json();
-    const { product_id, unit_price, cost_price, is_active, reason } = body;
+    const {
+      product_id,
+      name,
+      barcode,
+      brand,
+      category_id,
+      supplier_id,
+      unit_price,
+      cost_price,
+      tax_rate,
+      reorder_level,
+      is_active,
+      reason,
+      force_supervisor_override,
+    } = body;
 
     if (!product_id) {
       return NextResponse.json({ error: "product_id is required" }, { status: 400 });
@@ -135,7 +150,7 @@ export async function PATCH(req: Request) {
     await connection.beginTransaction();
 
     const [existing]: any = await connection.query(
-      "SELECT unit_price, cost_price, is_active FROM products WHERE product_id = ? FOR UPDATE",
+      "SELECT unit_price, cost_price, is_active, barcode, name FROM products WHERE product_id = ? FOR UPDATE",
       [product_id]
     );
 
@@ -143,67 +158,171 @@ export async function PATCH(req: Request) {
       throw new Error("Product not found");
     }
 
-    const currentPrice = existing[0].unit_price;
+    const currentPrice = Number(existing[0].unit_price);
+    const targetCost = cost_price !== undefined ? Number(cost_price) : Number(existing[0].cost_price);
+    let pendingApproval = false;
+    let approvalMessage = "Product updated successfully";
 
-    // If unit price changed, record in product_price_history!
-    if (unit_price !== undefined && Number(unit_price) !== Number(currentPrice)) {
-      await connection.query(
-        `INSERT INTO product_price_history (product_id, old_price, new_price, changed_by, changed_at, reason)
-         VALUES (?, ?, ?, ?, NOW(), ?)`,
-        [product_id, currentPrice, unit_price, changed_by || 1, reason || "Regular price update"]
-      );
+    // Handle unit price change with Supervisor Approval Gate
+    if (unit_price !== undefined && Number(unit_price) !== currentPrice) {
+      const newPriceNum = Number(unit_price);
+      const variancePct = currentPrice > 0 ? Number((((newPriceNum - currentPrice) / currentPrice) * 100).toFixed(2)) : 0;
+      
+      // Approval rule: Price drop > 15% OR below cost price
+      const requiresApproval = (variancePct < -15.00 || newPriceNum < targetCost);
+      const canDirectlyApprove = (userRole === "ADMIN" || userRole === "MANAGER" || Boolean(force_supervisor_override));
 
-      await connection.query(
-        "UPDATE products SET unit_price = ?, updated_at = NOW() WHERE product_id = ?",
-        [unit_price, product_id]
-      );
+      if (requiresApproval && !canDirectlyApprove) {
+        pendingApproval = true;
+        // Queue into price history as PENDING_SUPERVISOR_APPROVAL without updating products.unit_price
+        await connection.query(
+          `INSERT INTO product_price_history (
+            product_id, old_price, new_price, price_variance_pct, changed_by, changed_at, reason, supervisor_approval_status
+          ) VALUES (?, ?, ?, ?, ?, NOW(), ?, 'PENDING_SUPERVISOR_APPROVAL')`,
+          [
+            product_id,
+            currentPrice,
+            newPriceNum,
+            variancePct,
+            changed_by || 1,
+            reason || (newPriceNum < targetCost ? "Selling below cost price" : "Price reduction exceeding 15% policy threshold")
+          ]
+        );
+        approvalMessage = "Price change exceeds policy threshold (>15% drop or below cost). Queued for Supervisor Approval.";
+      } else {
+        // Immediate approval
+        await connection.query(
+          `INSERT INTO product_price_history (
+            product_id, old_price, new_price, price_variance_pct, changed_by, changed_at, reason, supervisor_approval_status, approved_at
+          ) VALUES (?, ?, ?, ?, ?, NOW(), ?, 'APPROVED', NOW())`,
+          [
+            product_id,
+            currentPrice,
+            newPriceNum,
+            variancePct,
+            changed_by || 1,
+            reason || "Regular price update"
+          ]
+        );
 
-      // Audit log
-      await connection.query(
-        `INSERT INTO audit_log (table_name, record_id, action, old_value, new_value, changed_by, changed_at)
-         VALUES ('products', ?, 'UPDATE', ?, ?, ?, NOW())`,
-        [
-          String(product_id),
-          JSON.stringify({ unit_price: currentPrice }),
-          JSON.stringify({ unit_price }),
-          `employee_${changed_by || 1}`,
-        ]
-      );
+        await connection.query(
+          "UPDATE products SET unit_price = ?, updated_at = NOW() WHERE product_id = ?",
+          [newPriceNum, product_id]
+        );
+
+        // Audit log
+        await connection.query(
+          `INSERT INTO audit_log (table_name, record_id, action, old_value, new_value, changed_by, changed_at)
+           VALUES ('products', ?, 'UPDATE', ?, ?, ?, NOW())`,
+          [
+            String(product_id),
+            JSON.stringify({ unit_price: currentPrice }),
+            JSON.stringify({ unit_price: newPriceNum, variance_pct: variancePct }),
+            `employee_${changed_by || 1}`,
+          ]
+        );
+        approvalMessage = "Product price successfully updated";
+      }
     }
 
+    // Update other product attributes
+    const updateFields: string[] = [];
+    const updateParams: any[] = [];
+
+    if (name !== undefined) {
+      updateFields.push("name = ?");
+      updateParams.push(name);
+    }
+    if (barcode !== undefined) {
+      updateFields.push("barcode = ?");
+      updateParams.push(barcode);
+    }
+    if (brand !== undefined) {
+      updateFields.push("brand = ?");
+      updateParams.push(brand);
+    }
+    if (category_id !== undefined) {
+      updateFields.push("category_id = ?");
+      updateParams.push(category_id);
+    }
+    if (supplier_id !== undefined) {
+      updateFields.push("supplier_id = ?");
+      updateParams.push(supplier_id);
+    }
     if (cost_price !== undefined) {
-      await connection.query(
-        "UPDATE products SET cost_price = ?, updated_at = NOW() WHERE product_id = ?",
-        [cost_price, product_id]
-      );
+      updateFields.push("cost_price = ?");
+      updateParams.push(cost_price);
     }
-
-    if (is_active !== undefined) {
-      await connection.query(
-        "UPDATE products SET is_active = ?, updated_at = NOW() WHERE product_id = ?",
-        [is_active, product_id]
-      );
+    if (tax_rate !== undefined) {
+      updateFields.push("tax_rate = ?");
+      updateParams.push(tax_rate);
     }
-
-    if (body.reorder_level !== undefined) {
-      await connection.query(
-        "UPDATE products SET reorder_level = ?, updated_at = NOW() WHERE product_id = ?",
-        [body.reorder_level, product_id]
-      );
+    if (reorder_level !== undefined) {
+      updateFields.push("reorder_level = ?");
+      updateParams.push(reorder_level);
       // Synchronize all branch inventory records for this product
       await connection.query(
         "UPDATE inventory SET reorder_level = ?, last_updated = NOW() WHERE product_id = ?",
-        [body.reorder_level, product_id]
+        [reorder_level, product_id]
+      );
+    }
+    if (is_active !== undefined) {
+      updateFields.push("is_active = ?");
+      updateParams.push(is_active);
+    }
+
+    if (updateFields.length > 0) {
+      updateFields.push("updated_at = NOW()");
+      updateParams.push(product_id);
+      await connection.query(
+        `UPDATE products SET ${updateFields.join(", ")} WHERE product_id = ?`,
+        updateParams
       );
     }
 
     await connection.commit();
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      pendingApproval,
+      message: approvalMessage,
+    });
   } catch (err: any) {
     await connection.rollback();
     console.error("PATCH /api/products error:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   } finally {
     connection.release();
+  }
+}
+
+export async function DELETE(req: Request) {
+  const auth = await authorizeRequest("manage_catalog");
+  if (auth.error) {
+    return auth.error;
+  }
+  const employeeId = auth.session.employee_id;
+
+  try {
+    const { searchParams } = new URL(req.url);
+    const productId = searchParams.get("id");
+
+    if (!productId) {
+      return NextResponse.json({ error: "Product id is required" }, { status: 400 });
+    }
+
+    // Soft-deactivate product
+    await query("UPDATE products SET is_active = 0, updated_at = NOW() WHERE product_id = ?", [productId]);
+
+    // Audit log
+    await query(
+      `INSERT INTO audit_log (table_name, record_id, action, old_value, new_value, changed_by, changed_at)
+       VALUES ('products', ?, 'UPDATE', JSON_OBJECT('is_active', 1), JSON_OBJECT('is_active', 0), ?, NOW())`,
+      [String(productId), `employee_${employeeId || 1}`]
+    );
+
+    return NextResponse.json({ success: true, message: "Product deactivated successfully" });
+  } catch (err: any) {
+    console.error("DELETE /api/products error:", err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
