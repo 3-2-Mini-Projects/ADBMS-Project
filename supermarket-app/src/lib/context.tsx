@@ -132,11 +132,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       } else {
         setAuthenticatedUser(null);
         setCurrentEmployee(null);
-        if (
-          typeof window !== "undefined" &&
-          window.location.pathname !== "/login" &&
-          !window.location.pathname.startsWith("/activate-account")
-        ) {
+        if (typeof window !== "undefined" && window.location.pathname !== "/login") {
           window.location.replace("/login");
         }
       }

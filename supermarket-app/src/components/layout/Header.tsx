@@ -104,7 +104,7 @@ export function Header() {
         {/* Fast Action Button: Audit Logs for Admin, POS for others */}
         {isAdmin ? (
           <Link
-            href="/audit"
+            href="/admin/audit"
             className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-600 hover:to-indigo-600 text-white font-medium text-xs shadow-lg shadow-purple-900/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
             <ShieldAlert className="w-3.5 h-3.5 text-amber-300" />

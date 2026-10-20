@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import crypto from "crypto";
 import { ResultSetHeader } from "mysql2/promise";
 import { pool, query, queryOne } from "@/lib/db";
 import { requireAdmin, logAuthEvent } from "@/lib/auth";
@@ -161,20 +160,9 @@ export async function POST(req: Request) {
 
     const newEmployeeId = empResult.insertId;
 
-    // 6. Generate high-entropy one-time activation token
-    const rawToken = crypto.randomBytes(32).toString("hex");
-    const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-
-    await connection.query(
-      `INSERT INTO employee_activations (employee_id, token_hash, expires_at, created_by)
-       VALUES (?, ?, ?, ?)`,
-      [newEmployeeId, tokenHash, expiresAt, session.employee_id]
-    );
-
     await connection.commit();
 
-    // 7. Audit log creation event
+    // 6. Audit log creation event
     await logAuthEvent({
       event: "EMPLOYEE_CREATED",
       employee_id: session.employee_id,
@@ -189,16 +177,10 @@ export async function POST(req: Request) {
       },
     });
 
-    const activationUrl = `/activate-account?token=${rawToken}`;
-
     return NextResponse.json({
       success: true,
       employee_id: newEmployeeId,
-      activation: {
-        token: rawToken,
-        activation_url: activationUrl,
-        expires_at: expiresAt.toISOString(),
-      },
+      message: "Employee registered successfully with Pending Activation status.",
     });
   } catch (err: unknown) {
     await connection.rollback().catch(() => {});
@@ -218,7 +200,17 @@ export async function PATCH(req: Request) {
 
   try {
     const body = await req.json().catch(() => ({}));
-    const { employee_id, role, monthly_salary, is_active } = body;
+    const {
+      employee_id,
+      full_name,
+      email,
+      phone,
+      hire_date,
+      role,
+      branch_id,
+      monthly_salary,
+      is_active,
+    } = body;
 
     if (!employee_id) {
       return NextResponse.json({ error: "Employee ID is required" }, { status: 400 });
@@ -227,12 +219,64 @@ export async function PATCH(req: Request) {
     const updates: string[] = [];
     const params: unknown[] = [];
 
+    if (full_name !== undefined) {
+      if (typeof full_name !== "string" || full_name.trim().length === 0) {
+        return NextResponse.json({ error: "Full name cannot be empty" }, { status: 400 });
+      }
+      updates.push("full_name = ?");
+      params.push(full_name.trim());
+    }
+
+    if (email !== undefined) {
+      if (typeof email !== "string" || email.trim().length === 0 || !email.includes("@")) {
+        return NextResponse.json({ error: "A valid email address is required" }, { status: 400 });
+      }
+      const normalizedEmail = email.trim().toLowerCase();
+      const conflict = await queryOne<{ employee_id: number }>(
+        "SELECT employee_id FROM employees WHERE email = ? AND employee_id != ? LIMIT 1",
+        [normalizedEmail, employee_id]
+      );
+      if (conflict) {
+        return NextResponse.json(
+          { error: "Another employee already has this email address" },
+          { status: 409 }
+        );
+      }
+      updates.push("email = ?");
+      params.push(normalizedEmail);
+    }
+
+    if (phone !== undefined) {
+      updates.push("phone = ?");
+      params.push(typeof phone === "string" && phone.trim().length > 0 ? phone.trim() : null);
+    }
+
+    if (hire_date !== undefined) {
+      updates.push("hire_date = ?");
+      params.push(
+        typeof hire_date === "string" && hire_date.trim().length > 0
+          ? hire_date.trim()
+          : new Date().toISOString().split("T")[0]
+      );
+    }
     if (role !== undefined) {
       if (!ALLOWED_ROLES.includes(role as UserRole)) {
         return NextResponse.json({ error: "Invalid role value" }, { status: 400 });
       }
       updates.push("role = ?");
       params.push(role);
+    }
+    if (branch_id !== undefined) {
+      const branchIdNum = Number(branch_id);
+      const branch = await queryOne<{ branch_id: number }>(
+        "SELECT branch_id FROM branches WHERE branch_id = ? AND is_active = 1 LIMIT 1",
+        [branchIdNum]
+      );
+      if (!branch) {
+        return NextResponse.json({ error: "Invalid or inactive branch selected" }, { status: 400 });
+      }
+      updates.push("branch_id = ?");
+      params.push(branchIdNum);
     }
     if (monthly_salary !== undefined) {
       updates.push("monthly_salary = ?");
@@ -259,15 +303,91 @@ export async function PATCH(req: Request) {
       action: "UPDATE",
       details: {
         target_employee_id: employee_id,
+        updated_full_name: full_name,
+        updated_email: email,
         updated_role: role,
+        updated_branch_id: branch_id,
         updated_salary: monthly_salary,
         updated_active: is_active,
       },
     });
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, message: "Employee details updated successfully" });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("PATCH /api/employees error:", message);
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: Request) {
+  const auth = await requireAdmin();
+  if (auth.error) {
+    return auth.error;
+  }
+  const { session } = auth;
+
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("employee_id") || searchParams.get("id");
+
+    if (!id || Number.isNaN(Number(id))) {
+      return NextResponse.json({ error: "Valid employee_id is required" }, { status: 400 });
+    }
+
+    const employeeId = Number(id);
+
+    // Prevent self-deletion
+    if (employeeId === session.employee_id) {
+      return NextResponse.json(
+        { error: "You cannot delete your own administrator account" },
+        { status: 400 }
+      );
+    }
+
+    // Verify employee exists
+    const employee = await queryOne<{
+      employee_id: number;
+      full_name: string;
+      email: string;
+      role: UserRole;
+      is_active: number;
+    }>(
+      "SELECT employee_id, full_name, email, role, is_active FROM employees WHERE employee_id = ? LIMIT 1",
+      [employeeId]
+    );
+
+    if (!employee) {
+      return NextResponse.json({ error: "Employee not found" }, { status: 404 });
+    }
+
+    // Unlink if currently branch manager
+    await query("UPDATE branches SET manager_id = NULL WHERE manager_id = ?", [employeeId]);
+
+    // Soft delete: mark employee as inactive
+    await query("UPDATE employees SET is_active = 0 WHERE employee_id = ?", [employeeId]);
+
+    // Audit log deactivation event
+    await logAuthEvent({
+      event: "EMPLOYEE_UPDATED",
+      employee_id: session.employee_id,
+      email: session.email,
+      role: session.role,
+      action: "UPDATE",
+      details: {
+        action: "EMPLOYEE_DEACTIVATED",
+        deleted_employee_id: employeeId,
+        deleted_employee_name: employee.full_name,
+        deleted_employee_email: employee.email,
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: `Staff member "${employee.full_name}" has been deactivated and archived under Deleted / Former Staff.`,
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("DELETE /api/employees error:", message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
