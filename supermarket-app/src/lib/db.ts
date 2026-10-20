@@ -70,3 +70,23 @@ export async function queryOne<T = any>(
   const rows = await query<T>(sql, params);
   return rows.length > 0 ? rows[0] : null;
 }
+
+export async function withTransaction<T>(
+  callback: (conn: mysql.PoolConnection) => Promise<T>
+): Promise<T> {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const result = await callback(conn);
+    await conn.commit();
+    return result;
+  } catch (error) {
+    await conn.rollback();
+    throw error;
+  } finally {
+    conn.release();
+  }
+}
+
+export default pool;
+
