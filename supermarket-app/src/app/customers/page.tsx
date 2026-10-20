@@ -20,6 +20,7 @@ import {
   Pencil,
   Calendar,
   Store,
+  Lock,
 } from "lucide-react";
 
 export default function CustomersPage() {
@@ -186,17 +187,6 @@ export default function CustomersPage() {
             <Users className="w-6 h-6 text-amber-400" />
             <span>Customers & Loyalty Management</span>
           </h1>
-          {currentBranch && (
-            <div className="flex flex-wrap items-center gap-2 mt-1.5 text-xs">
-              <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 font-medium">
-                <Store className="w-3.5 h-3.5 text-amber-400" />
-                <span>Branch: <strong className="text-white font-semibold">{currentBranch.name}</strong></span>
-              </span>
-              <span className="text-[11px] text-emerald-400 font-mono">
-                Showing customers related to {currentBranch.name}
-              </span>
-            </div>
-          )}
         </div>
       </div>
 
@@ -298,14 +288,24 @@ export default function CustomersPage() {
                       {c.join_date ? new Date(c.join_date).toLocaleDateString() : "—"}
                     </td>
                     <td className="py-3 px-4 text-center">
-                      <button
-                        onClick={() => openCustomerEdit(c)}
-                        className="px-3 py-1 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 hover:text-blue-300 border border-blue-500/30 transition-all flex items-center gap-1.5 mx-auto text-[11px] font-semibold"
-                        title="Edit Customer"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                        <span>Edit</span>
-                      </button>
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          onClick={() => openCustomerLedger(c)}
+                          className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 hover:text-amber-200 border border-amber-500/30 transition-all flex items-center gap-1 text-[11px] font-semibold"
+                          title="View Loyalty Ledger"
+                        >
+                          <Star className="w-3.5 h-3.5" />
+                          <span>Ledger</span>
+                        </button>
+                        <button
+                          onClick={() => openCustomerEdit(c)}
+                          className="px-2.5 py-1 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 hover:text-blue-300 border border-blue-500/30 transition-all flex items-center gap-1 text-[11px] font-semibold"
+                          title="Edit Customer"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                          <span>Edit</span>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -506,9 +506,9 @@ export default function CustomersPage() {
                 <button
                   type="submit"
                   disabled={isAdding}
-                  className="w-2/3 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold"
+                  className="w-2/3 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold disabled:opacity-50"
                 >
-                  Register & Issue Card
+                  {isAdding ? "Registering..." : "Register & Issue Card"}
                 </button>
               </div>
             </form>
