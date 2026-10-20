@@ -74,7 +74,7 @@ WHERE p.is_active = 1
   AND CURDATE() BETWEEN p.start_date AND p.end_date;
 
 -- ------------------------------------------------------------
--- VIEW 3: Top Customers Leaderboard by Points Earned
+-- VIEW 3: Top Customers Leaderboard by Points Earned (Month-wise)
 -- ------------------------------------------------------------
 CREATE OR REPLACE VIEW top_customers_vw AS
 SELECT
@@ -83,22 +83,26 @@ SELECT
     c.full_name,
     c.tier,
     c.points_balance,
+    DATE_FORMAT(lt.created_at, '%Y-%m') AS transaction_month,
     COALESCE(SUM(
         CASE
-            WHEN lt.transaction_type = 'EARNED'
-            THEN lt.points_change
+            WHEN lt.transaction_type = 'EARNED' OR lt.transaction_type = 'EARN'
+            THEN COALESCE(lt.points_change, 0)
             ELSE 0
         END
     ), 0) AS total_points_earned
 FROM customers c
 LEFT JOIN loyalty_transactions lt
     ON c.customer_id = lt.customer_id
+WHERE c.is_active = 1
+  AND c.points_balance > 0
 GROUP BY
     c.customer_id,
     c.card_no,
     c.full_name,
     c.tier,
-    c.points_balance;
+    c.points_balance,
+    DATE_FORMAT(lt.created_at, '%Y-%m');
 
 
 -- ------------------------------------------------------------
@@ -663,11 +667,21 @@ DELIMITER ;
 -- SELECT * FROM active_promotions_vw LIMIT 5;
 -- SELECT * FROM customer_summary_vw LIMIT 5;
 
--- Top 3 customers by points earned from top_customers_vw:
+-- Top 10 customers by points earned (Month-wise) from top_customers_vw:
+-- Example 1: Top 10 customers with points_balance > 0
 SELECT *
 FROM top_customers_vw
-ORDER BY total_points_earned DESC
-LIMIT 3;
+WHERE points_balance > 0
+ORDER BY total_points_earned DESC, points_balance DESC
+LIMIT 10;
+
+-- Example 2: Top 10 customers for a specific month (e.g. October 2026):
+-- SELECT *
+-- FROM top_customers_vw
+-- WHERE transaction_month = '2026-10'
+--   AND points_balance > 0
+-- ORDER BY total_points_earned DESC, points_balance DESC
+-- LIMIT 10;
 
 -- SELECT lt_points_earned(500);
 -- SELECT get_discount(500, 1);

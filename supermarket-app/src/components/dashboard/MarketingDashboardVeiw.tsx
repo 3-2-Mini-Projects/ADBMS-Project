@@ -26,9 +26,17 @@ import {
   ChevronUp,
   X,
   Search,
+  Store,
 } from "lucide-react";
 
 interface DashboardData {
+  branch?: {
+    branch_id: number;
+    branch_code: string;
+    name: string;
+    city: string;
+    region?: string;
+  } | null;
   summary: {
     total_customers: number;
     total_points_balance: number;
@@ -105,7 +113,7 @@ interface DashboardData {
 }
 
 export function MarketingDashboardVeiw() {
-  const { currentBranch } = useApp();
+  const { currentBranch, currentEmployee } = useApp();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedTier, setSelectedTier] = useState<string | null>(null);
@@ -114,8 +122,9 @@ export function MarketingDashboardVeiw() {
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
+      const targetBranchId = currentBranch?.branch_id || currentEmployee?.branch_id;
       const params = new URLSearchParams();
-      if (currentBranch) params.append("branchId", String(currentBranch.branch_id));
+      if (targetBranchId) params.append("branchId", String(targetBranchId));
       const res = await fetch(`/api/marketing/dashboard?${params.toString()}`);
       if (res.ok) {
         const json = await res.json();
@@ -130,7 +139,7 @@ export function MarketingDashboardVeiw() {
 
   useEffect(() => {
     fetchDashboardData();
-  }, [currentBranch]);
+  }, [currentBranch?.branch_id, currentEmployee?.branch_id]);
 
   const summary = data?.summary;
   const tiers = data?.tierBreakdown ?? [];
@@ -144,7 +153,18 @@ export function MarketingDashboardVeiw() {
       {/* Top Banner Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-2 border-b border-slate-800">
         <div>
-
+          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+            <span className="text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-blue-950/70 text-blue-300 border border-blue-800/60 font-semibold flex items-center gap-1.5">
+              <Store className="w-3.5 h-3.5 text-blue-400" />
+              <span>Assigned Branch: {data?.branch?.name || currentBranch?.name || currentEmployee?.branch_name || "Colombo Main"}</span>
+              <span className="text-blue-400 font-normal">
+                (City: {data?.branch?.city || currentBranch?.city || "Colombo"})
+              </span>
+            </span>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-800/80 text-slate-300 border border-slate-700">
+              Customer Data Scoped to Branch City
+            </span>
+          </div>
           <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight mt-1">
             Marketing & Loyalty Dashboard
           </h1>

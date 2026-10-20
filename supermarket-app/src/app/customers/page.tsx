@@ -19,17 +19,15 @@ import {
   ArrowUpRight,
   Pencil,
   Calendar,
-  Lock,
   Store,
-  ChevronDown,
+  Lock,
 } from "lucide-react";
 
 export default function CustomersPage() {
-  const { showToast, branches } = useApp();
+  const { showToast, currentBranch, currentEmployee } = useApp();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [selectedBranchId, setSelectedBranchId] = useState<string>("ALL");
 
   // Customer Loyalty Ledger Modal State
   const [ledgerModalOpen, setLedgerModalOpen] = useState(false);
@@ -59,18 +57,27 @@ export default function CustomersPage() {
     full_name: "",
     phone: "",
     email: "",
-    city: "Colombo",
+    city: currentBranch?.city || "Colombo",
   });
   const [isAdding, setIsAdding] = useState(false);
 
-  const fetchCustomers = async (queryOverride?: string, branchOverride?: string) => {
+  useEffect(() => {
+    if (currentBranch?.city) {
+      setNewCust((prev) => ({
+        ...prev,
+        city: prev.city === "Colombo" || !prev.city ? currentBranch.city : prev.city,
+      }));
+    }
+  }, [currentBranch?.city]);
+
+  const fetchCustomers = async (queryOverride?: string) => {
     setLoading(true);
     try {
       const q = queryOverride !== undefined ? queryOverride : search;
-      const bId = branchOverride !== undefined ? branchOverride : selectedBranchId;
+      const targetBranchId = currentBranch?.branch_id || currentEmployee?.branch_id;
       const params = new URLSearchParams();
       if (q.trim()) params.append("search", q.trim());
-      if (bId && bId !== "ALL") params.append("branchId", bId);
+      if (targetBranchId) params.append("branchId", String(targetBranchId));
       const res = await fetch(`/api/customers?${params.toString()}`);
       const data = await res.json();
       if (Array.isArray(data)) setCustomers(data);
@@ -81,13 +88,13 @@ export default function CustomersPage() {
     }
   };
 
-  // Debounce search and reload customers automatically on search or branch change
+  // Debounce search and reload customers automatically on search change or branch change
   useEffect(() => {
     const timer = setTimeout(() => {
-      fetchCustomers(search, selectedBranchId);
+      fetchCustomers(search);
     }, 250);
     return () => clearTimeout(timer);
-  }, [search, selectedBranchId]);
+  }, [search, currentBranch?.branch_id, currentEmployee?.branch_id]);
 
   const openCustomerEdit = (customer: Customer) => {
     let formattedDate = "";
@@ -185,6 +192,18 @@ export default function CustomersPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
+          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+            <span className="text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-blue-950/70 text-blue-300 border border-blue-800/60 font-semibold flex items-center gap-1.5">
+              <Store className="w-3.5 h-3.5 text-blue-400" />
+              <span>Assigned Branch: {currentBranch?.name || currentEmployee?.branch_name || "Colombo Main"}</span>
+              <span className="text-blue-400 font-normal">
+                (City: {currentBranch?.city || "Colombo"})
+              </span>
+            </span>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-800/80 text-slate-300 border border-slate-700">
+              Scoped by Branch Name & Customer City
+            </span>
+          </div>
           <h1 className="text-2xl font-black text-white flex items-center gap-2.5">
             <Users className="w-6 h-6 text-amber-400" />
             <span>Customers & Loyalty Management</span>
@@ -192,13 +211,13 @@ export default function CustomersPage() {
         </div>
       </div>
 
-      {/* Search & Branch Filter Controls */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+      {/* Search Controls */}
+      <div className="flex items-center gap-3">
         {/* Search Bar */}
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            fetchCustomers(search, selectedBranchId);
+            fetchCustomers(search);
           }}
           className="relative flex-1"
         >
@@ -210,7 +229,7 @@ export default function CustomersPage() {
               const val = e.target.value;
               setSearch(val);
               if (!val.trim()) {
-                fetchCustomers("", selectedBranchId);
+                fetchCustomers("");
               }
             }}
             placeholder="Search customer by name, card number, or phone..."
@@ -221,7 +240,7 @@ export default function CustomersPage() {
               type="button"
               onClick={() => {
                 setSearch("");
-                fetchCustomers("", selectedBranchId);
+                fetchCustomers("");
               }}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-0.5 rounded transition-colors"
               title="Clear search and show all customers"
@@ -230,37 +249,6 @@ export default function CustomersPage() {
             </button>
           )}
         </form>
-
-        {/* Branch-Wise Filter Dropdown */}
-        <div className="relative min-w-[220px] sm:min-w-[260px]">
-          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 hover:border-slate-600 transition-colors">
-            <Store className="w-4 h-4 text-amber-400 shrink-0" />
-            <div className="flex-1 min-w-0">
-              <div className="text-[10px] text-slate-400 font-medium uppercase tracking-wider leading-none mb-0.5">
-                Branch Wise
-              </div>
-              <select
-                value={selectedBranchId}
-                onChange={(e) => {
-                  const bId = e.target.value;
-                  setSelectedBranchId(bId);
-                  fetchCustomers(search, bId);
-                }}
-                className="w-full bg-transparent text-xs text-white font-bold focus:outline-none cursor-pointer truncate"
-              >
-                <option value="ALL" className="bg-slate-900 text-slate-200">
-                  All Branches (All Customers)
-                </option>
-                {branches.map((b) => (
-                  <option key={b.branch_id} value={String(b.branch_id)} className="bg-slate-900 text-slate-200">
-                    {b.name} ({b.city})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0 pointer-events-none" />
-          </div>
-        </div>
       </div>
 
       {/* Customers Cards / Table */}
@@ -321,14 +309,24 @@ export default function CustomersPage() {
                       {c.join_date ? new Date(c.join_date).toLocaleDateString() : "—"}
                     </td>
                     <td className="py-3 px-4 text-center">
-                      <button
-                        onClick={() => openCustomerEdit(c)}
-                        className="px-3 py-1 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 hover:text-blue-300 border border-blue-500/30 transition-all flex items-center gap-1.5 mx-auto text-[11px] font-semibold"
-                        title="Edit Customer"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                        <span>Edit</span>
-                      </button>
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          onClick={() => openCustomerLedger(c)}
+                          className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 hover:text-amber-200 border border-amber-500/30 transition-all flex items-center gap-1 text-[11px] font-semibold"
+                          title="View Loyalty Ledger"
+                        >
+                          <Star className="w-3.5 h-3.5" />
+                          <span>Ledger</span>
+                        </button>
+                        <button
+                          onClick={() => openCustomerEdit(c)}
+                          className="px-2.5 py-1 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 hover:text-blue-300 border border-blue-500/30 transition-all flex items-center gap-1 text-[11px] font-semibold"
+                          title="Edit Customer"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                          <span>Edit</span>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -529,9 +527,9 @@ export default function CustomersPage() {
                 <button
                   type="submit"
                   disabled={isAdding}
-                  className="w-2/3 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold"
+                  className="w-2/3 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold disabled:opacity-50"
                 >
-                  Register & Issue Card
+                  {isAdding ? "Registering..." : "Register & Issue Card"}
                 </button>
               </div>
             </form>

@@ -14,17 +14,13 @@ import {
   XCircle,
   Sparkles,
   X,
-  Calculator,
-  Trash2,
   Power,
   Search,
-  Filter,
   RefreshCw,
   Eye,
-  ShieldCheck,
   AlertTriangle,
-  Flame,
   Store,
+  Pencil,
 } from "lucide-react";
 
 interface ActivePromoVwRow {
@@ -50,9 +46,6 @@ export default function PromotionsPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Tab State: 'all' | 'active_vw' | 'matrix' | 'sql_functions'
-  const [activeTab, setActiveTab] = useState<"all" | "active_vw" | "matrix" | "sql_functions">("all");
-
   // Filters & Search
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "SCHEDULED" | "EXPIRED">("ALL");
@@ -69,12 +62,24 @@ export default function PromotionsPage() {
     target_id: "",
   });
 
-  // Calculator Modal (SELECT get_discount(p_amount, promo_id))
-  const [calcModalOpen, setCalcModalOpen] = useState(false);
-  const [calcPromoId, setCalcPromoId] = useState<number | "">("");
-  const [calcAmount, setCalcAmount] = useState<string>("5000");
-  const [calcResult, setCalcResult] = useState<any>(null);
-  const [calculatingDiscount, setCalculatingDiscount] = useState(false);
+  // Edit Promo Modal (Scheduled Edit or Active End Date Extension)
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [updatingPromo, setUpdatingPromo] = useState(false);
+  const [editPromo, setEditPromo] = useState<{
+    promo_id: number;
+    name: string;
+    start_date: string;
+    end_date: string;
+    discount_percent: string | number;
+    status: string;
+  }>({
+    promo_id: 0,
+    name: "",
+    start_date: "",
+    end_date: "",
+    discount_percent: "10",
+    status: "SCHEDULED",
+  });
 
   useEffect(() => {
     const today = new Date().toISOString().split("T")[0];
@@ -146,74 +151,142 @@ export default function PromotionsPage() {
     }
   };
 
-  // Toggle Promotion Active/Inactive
-  const handleToggleActive = async (promo_id: number, current_active: number) => {
-    const nextState = current_active === 1 ? 0 : 1;
+
+
+  // Open Edit Modal for Scheduled or Active Promotion
+  const handleOpenEditModal = (pr: Promotion) => {
+    const formatDateForInput = (val: any) => {
+      if (!val) return "";
+      if (typeof val === "string" && /^\d{4}-\d{2}-\d{2}/.test(val)) {
+        return val.slice(0, 10);
+      }
+      try {
+        const d = new Date(val);
+        if (!isNaN(d.getTime())) {
+          const y = d.getFullYear();
+          const m = String(d.getMonth() + 1).padStart(2, "0");
+          const day = String(d.getDate()).padStart(2, "0");
+          return `${y}-${m}-${day}`;
+        }
+      } catch {}
+      return "";
+    };
+
+    const status = (pr as any).status || "ACTIVE";
+
+    setEditPromo({
+      promo_id: pr.promo_id,
+      name: pr.name,
+      start_date: formatDateForInput(pr.start_date),
+      end_date: formatDateForInput(pr.end_date),
+      discount_percent: pr.discount_percent,
+      status,
+    });
+    setEditModalOpen(true);
+  };
+
+  // Deactivate an Active Promotion (immediately sets is_active = 0, moving it to EXPIRED)
+  const handleDeactivatePromo = async (promo_id: number, name: string) => {
+    if (
+      !confirm(
+        `Are you sure you want to deactivate promotion "${name}"? This will immediately end the campaign.`
+      )
+    ) {
+      return;
+    }
+    setUpdatingPromo(true);
     try {
       const res = await fetch("/api/promotions", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ promo_id, is_active: nextState }),
+        body: JSON.stringify({ promo_id, is_active: 0 }),
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        showToast(data.message || `Promotion ${nextState ? "activated" : "deactivated"}!`, "success");
+        showToast(`Promotion "${name}" deactivated successfully!`, "success");
+        if (editModalOpen) setEditModalOpen(false);
         await fetchData();
       } else {
-        showToast(data.error || "Failed to update status", "error");
+        showToast(data.error || "Failed to deactivate promotion", "error");
       }
     } catch {
-      showToast("Error updating promotion status", "error");
+      showToast("Error deactivating promotion", "error");
+    } finally {
+      setUpdatingPromo(false);
     }
   };
 
-  // Delete Promotion
-  const handleDeletePromo = async (promo_id: number, name: string) => {
-    if (!confirm(`Are you sure you want to delete promotion "${name}"?`)) return;
-    try {
-      const res = await fetch(`/api/promotions?promo_id=${promo_id}`, { method: "DELETE" });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        showToast(data.message || "Promotion deleted successfully", "success");
-        await fetchData();
-      } else {
-        showToast(data.error || "Failed to delete promotion", "error");
-      }
-    } catch {
-      showToast("Error deleting promotion", "error");
-    }
-  };
-
-  // Execute get_discount(p_amount, promo_id) calculation
-  const handleCalculateDiscount = async (e: React.FormEvent) => {
+  // Update Promotion (Scheduled Edit or Active End Date Extension) in Backend Table
+  const handleUpdatePromo = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!calcPromoId || !calcAmount) {
-      showToast("Please choose a promotion and enter an amount", "error");
+    if (!editPromo.end_date) {
+      showToast("End date is required", "error");
+      return;
+    }
+    if (editPromo.end_date < editPromo.start_date) {
+      showToast("End date cannot precede start date", "error");
       return;
     }
 
-    setCalculatingDiscount(true);
-    setCalcResult(null);
+    setUpdatingPromo(true);
     try {
-      const res = await fetch(`/api/promotions?calculate=discount&promo_id=${calcPromoId}&amount=${calcAmount}`);
+      const payload: any = {
+        promo_id: editPromo.promo_id,
+        end_date: editPromo.end_date,
+      };
+
+      if (editPromo.status === "SCHEDULED") {
+        if (!editPromo.name.trim()) {
+          showToast("Promotion name cannot be empty", "error");
+          setUpdatingPromo(false);
+          return;
+        }
+        payload.name = editPromo.name.trim();
+        payload.start_date = editPromo.start_date;
+        payload.discount_percent = editPromo.discount_percent;
+      }
+
+      const res = await fetch("/api/promotions", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
       const data = await res.json();
       if (res.ok && data.success) {
-        setCalcResult(data);
+        showToast(
+          editPromo.status === "ACTIVE"
+            ? `Promotion #${editPromo.promo_id} end date extended successfully!`
+            : `Promotion #${editPromo.promo_id} updated successfully!`,
+          "success"
+        );
+        setEditModalOpen(false);
+        await fetchData();
       } else {
-        showToast(data.error || "Failed to calculate discount", "error");
+        showToast(data.error || "Failed to update promotion", "error");
       }
     } catch {
-      showToast("Error calling get_discount() function", "error");
+      showToast("Error updating promotion", "error");
     } finally {
-      setCalculatingDiscount(false);
+      setUpdatingPromo(false);
     }
   };
 
-  const openCalculator = (promo_id: number) => {
-    setCalcPromoId(promo_id);
-    setCalcResult(null);
-    setCalcModalOpen(true);
-  };
+  // Compute status counts for the top 4 status cards
+  const statusCounts = useMemo(() => {
+    let all = promotions.length;
+    let active = 0;
+    let scheduled = 0;
+    let expired = 0;
+
+    promotions.forEach((p) => {
+      const s = p.status || "ACTIVE";
+      if (s === "ACTIVE") active++;
+      else if (s === "SCHEDULED") scheduled++;
+      else if (s === "EXPIRED") expired++;
+    });
+
+    return { all, active, scheduled, expired };
+  }, [promotions]);
 
   // Filtered promotions
   const filteredPromotions = useMemo(() => {
@@ -224,7 +297,7 @@ export default function PromotionsPage() {
         p.product_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         p.category_name?.toLowerCase().includes(searchTerm.toLowerCase());
 
-      const status = (p as any).status || "ACTIVE";
+      const status = p.status || "ACTIVE";
       const matchesStatus = statusFilter === "ALL" || status === statusFilter;
 
       return matchesSearch && matchesStatus;
@@ -244,18 +317,6 @@ export default function PromotionsPage() {
 
         <div className="flex items-center gap-2.5 flex-wrap">
           <button
-            onClick={() => {
-              setCalcResult(null);
-              setCalcModalOpen(true);
-            }}
-            className="px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold text-xs flex items-center gap-2 shadow-lg shadow-emerald-950/40 border border-emerald-500/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
-            title="Execute get_discount() function calculation"
-          >
-            <Calculator className="w-4 h-4" />
-            <span>Calculate Discount </span>
-          </button>
-
-          <button
             onClick={() => setPromoModalOpen(true)}
             className="px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold text-xs shadow-lg shadow-purple-950/40 border border-purple-500/30 flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
             title="Create promotion via stored procedure create_promotion()"
@@ -266,104 +327,201 @@ export default function PromotionsPage() {
         </div>
       </div>
 
-      {/* Navigation Tabs Header */}
-      <div className="rounded-2xl border border-slate-800 bg-slate-900 overflow-hidden shadow-xl">
-        <div className="p-4 border-b border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-950/30">
-          <div className="flex items-center gap-2 overflow-x-auto">
-            <button
-              onClick={() => setActiveTab("all")}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${activeTab === "all"
-                ? "bg-purple-500/10 text-purple-400 border border-purple-500/30 shadow-sm"
-                : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-                }`}
+      {/* 4 Status Filter Cards (ALL, ACTIVE, SCHEDULED, EXPIRED) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Card 1: ALL */}
+        <div
+          onClick={() => setStatusFilter("ALL")}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setStatusFilter("ALL"); }}
+          className={`rounded-2xl border p-5 shadow-xl relative overflow-hidden group cursor-pointer transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] select-none ${
+            statusFilter === "ALL"
+              ? "bg-slate-900 border-purple-500 ring-2 ring-purple-500/30 shadow-purple-950/20"
+              : "bg-gradient-to-br from-slate-900 to-slate-950 border-slate-800 hover:border-slate-700"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-400">Total Promotions</span>
+            <div
+              className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${
+                statusFilter === "ALL"
+                  ? "bg-purple-500/20 border border-purple-500/40 text-purple-300"
+                  : "bg-purple-500/10 border border-purple-500/20 text-purple-400"
+              }`}
             >
-
-              <span>All Promotions ({promotions.length})</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab("active_vw")}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${activeTab === "active_vw"
-                ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 shadow-sm"
-                : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-                }`}
-            >
-              <Flame className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Active Promotions</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800/50">
-                {activePromotions.length}
-              </span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab("matrix")}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${activeTab === "matrix"
-                ? "bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 shadow-sm"
-                : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-                }`}
-            >
-              <Layers className="w-3.5 h-3.5" />
-              <span>Categories of promotion</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab("sql_functions")}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${activeTab === "sql_functions"
-                ? "bg-blue-500/10 text-blue-400 border border-blue-500/30 shadow-sm"
-                : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-                }`}
-            >
-              <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
-              <span>ADBMS SQL Functions (get_discount, etc.)</span>
-            </button>
+              <Tag className="w-5 h-5" />
+            </div>
           </div>
-
-          <button
-            onClick={fetchData}
-            disabled={loading}
-            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors self-end md:self-auto"
-            title="Refresh Promotions Data"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-          </button>
+          <div className="mt-3">
+            <div className="text-3xl font-black text-white font-mono tracking-tight">
+              {loading ? "..." : statusCounts.all}
+            </div>
+            <div className="flex items-center justify-between mt-2">
+              <span className="text-[11px] text-slate-400">
+                All registered campaigns
+              </span>
+              {statusFilter === "ALL" && (
+                <span className="text-[10px] font-bold text-purple-400 bg-purple-950/70 px-2 py-0.5 rounded-full border border-purple-800/50">
+                  Active Filter
+                </span>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* ========================================================================= */}
-        {/* TAB 1: All Promotions Table */}
-        {/* ========================================================================= */}
-        {activeTab === "all" && (
-          <div className="space-y-4">
-            {/* Filter Bar */}
-            <div className="p-4 border-b border-slate-800/60 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-900/50">
-              <div className="relative w-full sm:w-80">
-                <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
-                <input
-                  type="text"
-                  placeholder="Search promo name, category, or product..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-slate-950/70 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/50"
-                />
-              </div>
-
-              <div className="flex items-center gap-1.5 self-start sm:self-auto flex-wrap">
-                <span className="text-[11px] text-slate-400 font-semibold mr-1 flex items-center gap-1">
-                  <Filter className="w-3 h-3 text-slate-500" /> Status:
-                </span>
-                {(["ALL", "ACTIVE", "SCHEDULED", "EXPIRED"] as const).map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => setStatusFilter(s)}
-                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${statusFilter === s
-                      ? "bg-purple-500 text-white shadow-md"
-                      : "bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white"
-                      }`}
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
+        {/* Card 2: ACTIVE */}
+        <div
+          onClick={() => setStatusFilter("ACTIVE")}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setStatusFilter("ACTIVE"); }}
+          className={`rounded-2xl border p-5 shadow-xl relative overflow-hidden group cursor-pointer transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] select-none ${
+            statusFilter === "ACTIVE"
+              ? "bg-slate-900 border-emerald-500 ring-2 ring-emerald-500/30 shadow-emerald-950/20"
+              : "bg-gradient-to-br from-slate-900 to-slate-950 border-slate-800 hover:border-slate-700"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-400">Total Active promotions</span>
+            <div
+              className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${
+                statusFilter === "ACTIVE"
+                  ? "bg-emerald-500/20 border border-emerald-500/40 text-emerald-300"
+                  : "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400"
+              }`}
+            >
+              <CheckCircle2 className="w-5 h-5" />
             </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-3xl font-black text-emerald-400 font-mono tracking-tight">
+              {loading ? "..." : statusCounts.active}
+            </div>
+            <div className="flex items-center justify-between mt-2">
+              <span className="text-[11px] text-slate-400">
+                Out of {statusCounts.all} total campaigns
+              </span>
+              {statusFilter === "ACTIVE" && (
+                <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/70 px-2 py-0.5 rounded-full border border-emerald-800/50">
+                  Active Filter
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Card 3: SCHEDULED */}
+        <div
+          onClick={() => setStatusFilter("SCHEDULED")}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setStatusFilter("SCHEDULED"); }}
+          className={`rounded-2xl border p-5 shadow-xl relative overflow-hidden group cursor-pointer transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] select-none ${
+            statusFilter === "SCHEDULED"
+              ? "bg-slate-900 border-sky-500 ring-2 ring-sky-500/30 shadow-sky-950/20"
+              : "bg-gradient-to-br from-slate-900 to-slate-950 border-slate-800 hover:border-slate-700"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-400">Scheduled Promotions</span>
+            <div
+              className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${
+                statusFilter === "SCHEDULED"
+                  ? "bg-sky-500/20 border border-sky-500/40 text-sky-300"
+                  : "bg-sky-500/10 border border-sky-500/20 text-sky-400"
+              }`}
+            >
+              <Calendar className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-3xl font-black text-sky-400 font-mono tracking-tight">
+              {loading ? "..." : statusCounts.scheduled}
+            </div>
+            <div className="flex items-center justify-between mt-2">
+              <span className="text-[11px] text-slate-400">
+                Upcoming campaign launches
+              </span>
+              {statusFilter === "SCHEDULED" && (
+                <span className="text-[10px] font-bold text-sky-400 bg-sky-950/70 px-2 py-0.5 rounded-full border border-sky-800/50">
+                  Active Filter
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Card 4: EXPIRED */}
+        <div
+          onClick={() => setStatusFilter("EXPIRED")}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setStatusFilter("EXPIRED"); }}
+          className={`rounded-2xl border p-5 shadow-xl relative overflow-hidden group cursor-pointer transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] select-none ${
+            statusFilter === "EXPIRED"
+              ? "bg-slate-900 border-rose-500 ring-2 ring-rose-500/30 shadow-rose-950/20"
+              : "bg-gradient-to-br from-slate-900 to-slate-950 border-slate-800 hover:border-slate-700"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-400">Expired Promotions</span>
+            <div
+              className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${
+                statusFilter === "EXPIRED"
+                  ? "bg-rose-500/20 border border-rose-500/40 text-rose-300"
+                  : "bg-rose-500/10 border border-rose-500/20 text-rose-400"
+              }`}
+            >
+              <XCircle className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-3xl font-black text-rose-400 font-mono tracking-tight">
+              {loading ? "..." : statusCounts.expired}
+            </div>
+            <div className="flex items-center justify-between mt-2">
+              <span className="text-[11px] text-slate-400">
+                Past or concluded campaigns
+              </span>
+              {statusFilter === "EXPIRED" && (
+                <span className="text-[10px] font-bold text-rose-400 bg-rose-950/70 px-2 py-0.5 rounded-full border border-rose-800/50">
+                  Active Filter
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Promotions Table Card */}
+      <div className="rounded-2xl border border-slate-800 bg-slate-900 overflow-hidden shadow-xl">
+        <div className="space-y-4">
+          {/* Search & Actions Bar */}
+          <div className="p-4 border-b border-slate-800/60 flex items-center justify-between gap-3 bg-slate-900/50">
+            <div className="relative w-full sm:w-96">
+              <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
+              <input
+                type="text"
+                placeholder="Search promo name, category, or product..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-slate-950/70 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/50"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={fetchData}
+                disabled={loading}
+                className="px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/80 transition-all text-xs flex items-center gap-1.5"
+                title="Refresh Promotions Data"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+                <span className="hidden sm:inline font-medium">Refresh</span>
+              </button>
+            </div>
+          </div>
 
             {/* Table */}
             <div className="overflow-x-auto">
@@ -447,26 +605,41 @@ export default function PromotionsPage() {
                           </td>
                           <td className="py-3 px-4 text-right">
                             <div className="flex items-center justify-end gap-1.5 font-sans">
-                              {/* Toggle active */}
-                              <button
-                                onClick={() => handleToggleActive(pr.promo_id, pr.is_active)}
-                                className={`p-1.5 rounded-lg text-xs transition-colors ${pr.is_active === 1
-                                  ? "text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300"
-                                  : "text-slate-500 hover:bg-slate-800 hover:text-slate-300"
-                                  }`}
-                                title={pr.is_active === 1 ? "Deactivate Promotion" : "Activate Promotion"}
-                              >
-                                <Power className="w-3.5 h-3.5" />
-                              </button>
+                              {/* If Scheduled: Edit All Details */}
+                              {status === "SCHEDULED" && (
+                                <button
+                                  onClick={() => handleOpenEditModal(pr)}
+                                  className="p-1.5 rounded-lg text-sky-400 hover:bg-sky-500/10 hover:text-sky-300 transition-colors"
+                                  title="Edit Scheduled Promotion (Name, Start Date, End Date)"
+                                >
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                              )}
 
-                              {/* Delete */}
-                              <button
-                                onClick={() => handleDeletePromo(pr.promo_id, pr.name)}
-                                className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
-                                title="Delete Promotion"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
+                              {/* If Active: Extend End Date & Deactivate */}
+                              {status === "ACTIVE" && (
+                                <>
+                                  <button
+                                    onClick={() => handleOpenEditModal(pr)}
+                                    className="p-1.5 rounded-lg text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300 transition-colors"
+                                    title="Extend End Date / Edit Campaign"
+                                  >
+                                    <Pencil className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeactivatePromo(pr.promo_id, pr.name)}
+                                    className="p-1.5 rounded-lg text-amber-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                                    title="Deactivate Promotion (End campaign immediately)"
+                                  >
+                                    <Power className="w-3.5 h-3.5" />
+                                  </button>
+                                </>
+                              )}
+
+                              {/* Expired / Other */}
+                              {status !== "SCHEDULED" && status !== "ACTIVE" && (
+                                <span className="text-slate-600 text-[11px] font-mono px-1.5">—</span>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -477,316 +650,7 @@ export default function PromotionsPage() {
               </table>
             </div>
           </div>
-        )}
-
-        {/* ========================================================================= */}
-        {/* TAB 2: Active Promotions View (active_promotions_vw) */}
-        {/* ========================================================================= */}
-        {activeTab === "active_vw" && (
-          <div className="space-y-4">
-            <div className="p-4 bg-emerald-950/20 border-b border-emerald-800/30 flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2">
-                <Flame className="w-4 h-4 text-emerald-400" />
-                <span className="text-emerald-300 font-semibold">
-                  Live View: <code className="font-mono text-white">active_promotions_vw</code>
-                </span>
-                <span className="text-slate-400 hidden sm:inline">
-                  — Automatically filters where <code className="text-emerald-400 font-mono">is_active = 1</code> and{" "}
-                  <code className="text-emerald-400 font-mono">CURDATE() BETWEEN start_date AND end_date</code>.
-                </span>
-              </div>
-              <span className="font-mono font-bold text-emerald-400">{activePromotions.length} active</span>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-slate-800 bg-slate-950/40 text-slate-400 font-semibold">
-                    <th className="py-3 px-4 font-mono">Promo ID</th>
-                    <th className="py-3 px-4">Promotion Name</th>
-                    <th className="py-3 px-4 text-center">Discount %</th>
-                    <th className="py-3 px-4">Product Target</th>
-                    <th className="py-3 px-4">Category Target</th>
-                    <th className="py-3 px-4">Valid Period</th>
-                    <th className="py-3 px-4 text-center">Days Remaining</th>
-                    <th className="py-3 px-4 text-right">Calculator</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60 font-mono">
-                  {loading ? (
-                    <tr>
-                      <td colSpan={8} className="py-12 text-center text-slate-500 font-sans">
-                        <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-emerald-500" />
-                        Querying active_promotions_vw...
-                      </td>
-                    </tr>
-                  ) : activePromotions.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="py-12 text-center text-slate-500 font-sans">
-                        No active promotions currently in effect today.
-                      </td>
-                    </tr>
-                  ) : (
-                    activePromotions.map((p) => (
-                      <tr key={p.promo_id} className="hover:bg-slate-800/30 transition-colors">
-                        <td className="py-3 px-4 font-bold text-amber-400 font-mono">#{p.promo_id}</td>
-                        <td className="py-3 px-4 font-sans font-bold text-white">{p.name}</td>
-                        <td className="py-3 px-4 text-center font-bold text-emerald-400 text-sm">
-                          {Number(p.discount_percent)}% OFF
-                        </td>
-                        <td className="py-3 px-4 text-slate-300 font-sans">
-                          {p.product_name ? (
-                            <span className="text-blue-300 flex items-center gap-1">
-                              <Package className="w-3 h-3" />
-                              {p.product_name}
-                            </span>
-                          ) : (
-                            <span className="text-slate-500">—</span>
-                          )}
-                        </td>
-                        <td className="py-3 px-4 text-slate-300 font-sans">
-                          {p.category_name ? (
-                            <span className="text-indigo-300 flex items-center gap-1">
-                              <Layers className="w-3 h-3" />
-                              {p.category_name}
-                            </span>
-                          ) : (
-                            <span className="text-slate-500">—</span>
-                          )}
-                        </td>
-                        <td className="py-3 px-4 text-slate-400 text-[11px]">
-                          {new Date(p.start_date).toLocaleDateString()} – {new Date(p.end_date).toLocaleDateString()}
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          <span className="text-[10px] px-2 py-0.5 rounded font-bold bg-emerald-950 text-emerald-300 border border-emerald-800/50">
-                            {p.days_left >= 0 ? `${p.days_left} days left` : "Ends today"}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-right">
-                          <button
-                            onClick={() => openCalculator(p.promo_id)}
-                            className="px-2.5 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-[10px] font-bold border border-emerald-500/20 transition-all font-sans"
-                          >
-                            Calculate Rs.
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* ========================================================================= */}
-        {/* TAB 3: Scope Matrix (Categories & Products) */}
-        {/* ========================================================================= */}
-        {activeTab === "matrix" && (
-          <div className="p-6 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Category-Wide Discounts */}
-              <div className="p-5 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-3">
-                <div className="flex items-center gap-2 pb-2 border-b border-slate-800 text-indigo-400 font-bold text-sm">
-                  <Layers className="w-4 h-4" />
-                  <span>Category-Wide Discount Campaigns</span>
-                </div>
-                <div className="space-y-2">
-                  {promotions.filter((p) => p.category_id != null).length === 0 ? (
-                    <p className="text-xs text-slate-500">No category-level campaigns active.</p>
-                  ) : (
-                    promotions
-                      .filter((p) => p.category_id != null)
-                      .map((p) => (
-                        <div
-                          key={p.promo_id}
-                          className="p-3 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between text-xs"
-                        >
-                          <div>
-                            <span className="font-bold text-white block">{p.category_name}</span>
-                            <span className="text-slate-400 text-[11px]">{p.name}</span>
-                          </div>
-                          <div className="text-right">
-                            <span className="text-emerald-400 font-bold text-sm font-mono">
-                              {Number(p.discount_percent)}% OFF
-                            </span>
-                            <span className="text-[10px] text-slate-500 block">
-                              Until {new Date(p.end_date).toLocaleDateString()}
-                            </span>
-                          </div>
-                        </div>
-                      ))
-                  )}
-                </div>
-              </div>
-
-              {/* Product-Specific Discounts */}
-              <div className="p-5 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-3">
-                <div className="flex items-center gap-2 pb-2 border-b border-slate-800 text-blue-400 font-bold text-sm">
-                  <Package className="w-4 h-4" />
-                  <span>Product-Specific Discount Campaigns</span>
-                </div>
-                <div className="space-y-2">
-                  {promotions.filter((p) => p.product_id != null).length === 0 ? (
-                    <p className="text-xs text-slate-500">No product-specific campaigns active.</p>
-                  ) : (
-                    promotions
-                      .filter((p) => p.product_id != null)
-                      .map((p) => (
-                        <div
-                          key={p.promo_id}
-                          className="p-3 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between text-xs"
-                        >
-                          <div>
-                            <span className="font-bold text-white block">{p.product_name}</span>
-                            <span className="text-slate-400 text-[11px]">{p.name}</span>
-                          </div>
-                          <div className="text-right">
-                            <span className="text-emerald-400 font-bold text-sm font-mono">
-                              {Number(p.discount_percent)}% OFF
-                            </span>
-                            <span className="text-[10px] text-slate-500 block">
-                              Until {new Date(p.end_date).toLocaleDateString()}
-                            </span>
-                          </div>
-                        </div>
-                      ))
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ========================================================================= */}
-        {/* TAB 4: ADBMS Functions & Procedures Playground */}
-        {/* ========================================================================= */}
-        {activeTab === "sql_functions" && (
-          <div className="p-6 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Box 1: get_discount() function tester */}
-              <div className="p-5 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-4">
-                <div className="flex items-center gap-2 pb-3 border-b border-slate-800">
-                  <Calculator className="w-5 h-5 text-emerald-400" />
-                  <div>
-                    <h3 className="font-bold text-white text-sm">Function: get_discount(p_amount, promo_id)</h3>
-                    <p className="text-[11px] text-slate-400">Computes monetary discount based on active promotion</p>
-                  </div>
-                </div>
-
-                <form onSubmit={handleCalculateDiscount} className="space-y-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">Select Promotion</label>
-                    <select
-                      value={calcPromoId}
-                      onChange={(e) => setCalcPromoId(Number(e.target.value))}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white"
-                      required
-                    >
-                      <option value="">-- Choose Campaign --</option>
-                      {promotions.map((p) => (
-                        <option key={p.promo_id} value={p.promo_id}>
-                          {p.name} ({Number(p.discount_percent)}%) - {(p as any).status}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">
-                      Purchase Amount (Rs.)
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={calcAmount}
-                      onChange={(e) => setCalcAmount(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-sm font-mono text-white"
-                      required
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={calculatingDiscount}
-                    className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold transition-all flex items-center justify-center gap-2"
-                  >
-                    {calculatingDiscount ? (
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <Calculator className="w-3.5 h-3.5" />
-                    )}
-                    <span>Run get_discount() Query</span>
-                  </button>
-                </form>
-
-                {calcResult && (
-                  <div className="p-4 rounded-xl bg-emerald-950/30 border border-emerald-800/40 text-xs space-y-1.5 animate-in fade-in">
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-400">Order Amount:</span>
-                      <span className="font-mono text-white">Rs. {Number(calcResult.amount).toFixed(2)}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-emerald-400 font-bold">Calculated Discount:</span>
-                      <span className="font-mono font-bold text-emerald-400">
-                        - Rs. {Number(calcResult.calculated_discount).toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between border-t border-emerald-800/40 pt-1.5">
-                      <span className="text-white font-bold">Net Total:</span>
-                      <span className="font-mono font-bold text-amber-300 text-sm">
-                        Rs. {(Number(calcResult.amount) - Number(calcResult.calculated_discount)).toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="text-[10px] text-slate-500 font-mono mt-1 pt-1 border-t border-slate-800">
-                      Evaluated via {calcResult.method}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Box 2: ADBMS Engine Trigger & Stored Procedure Documentation */}
-              <div className="p-5 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-3 text-xs">
-                <div className="flex items-center gap-2 pb-2 border-b border-slate-800 text-purple-400 font-bold">
-                  <ShieldCheck className="w-4 h-4" />
-                  <span>Database Objects Enforcing Campaign Rules</span>
-                </div>
-                <div className="space-y-2 text-slate-300 text-[11px]">
-                  <p>
-                    All promotional policies are backed by stored objects defined in{" "}
-                    <code className="text-purple-300 font-mono">marketingmanager.sql</code>:
-                  </p>
-                  <ul className="list-disc pl-5 space-y-2 text-slate-400">
-                    <li>
-                      <strong className="text-white font-mono">create_promotion</strong>: Stored procedure handling
-                      insertion into <code className="font-mono">promotions</code> with parameters{" "}
-                      <code className="font-mono">(name, discount, start, end, product_id, category_id)</code>.
-                    </li>
-                    <li>
-                      <strong className="text-white font-mono">active_promotions_vw</strong>: Real-time SQL view
-                      dynamically filtering active records where{" "}
-                      <code className="font-mono text-emerald-400">
-                        is_active = 1 AND CURDATE() BETWEEN start_date AND end_date
-                      </code>
-                      .
-                    </li>
-                    <li>
-                      <strong className="text-white font-mono">before_promotions_insert</strong>: Trigger automatically
-                      preventing invalid discounts (<code className="font-mono">&gt; 100% or &lt;= 0%</code>) or end date
-                      preceding start date.
-                    </li>
-                    <li>
-                      <strong className="text-white font-mono">evt_daily_expire_promotions</strong>: MySQL scheduled event
-                      deactivating expired campaigns automatically every night.
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+        </div>
 
       {/* ========================================================================= */}
       {/* MODAL 1: Create Promotion (CALL create_promotion) */}
@@ -932,107 +796,223 @@ export default function PromotionsPage() {
       )}
 
       {/* ========================================================================= */}
-      {/* MODAL 2: Discount Calculator (get_discount SQL function) */}
+      {/* MODAL 2: Edit Promotion (Scheduled Edit or Active End Date Extension) */}
       {/* ========================================================================= */}
-      {calcModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+      {editModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <div className="flex items-center gap-2">
-                <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-                  <Calculator className="w-5 h-5" />
+              <div className="flex items-center gap-2.5">
+                <div
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+                    editPromo.status === "ACTIVE"
+                      ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400"
+                      : "bg-sky-500/10 border border-sky-500/20 text-sky-400"
+                  }`}
+                >
+                  {editPromo.status === "ACTIVE" ? (
+                    <Calendar className="w-5 h-5 text-emerald-400" />
+                  ) : (
+                    <Pencil className="w-5 h-5 text-sky-400" />
+                  )}
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm text-white">Discount Calculator</h3>
-                  <p className="text-[11px] text-slate-400">Executes SQL function get_discount(amount, promo_id)</p>
+                  <h3 className="font-bold text-sm text-white">
+                    {editPromo.status === "ACTIVE"
+                      ? "Extend Active Promotion"
+                      : "Edit Scheduled Promotion"}
+                  </h3>
+                  <p className="text-[11px] text-slate-400 font-mono">
+                    Campaign ID: #{editPromo.promo_id} • Status:{" "}
+                    <span
+                      className={
+                        editPromo.status === "ACTIVE"
+                          ? "text-emerald-400 font-bold"
+                          : "text-sky-400 font-bold"
+                      }
+                    >
+                      {editPromo.status}
+                    </span>
+                  </p>
                 </div>
               </div>
               <button
-                onClick={() => setCalcModalOpen(false)}
+                onClick={() => setEditModalOpen(false)}
                 className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleCalculateDiscount} className="space-y-4">
-              <div>
-                <label className="text-xs text-slate-300 block mb-1">
-                  Promotion <span className="text-rose-400">*</span>
-                </label>
-                <select
-                  required
-                  value={calcPromoId}
-                  onChange={(e) => setCalcPromoId(Number(e.target.value))}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-emerald-500"
-                >
-                  <option value="">-- Choose Campaign --</option>
-                  {promotions.map((p) => (
-                    <option key={p.promo_id} value={p.promo_id}>
-                      {p.name} ({Number(p.discount_percent)}%) - {(p as any).status}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <form onSubmit={handleUpdatePromo} className="space-y-4">
+              {editPromo.status === "ACTIVE" ? (
+                /* Active Promotion: Read-only Campaign Info, only End Date is editable */
+                <div className="space-y-3">
+                  <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] text-slate-400 font-medium">Campaign Details</span>
+                      <span className="text-[10px] text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-800/40 font-bold flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                        Live Promotion
+                      </span>
+                    </div>
+                    <div className="text-sm font-bold text-white">{editPromo.name}</div>
+                    <div className="text-[11px] text-slate-400 font-mono">
+                      Started: {editPromo.start_date ? new Date(editPromo.start_date).toLocaleDateString() : "—"}
+                    </div>
+                  </div>
 
-              <div>
-                <label className="text-xs text-slate-300 block mb-1">
-                  Order Subtotal Amount (Rs.) <span className="text-rose-400">*</span>
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  required
-                  value={calcAmount}
-                  onChange={(e) => setCalcAmount(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 font-mono text-sm text-white focus:outline-none focus:border-emerald-500"
-                />
-              </div>
+                  <div>
+                    <label className="text-xs text-slate-300 block mb-1">
+                      Extend End Date <span className="text-rose-400">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      min={new Date().toISOString().split("T")[0]}
+                      value={editPromo.end_date}
+                      onChange={(e) =>
+                        setEditPromo((prev) => ({ ...prev, end_date: e.target.value }))
+                      }
+                      className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-800 font-mono text-xs text-white focus:outline-none focus:border-emerald-500"
+                    />
+                    <span className="text-[10px] text-slate-500 mt-1 block">
+                      Choose a future date to prolong this running campaign.
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                /* Scheduled Promotion: Name, Start Date, and End Date are editable */
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs text-slate-300 block mb-1">
+                      Campaign Name <span className="text-rose-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Summer Kickoff Sale"
+                      value={editPromo.name}
+                      onChange={(e) =>
+                        setEditPromo((prev) => ({ ...prev, name: e.target.value }))
+                      }
+                      className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-sky-500"
+                    />
+                  </div>
 
-              <div className="flex items-center gap-3 pt-2 border-t border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setCalcModalOpen(false)}
-                  className="w-1/3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors"
-                >
-                  Close
-                </button>
-                <button
-                  type="submit"
-                  disabled={calculatingDiscount}
-                  className="w-2/3 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  {calculatingDiscount ? (
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <Calculator className="w-3.5 h-3.5" />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs text-slate-300 block mb-1">
+                        Start Date <span className="text-rose-400">*</span>
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        value={editPromo.start_date}
+                        onChange={(e) =>
+                          setEditPromo((prev) => ({ ...prev, start_date: e.target.value }))
+                        }
+                        className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 font-mono text-xs text-white focus:outline-none focus:border-sky-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-slate-300 block mb-1">
+                        End Date <span className="text-rose-400">*</span>
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        min={editPromo.start_date}
+                        value={editPromo.end_date}
+                        onChange={(e) =>
+                          setEditPromo((prev) => ({ ...prev, end_date: e.target.value }))
+                        }
+                        className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 font-mono text-xs text-white focus:outline-none focus:border-sky-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {editPromo.status === "ACTIVE" ? (
+                <div className="p-3 rounded-xl bg-emerald-950/30 border border-emerald-800/40 text-[11px] text-emerald-300 flex items-start gap-2.5">
+                  <Calendar className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-semibold block">Extending Active Campaign</span>
+                    Select a new end date to extend this running campaign. The new end date will be updated immediately in the promotion table.
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 rounded-xl bg-sky-950/30 border border-sky-800/40 text-[11px] text-sky-300 flex items-start gap-2.5">
+                  <Calendar className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-semibold block">Scheduled Promotion Update</span>
+                    Modifications apply directly to the promotions table in the database before the campaign goes live.
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-800">
+                {editPromo.status === "ACTIVE" ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleDeactivatePromo(editPromo.promo_id, editPromo.name)
+                    }
+                    className="px-3 py-2 rounded-xl bg-rose-950/60 hover:bg-rose-900 border border-rose-800/60 text-rose-300 hover:text-white text-xs font-semibold transition-colors flex items-center gap-1.5"
+                    title="Deactivate campaign immediately"
+                  >
+                    <Power className="w-3.5 h-3.5" />
+                    <span>Deactivate</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setEditModalOpen(false)}
+                    className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors"
+                  >
+                    Cancel
+                  </button>
+                )}
+
+                <div className="flex items-center gap-2">
+                  {editPromo.status === "ACTIVE" && (
+                    <button
+                      type="button"
+                      onClick={() => setEditModalOpen(false)}
+                      className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors"
+                    >
+                      Cancel
+                    </button>
                   )}
-                  <span>Calculate Discount</span>
-                </button>
+                  <button
+                    type="submit"
+                    disabled={updatingPromo}
+                    className={`px-4 py-2 rounded-xl text-white text-xs font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg ${
+                      editPromo.status === "ACTIVE"
+                        ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-emerald-950/40"
+                        : "bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 shadow-sky-950/40"
+                    }`}
+                  >
+                    {updatingPromo ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Saving...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>
+                          {editPromo.status === "ACTIVE"
+                            ? "Extend End Date"
+                            : "Update Promotion"}
+                        </span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </form>
-
-            {calcResult && (
-              <div className="p-4 rounded-xl bg-emerald-950/30 border border-emerald-800/40 text-xs space-y-1.5 animate-in fade-in">
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-400">Order Amount:</span>
-                  <span className="font-mono text-white">Rs. {Number(calcResult.amount).toFixed(2)}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-emerald-400 font-bold">Calculated Discount:</span>
-                  <span className="font-mono font-bold text-emerald-400">
-                    - Rs. {Number(calcResult.calculated_discount).toFixed(2)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between border-t border-emerald-800/40 pt-1.5">
-                  <span className="text-white font-bold">Net Total:</span>
-                  <span className="font-mono font-bold text-amber-300 text-sm">
-                    Rs. {(Number(calcResult.amount) - Number(calcResult.calculated_discount)).toFixed(2)}
-                  </span>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       )}
