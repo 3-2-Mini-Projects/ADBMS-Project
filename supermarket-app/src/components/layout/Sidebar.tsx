@@ -102,6 +102,12 @@ const NAV_GROUPS: NavGroup[] = [
   {
     group: "CATALOG & INVENTORY",
     items: [
+      { title: "Catalog Dashboard", href: "/catalog", icon: LayoutDashboard, permission: "manage_catalog", badge: "Hub" },
+      { title: "Products", href: "/products", icon: Package, permission: "manage_catalog" },
+      { title: "Price History & Approvals", href: "/catalog/price-history", icon: ShieldAlert, permission: "manage_catalog", badge: "Approvals" },
+      { title: "Slow Movers Hub", href: "/catalog/slow-movers", icon: AlertTriangle, permission: "manage_catalog", badge: "Clearance" },
+      { title: "Categories", href: "/categories", icon: Layers, permission: "manage_catalog" },
+      { title: "Suppliers", href: "/suppliers", icon: Truck },
       { title: "Inventory Dashboard", href: "/inventory/dashboard", icon: LayoutGrid, permission: "manage_inventory", badge: "New" },
       { title: "Inventory & Batches", href: "/inventory", icon: Boxes, permission: "manage_inventory" },
       { title: "Stock Alerts", href: "/inventory/stock-alerts", icon: AlertTriangle, permission: "manage_inventory" },
@@ -109,9 +115,6 @@ const NAV_GROUPS: NavGroup[] = [
       { title: "Reorder Planning", href: "/inventory/reorder-suggestions", icon: Sparkles, permission: "manage_inventory" },
       { title: "Stock Transfers", href: "/inventory/transfers", icon: ArrowLeftRight, permission: "manage_inventory", badge: "Live" },
       { title: "Purchase Orders", href: "/purchases", icon: FileSpreadsheet, permission: "receive_purchases" },
-      { title: "Suppliers", href: "/suppliers", icon: Truck },
-      { title: "Products", href: "/products", icon: Package, permission: "manage_catalog" },
-      { title: "Categories", href: "/categories", icon: Layers, permission: "manage_catalog" },
     ],
   },
   {
@@ -188,7 +191,10 @@ const CATALOG_NAV_GROUPS: NavGroup[] = [
   {
     group: "CATALOG MANAGEMENT",
     items: [
+      { title: "Catalog Dashboard", href: "/catalog", icon: LayoutDashboard, badge: "Hub", highlight: true },
       { title: "Products", href: "/products", icon: Package },
+      { title: "Price History & Approvals", href: "/catalog/price-history", icon: ShieldAlert, badge: "Approvals" },
+      { title: "Slow Movers Hub", href: "/catalog/slow-movers", icon: AlertTriangle, badge: "Clearance" },
       { title: "Categories", href: "/categories", icon: Layers },
       { title: "Suppliers", href: "/suppliers", icon: Truck },
     ],
