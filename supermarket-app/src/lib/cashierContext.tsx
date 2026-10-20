@@ -56,22 +56,24 @@ export function CashierProvider({ children }: { children: ReactNode }) {
     try {
       const res = await fetch("/api/cashier/session");
       const data = await res.json();
-      if (data.cashiers && Array.isArray(data.cashiers)) {
-        setCashiers(data.cashiers);
+      if (data) {
+        if (data.cashiers && Array.isArray(data.cashiers)) {
+          setCashiers(data.cashiers);
+        }
         setManagers(data.managers || []);
         setBranches(data.branches || []);
 
-        // Load saved cashier from localStorage or default to first active cashier
-        const savedId = typeof window !== "undefined" ? localStorage.getItem("nexus_cashier_id") : null;
-        let matched = null;
-        if (savedId) {
-          matched = data.cashiers.find((c: CashierUser) => c.employee_id === Number(savedId));
-        }
-        if (!matched && data.cashiers.length > 0) {
-          matched = data.cashiers[0];
-        }
-        if (matched) {
-          setCashierState(matched);
+        // Authenticated cashier is strictly bound from login session
+        if (data.currentUser) {
+          setCashierState(data.currentUser);
+          if (typeof window !== "undefined") {
+            localStorage.setItem("nexus_cashier_id", String(data.currentUser.employee_id));
+          }
+        } else {
+          setCashierState(null);
+          if (typeof window !== "undefined") {
+            localStorage.removeItem("nexus_cashier_id");
+          }
         }
       }
     } catch (e) {
@@ -85,11 +87,9 @@ export function CashierProvider({ children }: { children: ReactNode }) {
     fetchSessionData();
   }, []);
 
-  const setCashier = (c: CashierUser) => {
-    setCashierState(c);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("nexus_cashier_id", String(c.employee_id));
-    }
+  const setCashier = (_c: CashierUser) => {
+    // Manual cashier switching via drop box is disabled; cashier changes only via login
+    console.warn("Cashier switching via drop box is disabled. Navigate by signing in.");
   };
 
   const verifyManagerPin = async (managerId: number, pin: string) => {

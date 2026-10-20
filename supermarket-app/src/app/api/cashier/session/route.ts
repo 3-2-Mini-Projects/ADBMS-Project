@@ -1,9 +1,30 @@
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
+import { getServerSession } from "@/lib/auth";
 
-// GET /api/cashier/session - Return active cashiers and managers with branch details
+export const dynamic = "force-dynamic";
+
+// GET /api/cashier/session - Return active cashiers and managers with branch details, plus authenticated currentUser
 export async function GET() {
   try {
+    const session = await getServerSession();
+
+    let currentUser: any = null;
+    if (session?.employee_id) {
+      const [userRow] = await query<any>(`
+        SELECT 
+          e.employee_id, e.branch_id, e.full_name, e.role, e.email,
+          b.name AS branch_name, b.branch_code, b.city
+        FROM employees e
+        JOIN branches b ON e.branch_id = b.branch_id
+        WHERE e.employee_id = ? AND e.is_active = 1
+        LIMIT 1
+      `, [session.employee_id]);
+      if (userRow) {
+        currentUser = userRow;
+      }
+    }
+
     const cashiers = await query<any>(`
       SELECT 
         e.employee_id, e.branch_id, e.full_name, e.role, e.email,
@@ -32,6 +53,7 @@ export async function GET() {
     `);
 
     return NextResponse.json({
+      currentUser,
       cashiers,
       managers,
       branches,

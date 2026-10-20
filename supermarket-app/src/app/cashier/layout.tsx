@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { CashierProvider, useCashier } from "@/lib/cashierContext";
 
 const CASHIER_TABS = [
@@ -15,9 +15,15 @@ const CASHIER_TABS = [
 
 function CashierLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { cashier, setCashier, cashiers, isLoading } = useCashier();
+  const router = useRouter();
+  const { cashier, isLoading } = useCashier();
   const [clockStr, setClockStr] = useState<string>("");
-  const [showSwitchModal, setShowSwitchModal] = useState(false);
+
+  useEffect(() => {
+    if (!isLoading && !cashier) {
+      router.replace("/login");
+    }
+  }, [isLoading, cashier, router]);
 
   useEffect(() => {
     const updateTime = () => {
@@ -37,6 +43,37 @@ function CashierLayoutContent({ children }: { children: React.ReactNode }) {
     const interval = setInterval(updateTime, 1000);
     return () => clearInterval(interval);
   }, []);
+
+  if (isLoading) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "var(--bg-main, #0b0f17)",
+          color: "var(--text-secondary, #94a3b8)",
+          fontFamily: "Inter, sans-serif",
+          fontSize: 14,
+          gap: 12,
+        }}
+      >
+        <span
+          style={{
+            width: 18,
+            height: 18,
+            border: "2px solid rgba(16, 185, 129, 0.3)",
+            borderTopColor: "var(--accent-emerald, #10b981)",
+            borderRadius: "50%",
+            display: "inline-block",
+            animation: "spin 0.8s linear infinite",
+          }}
+        />
+        <span>Verifying cashier credentials...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="app-layout">
@@ -177,15 +214,15 @@ function CashierLayoutContent({ children }: { children: React.ReactNode }) {
                 fontSize: 11.5,
               }}
             >
-              🔒 Role Restrictions
+              🔒 Active Session
             </div>
             <p style={{ margin: 0, fontSize: 10.5, color: "var(--text-muted)" }}>
-              Cashier scope is restricted to branch POS and personal transactions. Returns and voids require manager approval.
+              Bound to authenticated cashier account. Returns and voids require manager approval PIN.
             </p>
           </div>
         </nav>
 
-        {/* Logged-in Cashier Profile */}
+        {/* Logged-in Cashier Profile (No switcher - navigate by signin) */}
         <div
           style={{
             padding: "14px 16px",
@@ -225,7 +262,7 @@ function CashierLayoutContent({ children }: { children: React.ReactNode }) {
                   textOverflow: "ellipsis",
                 }}
               >
-                {cashier ? cashier.full_name : "Loading..."}
+                {cashier ? cashier.full_name : "Cashier"}
               </div>
               <div
                 style={{
@@ -234,19 +271,19 @@ function CashierLayoutContent({ children }: { children: React.ReactNode }) {
                   fontFamily: "'JetBrains Mono', monospace",
                 }}
               >
-                {cashier ? `${cashier.branch_name || "Branch 1"}` : "CASHIER"}
+                {cashier ? `${cashier.branch_name || "Branch"}` : "CASHIER"}
               </div>
             </div>
           </div>
 
-          <button
+          <Link
+            href="/logout"
             className="btn btn-ghost"
-            style={{ padding: "4px 8px", fontSize: 11 }}
-            title="Switch Cashier / Branch"
-            onClick={() => setShowSwitchModal(true)}
+            style={{ padding: "4px 8px", fontSize: 11, color: "var(--accent-rose)" }}
+            title="Sign Out to switch cashier"
           >
-            ⇄
-          </button>
+            Sign Out
+          </Link>
         </div>
       </aside>
 
@@ -302,13 +339,40 @@ function CashierLayoutContent({ children }: { children: React.ReactNode }) {
               {clockStr}
             </div>
 
-            <button
-              className="btn btn-ghost"
-              style={{ padding: "5px 10px", fontSize: 11 }}
-              onClick={() => setShowSwitchModal(true)}
-            >
-              Switch Cashier
-            </button>
+            {cashier && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "4px 10px",
+                  borderRadius: 8,
+                  background: "rgba(16, 185, 129, 0.1)",
+                  border: "1px solid rgba(16, 185, 129, 0.25)",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: "var(--text-primary)",
+                }}
+              >
+                <span
+                  style={{
+                    width: 22,
+                    height: 22,
+                    borderRadius: "50%",
+                    background: "linear-gradient(135deg, #10b981, #0284c7)",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#fff",
+                    fontSize: 11,
+                    fontWeight: 700,
+                  }}
+                >
+                  {cashier.full_name[0]}
+                </span>
+                <span>{cashier.full_name}</span>
+              </div>
+            )}
 
             <Link
               href="/logout"
@@ -324,93 +388,6 @@ function CashierLayoutContent({ children }: { children: React.ReactNode }) {
         {/* Page Content */}
         <main className="page-content animate-fade-in">{children}</main>
       </div>
-
-      {/* Cashier Switcher Modal */}
-      {showSwitchModal && (
-        <div className="modal-overlay">
-          <div className="modal-box" style={{ maxWidth: 440, width: "100%", padding: 24 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 20 }}>🔄</span>
-                <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)" }}>
-                  Select Active Cashier
-                </h3>
-              </div>
-              <button className="btn btn-ghost" style={{ padding: "4px 8px" }} onClick={() => setShowSwitchModal(false)}>
-                ✕
-              </button>
-            </div>
-
-            <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 16 }}>
-              Select a cashier account to simulate shifts, test branch data isolation, and verify cashier-scoped permissions.
-            </p>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 320, overflowY: "auto" }}>
-              {cashiers.map((c) => {
-                const isCurrent = cashier?.employee_id === c.employee_id;
-                return (
-                  <div
-                    key={c.employee_id}
-                    onClick={() => {
-                      setCashier(c);
-                      setShowSwitchModal(false);
-                    }}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      padding: "10px 14px",
-                      borderRadius: 10,
-                      background: isCurrent ? "var(--bg-card2)" : "var(--bg-surface)",
-                      border: isCurrent ? "1px solid var(--accent-emerald)" : "1px solid var(--border)",
-                      cursor: "pointer",
-                      transition: "all 0.15s",
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <div
-                        style={{
-                          width: 32,
-                          height: 32,
-                          borderRadius: "50%",
-                          background: isCurrent ? "var(--accent-emerald)" : "var(--border)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          color: "#fff",
-                          fontWeight: 700,
-                          fontSize: 12,
-                        }}
-                      >
-                        {c.full_name[0]}
-                      </div>
-                      <div>
-                        <div style={{ fontWeight: 600, fontSize: 13, color: "var(--text-primary)" }}>
-                          {c.full_name}
-                        </div>
-                        <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                          {c.branch_name} ({c.city})
-                        </div>
-                      </div>
-                    </div>
-                    {isCurrent && (
-                      <span className="badge badge-completed" style={{ fontSize: 10 }}>
-                        Active
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            <div style={{ marginTop: 16, display: "flex", justifyContent: "flex-end" }}>
-              <button className="btn btn-ghost" onClick={() => setShowSwitchModal(false)}>
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

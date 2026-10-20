@@ -147,10 +147,12 @@ export default function CashierDashboardPage() {
             <h1 style={{ fontSize: 22, fontWeight: 800, color: "var(--text-primary)" }}>
               Welcome back, {cashier?.full_name || "Cashier"} 👋
             </h1>
-            <span className="badge badge-completed">CASHIER ROLE</span>
+            <span className="badge badge-completed">
+              {cashier?.role || "CASHIER"} • ID: #{cashier?.employee_id ?? "—"}
+            </span>
           </div>
           <p style={{ fontSize: 13, color: "var(--text-secondary)", marginTop: 4 }}>
-            Terminal assigned to: <strong>{cashier?.branch_name || "Colombo Main"}</strong> • Ready for checkout
+            Cashier: <strong style={{ color: "var(--accent-emerald)" }}>{cashier?.full_name || "Cashier"}</strong> • Terminal assigned to: <strong>{cashier?.branch_name || "Colombo Main"}</strong> ({cashier?.branch_code || "POS"}) • Ready for checkout
           </p>
         </div>
 
