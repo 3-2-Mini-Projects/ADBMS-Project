@@ -94,6 +94,34 @@ export default function EmployeesPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [viewDetailsEmp, setViewDetailsEmp] = useState<Employee | null>(null);
   const [isRestoring, setIsRestoring] = useState(false);
+  // Reset Password Modal State
+  const [resetModalOpen, setResetModalOpen] = useState(false);
+  const [empToReset, setEmpToReset] = useState<Employee | null>(null);
+  const [isResetting, setIsResetting] = useState(false);
+
+  const handleResetPassword = async () => {
+    if (!empToReset) return;
+    setIsResetting(true);
+    try {
+      const res = await fetch(`/api/employees/${empToReset.employee_id}/reset-password`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showToast(data.message || `Password reset for ${empToReset.full_name}`, "success");
+        setResetModalOpen(false);
+        setEmpToReset(null);
+        fetchEmployees();
+        refreshAppData();
+      } else {
+        showToast(data.error || "Failed to reset password", "error");
+      }
+    } catch {
+      showToast("Error resetting password", "error");
+    } finally {
+      setIsResetting(false);
+    }
+  };
 
   const handleDeleteEmployee = async () => {
     if (!empToDelete) return;
@@ -493,6 +521,16 @@ export default function EmployeesPage() {
                             </button>
                             <button
                               onClick={() => {
+                                setEmpToReset(emp);
+                                setResetModalOpen(true);
+                              }}
+                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-amber-600 text-slate-300 hover:text-white transition-colors"
+                              title="Reset Employee Password"
+                            >
+                              <KeyRound className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => {
                                 setEmpToDelete(emp);
                                 setDeleteModalOpen(true);
                               }}
@@ -813,6 +851,56 @@ export default function EmployeesPage() {
               >
                 <Printer className="w-3.5 h-3.5" />
                 <span>Print Staff ID Badge</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Reset Password Confirmation */}
+      {resetModalOpen && empToReset && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-md shadow-2xl space-y-5 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2 text-amber-400 font-bold text-sm">
+                <KeyRound className="w-5 h-5 text-amber-500" />
+                <span>Reset Staff Password</span>
+              </div>
+              <button
+                onClick={() => setResetModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-amber-950/20 border border-amber-800/30 space-y-2">
+              <div className="text-xs font-semibold text-amber-300">
+                Reset Credentials for {empToReset.full_name}?
+              </div>
+              <p className="text-[11px] text-slate-300 leading-relaxed">
+                Their current password will be cleared and their account status will revert to <strong>Pending Activation</strong>.
+              </p>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                When they next visit the login screen and enter <strong className="text-slate-200 font-mono">{empToReset.email}</strong>, they will immediately be prompted to create and confirm a new password.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setResetModalOpen(false)}
+                className="w-1/3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isResetting}
+                onClick={handleResetPassword}
+                className="w-2/3 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-lg shadow-amber-950/50"
+              >
+                {isResetting ? "Resetting..." : "Confirm Password Reset"}
               </button>
             </div>
           </div>
