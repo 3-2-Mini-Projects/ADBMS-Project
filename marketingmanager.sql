@@ -21,6 +21,8 @@ DROP PROCEDURE IF EXISTS add_ltpoints;
 DROP PROCEDURE IF EXISTS create_promotion;
 DROP PROCEDURE IF EXISTS recalculate_tiers;
 DROP PROCEDURE IF EXISTS proc_apply_coupon;
+DROP PROCEDURE IF EXISTS get_active_promotions;
+DROP PROCEDURE IF EXISTS get_deactive_promotions;
 
 DROP FUNCTION IF EXISTS lt_points_earned;
 DROP FUNCTION IF EXISTS get_discount;
@@ -28,10 +30,12 @@ DROP FUNCTION IF EXISTS modify_customer_tier;
 DROP FUNCTION IF EXISTS promo_isactive;
 
 DROP TRIGGER IF EXISTS before_promotions_insert;
+DROP TRIGGER IF EXISTS before_promotion_insert;
 DROP TRIGGER IF EXISTS before_insert_customers;
 DROP TRIGGER IF EXISTS trg_sales_au_award_points;
 
 DROP EVENT IF EXISTS evt_daily_expire_promotions;
+DROP EVENT IF EXISTS update_promotion_status;
 
 
 -- ============================================================
@@ -550,6 +554,42 @@ BEGIN
 END //
 DELIMITER ;
 
+-- ------------------------------------------------------------
+-- PROCEDURE 7: Get Active Promotions
+-- ------------------------------------------------------------
+DELIMITER //
+
+CREATE PROCEDURE get_active_promotions()
+BEGIN
+    SELECT *
+    FROM promotions
+    WHERE is_active = 1
+      AND CURDATE() BETWEEN start_date AND end_date;
+END //
+
+DELIMITER ;
+
+-- ------------------------------------------------------------
+-- PROCEDURE 8: Get Deactive Promotions
+-- ------------------------------------------------------------
+DELIMITER //
+
+CREATE PROCEDURE get_deactive_promotions()
+BEGIN
+    SELECT *,
+        CASE
+            WHEN is_active = 0 THEN 'DEACTIVATED'
+            WHEN CURDATE() < start_date THEN 'SCHEDULED'
+            WHEN CURDATE() > end_date THEN 'EXPIRED'
+        END AS promotion_status
+    FROM promotions
+    WHERE is_active = 0
+       OR CURDATE() < start_date
+       OR CURDATE() > end_date;
+END //
+
+DELIMITER ;
+
 
 -- ============================================================
 -- 5. TRIGGERS
@@ -641,20 +681,42 @@ DELIMITER ;
 -- Ensure event scheduler is active
 SET GLOBAL event_scheduler = ON;
 
--- ------------------------------------------------------------
--- EVENT 1: Daily Expire Promotions
--- ------------------------------------------------------------
 DELIMITER //
-CREATE EVENT IF NOT EXISTS evt_daily_expire_promotions
+
+CREATE TRIGGER before_promotion_insert
+BEFORE INSERT ON promotions
+FOR EACH ROW
+BEGIN
+    IF CURDATE() < NEW.start_date
+       OR CURDATE() > NEW.end_date THEN
+        SET NEW.is_active = 0;
+    ELSE
+        SET NEW.is_active = 1;
+    END IF;
+END //
+
+DELIMITER ;
+
+DROP EVENT IF EXISTS update_promotion_status;
+
+
+
+DELIMITER //
+
+CREATE EVENT update_promotion_status
 ON SCHEDULE EVERY 1 DAY
-STARTS CURRENT_TIMESTAMP + INTERVAL 1 DAY
+STARTS CURRENT_TIMESTAMP
 DO
 BEGIN
     UPDATE promotions
-    SET is_active = 0
-    WHERE end_date < CURDATE()
-      AND is_active = 1;
+    SET is_active = CASE
+        WHEN CURDATE() >= start_date
+         AND CURDATE() <= end_date THEN 1
+        ELSE 0
+    END
+    WHERE promo_id > 0;
 END //
+
 DELIMITER ;
 
 
@@ -689,3 +751,5 @@ LIMIT 10;
 -- SELECT promo_isactive(1);
 
 -- CALL recalculate_tiers();
+-- CALL get_active_promotions();
+-- CALL get_deactive_promotions();

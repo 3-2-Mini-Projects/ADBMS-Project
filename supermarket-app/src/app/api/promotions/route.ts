@@ -115,6 +115,117 @@ export async function GET(req: Request) {
       return NextResponse.json({ promotions: activePromotions });
     }
 
+    // Ensure get_active_promotions() and get_deactive_promotions() procedures exist
+    try {
+      await query(`
+        CREATE PROCEDURE IF NOT EXISTS get_active_promotions()
+        BEGIN
+            SELECT *
+            FROM promotions
+            WHERE is_active = 1
+              AND CURDATE() BETWEEN start_date AND end_date;
+        END
+      `);
+    } catch {}
+
+    try {
+      await query(`
+        CREATE PROCEDURE IF NOT EXISTS get_deactive_promotions()
+        BEGIN
+            SELECT *,
+                CASE
+                    WHEN is_active = 0 THEN 'DEACTIVATED'
+                    WHEN CURDATE() < start_date THEN 'SCHEDULED'
+                    WHEN CURDATE() > end_date THEN 'EXPIRED'
+                END AS promotion_status
+            FROM promotions
+            WHERE is_active = 0
+               OR CURDATE() < start_date
+               OR CURDATE() > end_date;
+        END
+      `);
+    } catch {}
+
+    // 3a. Execute CALL get_active_promotions() procedure
+    if (view === "active_proc") {
+      let activeRows: any[] = [];
+      try {
+        const res: any = await query("CALL get_active_promotions()");
+        activeRows = Array.isArray(res) && Array.isArray(res[0]) ? res[0] : (Array.isArray(res) ? res : []);
+      } catch (err: any) {
+        console.warn("CALL get_active_promotions() error:", err.message);
+        activeRows = await query(`
+          SELECT * FROM promotions WHERE is_active = 1 AND CURDATE() BETWEEN start_date AND end_date
+        `);
+      }
+
+      const prods: any = await query("SELECT product_id, name FROM products");
+      const cats: any = await query("SELECT category_id, name FROM categories");
+      const prodMap = new Map(prods.map((p: any) => [p.product_id, p.name]));
+      const catMap = new Map(cats.map((c: any) => [c.category_id, c.name]));
+
+      const enriched = activeRows.map((r: any) => ({
+        ...r,
+        product_name: r.product_id ? prodMap.get(r.product_id) || null : null,
+        category_name: r.category_id ? catMap.get(r.category_id) || null : null,
+        status: "ACTIVE",
+        days_left: r.end_date ? Math.ceil((new Date(r.end_date).getTime() - new Date().setHours(0, 0, 0, 0)) / (1000 * 60 * 60 * 24)) : 0,
+      }));
+
+      return NextResponse.json({
+        success: true,
+        procedure: "get_active_promotions",
+        method: "CALL get_active_promotions()",
+        promotions: enriched,
+      });
+    }
+
+    // 3b. Execute CALL get_deactive_promotions() procedure
+    if (view === "deactive_proc") {
+      let deactiveRows: any[] = [];
+      try {
+        const res: any = await query("CALL get_deactive_promotions()");
+        deactiveRows = Array.isArray(res) && Array.isArray(res[0]) ? res[0] : (Array.isArray(res) ? res : []);
+      } catch (err: any) {
+        console.warn("CALL get_deactive_promotions() error:", err.message);
+        deactiveRows = await query(`
+          SELECT *,
+            CASE
+              WHEN is_active = 0 THEN 'DEACTIVATED'
+              WHEN CURDATE() < start_date THEN 'SCHEDULED'
+              WHEN CURDATE() > end_date THEN 'EXPIRED'
+            END AS promotion_status
+          FROM promotions
+          WHERE is_active = 0
+             OR CURDATE() < start_date
+             OR CURDATE() > end_date
+        `);
+      }
+
+      const prods: any = await query("SELECT product_id, name FROM products");
+      const cats: any = await query("SELECT category_id, name FROM categories");
+      const prodMap = new Map(prods.map((p: any) => [p.product_id, p.name]));
+      const catMap = new Map(cats.map((c: any) => [c.category_id, c.name]));
+
+      const enriched = deactiveRows.map((r: any) => {
+        const rawStatus = r.promotion_status || (r.is_active === 0 ? "DEACTIVATED" : new Date(r.start_date) > new Date() ? "SCHEDULED" : "EXPIRED");
+        return {
+          ...r,
+          product_name: r.product_id ? prodMap.get(r.product_id) || null : null,
+          category_name: r.category_id ? catMap.get(r.category_id) || null : null,
+          status: rawStatus,
+          days_left: r.end_date ? Math.ceil((new Date(r.end_date).getTime() - new Date().setHours(0, 0, 0, 0)) / (1000 * 60 * 60 * 24)) : 0,
+        };
+      });
+
+      return NextResponse.json({
+        success: true,
+        procedure: "get_deactive_promotions",
+        method: "CALL get_deactive_promotions()",
+        promotions: enriched,
+      });
+    }
+
     // 4. Query all promotions
     const promotions = await query(`
       SELECT 
@@ -359,14 +470,27 @@ export async function PUT(req: Request) {
 export async function DELETE(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const promoId = searchParams.get("promo_id");
-    const couponId = searchParams.get("coupon_id");
+    let promoId = searchParams.get("promo_id");
+    let couponId = searchParams.get("coupon_id");
+
+    if (!promoId && !couponId) {
+      try {
+        const body = await req.json();
+        promoId = body.promo_id;
+        couponId = body.coupon_id;
+      } catch {}
+    }
 
     if (promoId) {
-      // First delete associated coupons or set promo_id null
+      try {
+        await query("UPDATE sales SET promo_id = NULL WHERE promo_id = ?", [promoId]);
+      } catch {}
       await query("DELETE FROM coupons WHERE promo_id = ?", [promoId]);
       await query("DELETE FROM promotions WHERE promo_id = ?", [promoId]);
-      return NextResponse.json({ success: true, message: "Promotion and linked coupons deleted successfully." });
+      return NextResponse.json({
+        success: true,
+        message: `Promotion #${promoId} deleted successfully from backend promotion table.`,
+      });
     }
 
     if (couponId) {
@@ -377,6 +501,6 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ error: "Missing promo_id or coupon_id to delete" }, { status: 400 });
   } catch (err: any) {
     console.error("DELETE /api/promotions error:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: err.sqlMessage || err.message || "Failed to delete promotion" }, { status: 500 });
   }
 }

@@ -21,6 +21,8 @@ import {
   AlertTriangle,
   Store,
   Pencil,
+  Trash2,
+  Database,
 } from "lucide-react";
 
 interface ActivePromoVwRow {
@@ -46,9 +48,12 @@ export default function PromotionsPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Filters & Search
+  // Filters, Search & Stored Procedure Modes
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "SCHEDULED" | "EXPIRED">("ALL");
+  const [filterMode, setFilterMode] = useState<"ALL" | "ACTIVE" | "DEACTIVE">("ALL");
+  const [activeProcedureName, setActiveProcedureName] = useState<string | null>(null);
+  const [allPromotionsCache, setAllPromotionsCache] = useState<Promotion[]>([]);
 
   // Create Promo Modal (CALL create_promotion)
   const [promoModalOpen, setPromoModalOpen] = useState(false);
@@ -92,10 +97,53 @@ export default function PromotionsPage() {
     try {
       const res = await fetch("/api/promotions");
       const data = await res.json();
-      if (data.promotions) setPromotions(data.promotions);
+      if (data.promotions) {
+        setPromotions(data.promotions);
+        setAllPromotionsCache(data.promotions);
+      }
       if (data.activePromotions) setActivePromotions(data.activePromotions);
+      setActiveProcedureName(null);
+      setFilterMode("ALL");
+      setStatusFilter("ALL");
     } catch (err) {
       console.error("Error fetching promotions:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSelectFilter = async (mode: "ALL" | "ACTIVE" | "DEACTIVE") => {
+    setFilterMode(mode);
+    setLoading(true);
+    try {
+      if (mode === "ACTIVE") {
+        setStatusFilter("ACTIVE");
+        const res = await fetch("/api/promotions?view=active_proc");
+        const data = await res.json();
+        if (data.promotions) {
+          setPromotions(data.promotions);
+          setActiveProcedureName("CALL get_active_promotions()");
+        }
+      } else if (mode === "DEACTIVE") {
+        setStatusFilter("ALL");
+        const res = await fetch("/api/promotions?view=deactive_proc");
+        const data = await res.json();
+        if (data.promotions) {
+          setPromotions(data.promotions);
+          setActiveProcedureName("CALL get_deactive_promotions()");
+        }
+      } else {
+        setStatusFilter("ALL");
+        const res = await fetch("/api/promotions");
+        const data = await res.json();
+        if (data.promotions) {
+          setPromotions(data.promotions);
+          setAllPromotionsCache(data.promotions);
+          setActiveProcedureName(null);
+        }
+      }
+    } catch (err) {
+      console.error("Error executing procedure for promotions:", err);
     } finally {
       setLoading(false);
     }
@@ -271,22 +319,49 @@ export default function PromotionsPage() {
     }
   };
 
+  // Delete Expired Promotion from Backend Promotion Table
+  const [deletingPromoId, setDeletingPromoId] = useState<number | null>(null);
+
+  const handleDeletePromo = async (promo_id: number, name: string) => {
+    if (!window.confirm(`Are you sure you want to permanently delete expired promotion "${name}" (#${promo_id}) from the database?`)) {
+      return;
+    }
+    setDeletingPromoId(promo_id);
+    try {
+      const res = await fetch(`/api/promotions?promo_id=${promo_id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showToast(`Expired promotion "${name}" deleted from backend table!`, "success");
+        await fetchData();
+      } else {
+        showToast(data.error || "Failed to delete promotion", "error");
+      }
+    } catch {
+      showToast("Error deleting promotion from database", "error");
+    } finally {
+      setDeletingPromoId(null);
+    }
+  };
+
   // Compute status counts for the top 4 status cards
   const statusCounts = useMemo(() => {
-    let all = promotions.length;
+    const list = allPromotionsCache.length > 0 ? allPromotionsCache : promotions;
+    let all = list.length;
     let active = 0;
     let scheduled = 0;
     let expired = 0;
 
-    promotions.forEach((p) => {
+    list.forEach((p) => {
       const s = p.status || "ACTIVE";
       if (s === "ACTIVE") active++;
       else if (s === "SCHEDULED") scheduled++;
-      else if (s === "EXPIRED") expired++;
+      else if (s === "EXPIRED" || s === "DEACTIVATED") expired++;
     });
 
     return { all, active, scheduled, expired };
-  }, [promotions]);
+  }, [allPromotionsCache, promotions]);
 
   // Filtered promotions
   const filteredPromotions = useMemo(() => {
@@ -297,12 +372,22 @@ export default function PromotionsPage() {
         p.product_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         p.category_name?.toLowerCase().includes(searchTerm.toLowerCase());
 
-      const status = p.status || "ACTIVE";
-      const matchesStatus = statusFilter === "ALL" || status === statusFilter;
+      if (!matchesSearch) return false;
 
-      return matchesSearch && matchesStatus;
+      // When in ACTIVE or DEACTIVE procedure mode, the list is already scoped from the procedure
+      if (filterMode === "ACTIVE" || filterMode === "DEACTIVE") {
+        return true;
+      }
+
+      const status = p.status || "ACTIVE";
+      const matchesStatus =
+        statusFilter === "ALL" ||
+        status === statusFilter ||
+        (statusFilter === "EXPIRED" && status === "DEACTIVATED");
+
+      return matchesStatus;
     });
-  }, [promotions, searchTerm, statusFilter]);
+  }, [promotions, searchTerm, filterMode, statusFilter]);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
@@ -331,12 +416,12 @@ export default function PromotionsPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: ALL */}
         <div
-          onClick={() => setStatusFilter("ALL")}
+          onClick={() => handleSelectFilter("ALL")}
           role="button"
           tabIndex={0}
-          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setStatusFilter("ALL"); }}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") handleSelectFilter("ALL"); }}
           className={`rounded-2xl border p-5 shadow-xl relative overflow-hidden group cursor-pointer transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] select-none ${
-            statusFilter === "ALL"
+            filterMode === "ALL" && statusFilter === "ALL"
               ? "bg-slate-900 border-purple-500 ring-2 ring-purple-500/30 shadow-purple-950/20"
               : "bg-gradient-to-br from-slate-900 to-slate-950 border-slate-800 hover:border-slate-700"
           }`}
@@ -345,7 +430,7 @@ export default function PromotionsPage() {
             <span className="text-xs font-semibold text-slate-400">Total Promotions</span>
             <div
               className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${
-                statusFilter === "ALL"
+                filterMode === "ALL" && statusFilter === "ALL"
                   ? "bg-purple-500/20 border border-purple-500/40 text-purple-300"
                   : "bg-purple-500/10 border border-purple-500/20 text-purple-400"
               }`}
@@ -361,7 +446,7 @@ export default function PromotionsPage() {
               <span className="text-[11px] text-slate-400">
                 All registered campaigns
               </span>
-              {statusFilter === "ALL" && (
+              {filterMode === "ALL" && statusFilter === "ALL" && (
                 <span className="text-[10px] font-bold text-purple-400 bg-purple-950/70 px-2 py-0.5 rounded-full border border-purple-800/50">
                   Active Filter
                 </span>
@@ -370,14 +455,14 @@ export default function PromotionsPage() {
           </div>
         </div>
 
-        {/* Card 2: ACTIVE */}
+        {/* Card 2: ACTIVE (CALL get_active_promotions) */}
         <div
-          onClick={() => setStatusFilter("ACTIVE")}
+          onClick={() => handleSelectFilter("ACTIVE")}
           role="button"
           tabIndex={0}
-          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setStatusFilter("ACTIVE"); }}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") handleSelectFilter("ACTIVE"); }}
           className={`rounded-2xl border p-5 shadow-xl relative overflow-hidden group cursor-pointer transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] select-none ${
-            statusFilter === "ACTIVE"
+            filterMode === "ACTIVE"
               ? "bg-slate-900 border-emerald-500 ring-2 ring-emerald-500/30 shadow-emerald-950/20"
               : "bg-gradient-to-br from-slate-900 to-slate-950 border-slate-800 hover:border-slate-700"
           }`}
@@ -386,7 +471,7 @@ export default function PromotionsPage() {
             <span className="text-xs font-semibold text-slate-400">Total Active promotions</span>
             <div
               className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${
-                statusFilter === "ACTIVE"
+                filterMode === "ACTIVE"
                   ? "bg-emerald-500/20 border border-emerald-500/40 text-emerald-300"
                   : "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400"
               }`}
@@ -402,9 +487,9 @@ export default function PromotionsPage() {
               <span className="text-[11px] text-slate-400">
                 Out of {statusCounts.all} total campaigns
               </span>
-              {statusFilter === "ACTIVE" && (
+              {filterMode === "ACTIVE" && (
                 <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/70 px-2 py-0.5 rounded-full border border-emerald-800/50">
-                  Active Filter
+                  Active (Procedure)
                 </span>
               )}
             </div>
@@ -413,12 +498,18 @@ export default function PromotionsPage() {
 
         {/* Card 3: SCHEDULED */}
         <div
-          onClick={() => setStatusFilter("SCHEDULED")}
+          onClick={() => {
+            if (filterMode !== "ALL") {
+              setFilterMode("ALL");
+              setActiveProcedureName(null);
+            }
+            setStatusFilter("SCHEDULED");
+          }}
           role="button"
           tabIndex={0}
           onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setStatusFilter("SCHEDULED"); }}
           className={`rounded-2xl border p-5 shadow-xl relative overflow-hidden group cursor-pointer transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] select-none ${
-            statusFilter === "SCHEDULED"
+            filterMode === "ALL" && statusFilter === "SCHEDULED"
               ? "bg-slate-900 border-sky-500 ring-2 ring-sky-500/30 shadow-sky-950/20"
               : "bg-gradient-to-br from-slate-900 to-slate-950 border-slate-800 hover:border-slate-700"
           }`}
@@ -427,7 +518,7 @@ export default function PromotionsPage() {
             <span className="text-xs font-semibold text-slate-400">Scheduled Promotions</span>
             <div
               className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${
-                statusFilter === "SCHEDULED"
+                filterMode === "ALL" && statusFilter === "SCHEDULED"
                   ? "bg-sky-500/20 border border-sky-500/40 text-sky-300"
                   : "bg-sky-500/10 border border-sky-500/20 text-sky-400"
               }`}
@@ -443,7 +534,7 @@ export default function PromotionsPage() {
               <span className="text-[11px] text-slate-400">
                 Upcoming campaign launches
               </span>
-              {statusFilter === "SCHEDULED" && (
+              {filterMode === "ALL" && statusFilter === "SCHEDULED" && (
                 <span className="text-[10px] font-bold text-sky-400 bg-sky-950/70 px-2 py-0.5 rounded-full border border-sky-800/50">
                   Active Filter
                 </span>
@@ -454,12 +545,18 @@ export default function PromotionsPage() {
 
         {/* Card 4: EXPIRED */}
         <div
-          onClick={() => setStatusFilter("EXPIRED")}
+          onClick={() => {
+            if (filterMode !== "ALL") {
+              setFilterMode("ALL");
+              setActiveProcedureName(null);
+            }
+            setStatusFilter("EXPIRED");
+          }}
           role="button"
           tabIndex={0}
           onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setStatusFilter("EXPIRED"); }}
           className={`rounded-2xl border p-5 shadow-xl relative overflow-hidden group cursor-pointer transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] select-none ${
-            statusFilter === "EXPIRED"
+            filterMode === "ALL" && statusFilter === "EXPIRED"
               ? "bg-slate-900 border-rose-500 ring-2 ring-rose-500/30 shadow-rose-950/20"
               : "bg-gradient-to-br from-slate-900 to-slate-950 border-slate-800 hover:border-slate-700"
           }`}
@@ -468,7 +565,7 @@ export default function PromotionsPage() {
             <span className="text-xs font-semibold text-slate-400">Expired Promotions</span>
             <div
               className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${
-                statusFilter === "EXPIRED"
+                filterMode === "ALL" && statusFilter === "EXPIRED"
                   ? "bg-rose-500/20 border border-rose-500/40 text-rose-300"
                   : "bg-rose-500/10 border border-rose-500/20 text-rose-400"
               }`}
@@ -484,7 +581,7 @@ export default function PromotionsPage() {
               <span className="text-[11px] text-slate-400">
                 Past or concluded campaigns
               </span>
-              {statusFilter === "EXPIRED" && (
+              {filterMode === "ALL" && statusFilter === "EXPIRED" && (
                 <span className="text-[10px] font-bold text-rose-400 bg-rose-950/70 px-2 py-0.5 rounded-full border border-rose-800/50">
                   Active Filter
                 </span>
@@ -497,9 +594,9 @@ export default function PromotionsPage() {
       {/* Promotions Table Card */}
       <div className="rounded-2xl border border-slate-800 bg-slate-900 overflow-hidden shadow-xl">
         <div className="space-y-4">
-          {/* Search & Actions Bar */}
-          <div className="p-4 border-b border-slate-800/60 flex items-center justify-between gap-3 bg-slate-900/50">
-            <div className="relative w-full sm:w-96">
+          {/* Search & Actions Bar with Active/Deactive Procedure Selector */}
+          <div className="p-4 border-b border-slate-800/60 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-900/50">
+            <div className="relative w-full sm:w-80">
               <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
               <input
                 type="text"
@@ -510,18 +607,66 @@ export default function PromotionsPage() {
               />
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              {/* Option to select Active and Deactive procedures */}
+              <div className="flex items-center gap-1 bg-slate-950/90 p-1 rounded-xl border border-slate-800 text-xs shadow-inner">
+                <button
+                  type="button"
+                  onClick={() => handleSelectFilter(filterMode === "ACTIVE" ? "ALL" : "ACTIVE")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                    filterMode === "ACTIVE"
+                      ? "bg-emerald-600 text-white shadow-md shadow-emerald-950/50"
+                      : "text-slate-400 hover:text-emerald-300 hover:bg-emerald-950/30"
+                  }`}
+                  title="Execute CALL get_active_promotions()"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Active</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSelectFilter(filterMode === "DEACTIVE" ? "ALL" : "DEACTIVE")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                    filterMode === "DEACTIVE"
+                      ? "bg-rose-600 text-white shadow-md shadow-rose-950/50"
+                      : "text-slate-400 hover:text-rose-300 hover:bg-rose-950/30"
+                  }`}
+                  title="Execute CALL get_deactive_promotions()"
+                >
+                  <XCircle className="w-3.5 h-3.5" />
+                  <span>Deactive</span>
+                </button>
+              </div>
+
               <button
-                onClick={fetchData}
+                onClick={() => handleSelectFilter(filterMode)}
                 disabled={loading}
-                className="px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/80 transition-all text-xs flex items-center gap-1.5"
+                className="px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/80 transition-all text-xs flex items-center gap-1.5 font-medium"
                 title="Refresh Promotions Data"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-                <span className="hidden sm:inline font-medium">Refresh</span>
+                <span className="hidden sm:inline">Refresh</span>
               </button>
             </div>
           </div>
+
+          {/* Procedure Active Indicator Banner */}
+          {activeProcedureName && (
+            <div className="px-4 py-2 bg-gradient-to-r from-purple-950/40 via-slate-900 to-slate-950 border-b border-purple-800/30 flex items-center justify-between text-xs text-slate-300 animate-in fade-in duration-200">
+              <div className="flex items-center gap-2">
+                <Database className="w-3.5 h-3.5 text-purple-400" />
+                <span className="font-mono text-purple-300 font-bold">{activeProcedureName}</span>
+                <span className="text-[11px] text-slate-400">
+                  {filterMode === "ACTIVE"
+                    ? "— Displaying active campaigns returned by stored procedure"
+                    : "— Displaying deactivated, scheduled, and expired campaigns returned by stored procedure"}
+                </span>
+              </div>
+              <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-purple-900/40 border border-purple-700/40 text-purple-200 font-semibold">
+                {filteredPromotions.length} campaign{filteredPromotions.length === 1 ? "" : "s"}
+              </span>
+            </div>
+          )}
 
             {/* Table */}
             <div className="overflow-x-auto">
@@ -593,12 +738,15 @@ export default function PromotionsPage() {
                           </td>
                           <td className="py-3 px-4 text-center">
                             <span
-                              className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold ${status === "ACTIVE"
-                                ? "bg-emerald-950 text-emerald-300 border border-emerald-800/50"
-                                : status === "SCHEDULED"
-                                  ? "bg-blue-950 text-blue-300 border border-blue-800/50"
-                                  : "bg-slate-800 text-slate-400"
-                                }`}
+                              className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold ${
+                                status === "ACTIVE"
+                                  ? "bg-emerald-950 text-emerald-300 border border-emerald-800/50"
+                                  : status === "SCHEDULED"
+                                    ? "bg-blue-950 text-blue-300 border border-blue-800/50"
+                                    : status === "DEACTIVATED"
+                                      ? "bg-amber-950/70 text-amber-300 border border-amber-800/50"
+                                      : "bg-rose-950/70 text-rose-300 border border-rose-800/50"
+                              }`}
                             >
                               {status}
                             </span>
@@ -636,8 +784,24 @@ export default function PromotionsPage() {
                                 </>
                               )}
 
-                              {/* Expired / Other */}
-                              {status !== "SCHEDULED" && status !== "ACTIVE" && (
+                              {/* If Expired or Deactivated: Delete option to update backend promotion table */}
+                              {(status === "EXPIRED" || status === "DEACTIVATED") && (
+                                <button
+                                  onClick={() => handleDeletePromo(pr.promo_id, pr.name)}
+                                  disabled={deletingPromoId === pr.promo_id}
+                                  className="p-1.5 rounded-lg text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-colors"
+                                  title="Delete promotion from database"
+                                >
+                                  {deletingPromoId === pr.promo_id ? (
+                                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-rose-400" />
+                                  ) : (
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  )}
+                                </button>
+                              )}
+
+                              {/* Other */}
+                              {status !== "SCHEDULED" && status !== "ACTIVE" && status !== "EXPIRED" && status !== "DEACTIVATED" && (
                                 <span className="text-slate-600 text-[11px] font-mono px-1.5">—</span>
                               )}
                             </div>
