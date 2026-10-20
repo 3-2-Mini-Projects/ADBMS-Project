@@ -279,21 +279,81 @@ export async function PATCH(req: Request) {
 
   try {
     const body = await req.json();
-    const { promo_id, is_active } = body;
+    const { promo_id, is_active, name, start_date, end_date, discount_percent } = body;
 
-    if (promo_id === undefined || is_active === undefined) {
-      return NextResponse.json({ error: "promo_id and is_active are required" }, { status: 400 });
+    if (!promo_id) {
+      return NextResponse.json({ error: "promo_id is required" }, { status: 400 });
     }
 
-    await query("UPDATE promotions SET is_active = ? WHERE promo_id = ?", [is_active ? 1 : 0, promo_id]);
+    // Fast path: Only updating is_active toggle
+    if (is_active !== undefined && name === undefined && start_date === undefined && end_date === undefined && discount_percent === undefined) {
+      await query("UPDATE promotions SET is_active = ? WHERE promo_id = ?", [is_active ? 1 : 0, promo_id]);
+      return NextResponse.json({
+        success: true,
+        message: `Promotion status updated to ${is_active ? "ACTIVE" : "INACTIVE"}.`,
+      });
+    }
+
+    // Dynamic field update (name, start_date, end_date, discount_percent)
+    const updates: string[] = [];
+    const params: any[] = [];
+
+    if (name !== undefined) {
+      if (!String(name).trim()) {
+        return NextResponse.json({ error: "Promotion name cannot be empty." }, { status: 400 });
+      }
+      updates.push("name = ?");
+      params.push(String(name).trim());
+    }
+
+    if (start_date !== undefined) {
+      updates.push("start_date = ?");
+      params.push(start_date);
+    }
+
+    if (end_date !== undefined) {
+      updates.push("end_date = ?");
+      params.push(end_date);
+    }
+
+    if (discount_percent !== undefined) {
+      const disc = Number(discount_percent);
+      if (isNaN(disc) || disc <= 0 || disc > 100) {
+        return NextResponse.json({ error: "Discount percent must be between 0 and 100." }, { status: 400 });
+      }
+      updates.push("discount_percent = ?");
+      params.push(disc);
+    }
+
+    if (is_active !== undefined) {
+      updates.push("is_active = ?");
+      params.push(is_active ? 1 : 0);
+    }
+
+    if (updates.length === 0) {
+      return NextResponse.json({ error: "No fields to update provided." }, { status: 400 });
+    }
+
+    // Validate date order if both are supplied or in DB
+    if (start_date && end_date && new Date(end_date) < new Date(start_date)) {
+      return NextResponse.json({ error: "End date cannot precede start date." }, { status: 400 });
+    }
+
+    params.push(promo_id);
+    await query(`UPDATE promotions SET ${updates.join(", ")} WHERE promo_id = ?`, params);
+
     return NextResponse.json({
       success: true,
-      message: `Promotion status updated to ${is_active ? "ACTIVE" : "INACTIVE"}.`,
+      message: `Promotion #${promo_id} updated successfully in the promotion table!`,
     });
   } catch (err: any) {
     console.error("PATCH /api/promotions error:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: err.sqlMessage || err.message || "Failed to update promotion" }, { status: 500 });
   }
+}
+
+export async function PUT(req: Request) {
+  return PATCH(req);
 }
 
 export async function DELETE(req: Request) {
