@@ -762,7 +762,7 @@ export default function POSPage() {
                         onClick={() => setCashTendered(String(quick))}
                         className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[10px] text-slate-300 font-mono"
                       >
-                        Rs.{quick}
+                        Rs. {quick}
                       </button>
                     ))}
                   </div>

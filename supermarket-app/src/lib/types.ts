@@ -285,7 +285,7 @@ export interface Shift {
   shift_id: number;
   employee_id: number;
   employee_name?: string;
-  branch_id: number;
+  role?: UserRole;
   branch_name?: string;
   shift_date: string;
   start_time: string;
