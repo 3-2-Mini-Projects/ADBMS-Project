@@ -5,56 +5,57 @@ import { authorizeRequest } from "@/lib/auth";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
+  const auth = await authorizeRequest("manage_inventory");
+  if (auth.error) return auth.error;
+  const { session } = auth;
+
   try {
     const { searchParams } = new URL(req.url);
-    const branchId = searchParams.get("branchId");
+    const branchId = session.role === "ADMIN" ? searchParams.get("branchId") : String(session.branch_id);
     const lowStock = searchParams.get("lowStock") === "true";
     const search = searchParams.get("search");
 
+    // ADBMS Stock Clerk View: vw_branch_inventory
     let sql = `
       SELECT 
-        i.inventory_id,
-        i.branch_id,
-        b.name AS branch_name,
-        i.product_id,
-        p.barcode,
-        p.name AS product_name,
-        p.brand,
-        c.name AS category_name,
-        i.quantity_on_hand,
-        i.reserved_qty,
-        i.reorder_level,
-        p.unit_price,
-        p.cost_price,
-        i.last_updated,
-        CASE
-          WHEN i.quantity_on_hand <= 0 THEN 'OUT_OF_STOCK'
-          WHEN i.quantity_on_hand <= i.reorder_level THEN 'LOW_STOCK'
-          ELSE 'NORMAL'
-        END AS stock_status
-      FROM inventory i
-      JOIN products p ON i.product_id = p.product_id
-      JOIN branches b ON i.branch_id = b.branch_id
-      LEFT JOIN categories c ON p.category_id = c.category_id
+        inventory_id,
+        branch_id,
+        branch_name,
+        product_id,
+        barcode,
+        product_name,
+        brand,
+        category_name,
+        supplier_name,
+        quantity_on_hand,
+        reserved_qty,
+        reorder_level,
+        unit_price,
+        cost_price,
+        last_updated,
+        stock_status,
+        fn_product_sales_velocity(branch_id, product_id) AS sales_velocity,
+        fn_suggested_reorder_qty(branch_id, product_id, 4, 1) AS suggested_reorder_qty
+      FROM vw_branch_inventory
       WHERE 1=1
     `;
     const params: any[] = [];
 
     if (branchId) {
-      sql += ` AND i.branch_id = ?`;
+      sql += ` AND branch_id = ?`;
       params.push(branchId);
     }
 
     if (lowStock) {
-      sql += ` AND i.quantity_on_hand <= i.reorder_level`;
+      sql += ` AND stock_status IN ('LOW_STOCK', 'OUT_OF_STOCK')`;
     }
 
     if (search) {
-      sql += ` AND (p.barcode = ? OR p.name LIKE ? OR p.brand LIKE ?)`;
+      sql += ` AND (barcode = ? OR product_name LIKE ? OR brand LIKE ?)`;
       params.push(search, `%${search}%`, `%${search}%`);
     }
 
-    sql += ` ORDER BY stock_status DESC, p.name ASC`;
+    sql += ` ORDER BY stock_status DESC, product_name ASC`;
 
     const inventory = await query(sql, params);
     return NextResponse.json(inventory);
@@ -93,21 +94,55 @@ export async function PATCH(req: Request) {
       invId = existing[0].inventory_id;
     }
 
+    const ownedRows: any = await query(
+      "SELECT branch_id, quantity_on_hand FROM inventory WHERE inventory_id = ?",
+      [invId]
+    );
+    if (ownedRows.length === 0) {
+      return NextResponse.json({ error: "Inventory record not found" }, { status: 404 });
+    }
+    if (session.role !== "ADMIN" && Number(ownedRows[0].branch_id) !== Number(session.branch_id)) {
+      return NextResponse.json({ error: "Forbidden: inventory belongs to another branch" }, { status: 403 });
+    }
+    if (new_quantity !== undefined &&
+        (!Number.isInteger(Number(new_quantity)) || Number(new_quantity) < 0)) {
+      return NextResponse.json({ error: "new_quantity must be a non-negative integer" }, { status: 400 });
+    }
+    if (reorder_level !== undefined &&
+        (!Number.isInteger(Number(reorder_level)) || Number(reorder_level) < 0)) {
+      return NextResponse.json({ error: "reorder_level must be a non-negative integer" }, { status: 400 });
+    }
+    if (quantity_change !== undefined &&
+        (!Number.isInteger(Number(quantity_change)) ||
+          Number(ownedRows[0].quantity_on_hand) + Number(quantity_change) < 0)) {
+      return NextResponse.json({ error: "quantity_change must be an integer and cannot reduce stock below zero" }, { status: 400 });
+    }
+
     if (new_quantity !== undefined) {
       await query(
-        "UPDATE inventory SET quantity_on_hand = ?, last_updated = NOW() WHERE inventory_id = ?",
-        [new_quantity, invId]
+        "UPDATE inventory SET quantity_on_hand = ?, last_updated = NOW() WHERE inventory_id = ? AND (? = 'ADMIN' OR branch_id = ?)",
+        [new_quantity, invId, session.role, session.branch_id]
       );
-    } else if (quantity_change !== undefined) {
-      await query(
-        "UPDATE inventory SET quantity_on_hand = quantity_on_hand + ?, last_updated = NOW() WHERE inventory_id = ?",
-        [quantity_change, invId]
-      );
+    } else if (quantity_change !== undefined && Number(quantity_change) !== 0) {
+      if (Number(quantity_change) > 0 && branch_id && product_id) {
+        // ADBMS Stock Clerk Stored Procedure: sp_update_inventory
+        await query("CALL sp_update_inventory(?, ?, ?)", [branch_id, product_id, Number(quantity_change)]);
+      } else {
+        await query(
+          "UPDATE inventory SET quantity_on_hand = quantity_on_hand + ?, last_updated = NOW() WHERE inventory_id = ? AND (? = 'ADMIN' OR branch_id = ?)",
+          [quantity_change, invId, session.role, session.branch_id]
+        );
+      }
     }
 
     if (reorder_level !== undefined) {
       await query(
-        "UPDATE inventory SET reorder_level = ?, last_updated = NOW() WHERE inventory_id = ?",
+        "UPDATE inventory SET reorder_level = ?, last_updated = NOW() WHERE inventory_id = ? AND (? = 'ADMIN' OR branch_id = ?)",
+        [reorder_level, invId, session.role, session.branch_id]
+      );
+      // Keep product-level default reorder level synchronized
+      await query(
+        "UPDATE products p JOIN inventory i ON p.product_id = i.product_id SET p.reorder_level = ?, p.updated_at = NOW() WHERE i.inventory_id = ?",
         [reorder_level, invId]
       );
     }
@@ -119,7 +154,7 @@ export async function PATCH(req: Request) {
       [
         String(invId),
         JSON.stringify({ quantity_change, new_quantity, reorder_level, reason }),
-        `employee_${changed_by || 1}`,
+        changed_by,
       ]
     );
 

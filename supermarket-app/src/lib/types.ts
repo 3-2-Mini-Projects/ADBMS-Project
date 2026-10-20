@@ -115,7 +115,8 @@ export interface ProductBatch {
   received_date: string;
   expiry_date?: string | null;
   days_to_expiry?: number;
-  expiry_status?: 'EXPIRED' | 'NEAR_EXPIRY' | 'GOOD';
+  expiry_status?: 'EXPIRED' | 'NEAR_EXPIRY' | 'EXPIRING_SOON' | 'GOOD' | 'NORMAL';
+  status?: 'EXPIRED' | 'NEAR_EXPIRY' | 'EXPIRING_SOON' | 'GOOD' | 'NORMAL';
 }
 
 export interface StockAlert {
@@ -248,12 +249,21 @@ export interface PurchaseOrder {
   branch_name?: string;
   order_date: string;
   expected_date?: string | null;
-  status: 'PENDING' | 'ORDERED' | 'RECEIVED' | 'CANCELLED';
+  status: 'DRAFT' | 'SENT' | 'PENDING' | 'ORDERED' | 'RECEIVED' | 'CANCELLED';
   total_cost: number | string;
   created_by: number;
   creator_name?: string;
   items?: PurchaseOrderItem[];
 }
+
+export type DiscrepancyReason =
+  | 'NONE'
+  | 'DAMAGED_IN_TRANSIT'
+  | 'PACKAGING_BROKEN'
+  | 'EXPIRED_ON_ARRIVAL'
+  | 'SUPPLIER_SHORTAGE'
+  | 'WRONG_PRODUCT'
+  | 'QUALITY_DEFECT';
 
 export interface PurchaseOrderItem {
   po_item_id: number;
@@ -265,6 +275,10 @@ export interface PurchaseOrderItem {
   unit_cost: number | string;
   line_total: number | string;
   received_quantity?: number;
+  damaged_quantity?: number;
+  shortage_quantity?: number;
+  discrepancy_reason?: DiscrepancyReason;
+  discrepancy_notes?: string | null;
 }
 
 export interface Shift {

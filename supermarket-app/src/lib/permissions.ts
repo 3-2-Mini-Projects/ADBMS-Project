@@ -26,7 +26,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Record<PermissionKey, boolean>> 
     view_audit_log: true,
   },
   MANAGER: {
-    manage_branches: false, // limited
+    manage_branches: false,
     manage_employees: true,
     manage_catalog: true,
     manage_inventory: true,
@@ -40,13 +40,13 @@ export const ROLE_PERMISSIONS: Record<UserRole, Record<PermissionKey, boolean>> 
   CASHIER: {
     manage_branches: false,
     manage_employees: false,
-    manage_catalog: false, // read-only
+    manage_catalog: false,
     manage_inventory: false,
     receive_purchases: false,
     create_pos_sales: true,
-    process_returns: true, // with permission
+    process_returns: true,
     manage_promotions: false,
-    view_reports: false, // own-shift
+    view_reports: false,
     view_audit_log: false,
   },
   STOCK_CLERK: {
@@ -58,14 +58,14 @@ export const ROLE_PERMISSIONS: Record<UserRole, Record<PermissionKey, boolean>> 
     create_pos_sales: false,
     process_returns: false,
     manage_promotions: false,
-    view_reports: true, // stock reports
+    view_reports: true,
     view_audit_log: false,
   },
   CATALOG_MANAGER: {
     manage_branches: false,
     manage_employees: false,
     manage_catalog: true,
-    manage_inventory: false,
+    manage_inventory: true,
     receive_purchases: false,
     create_pos_sales: false,
     process_returns: false,
@@ -110,13 +110,13 @@ export function getRoleDefaultPath(role?: UserRole | null): string {
     case "MANAGER":
       return "/dashboard";
     case "CASHIER":
-      return "/pos";
+      return "/cashier/dashboard";
     case "STOCK_CLERK":
       return "/inventory";
     case "CATALOG_MANAGER":
       return "/products";
     case "MARKETING":
-      return "/promotions";
+      return "/marketing/dashboard";
     case "HR":
       return "/admin/employees";
     default:
