@@ -313,24 +313,6 @@ export default function MarketingCouponsPage() {
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2.5 flex-wrap">
-          {summary.expired_coupons > 0 && (
-            <button
-              onClick={handleCleanupExpired}
-              className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs transition-colors border border-slate-700"
-              title="Delete expired unused coupons"
-            >
-              Cleanup Expired ({summary.expired_coupons})
-            </button>
-          )}
-
-          <button
-            onClick={() => setBatchModalOpen(true)}
-            className="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs flex items-center gap-2 transition-all border border-slate-700 hover:scale-[1.02] active:scale-[0.98]"
-            title="Generate multiple coupons at once"
-          >
-            <Layers className="w-4 h-4 text-emerald-400" />
-            <span>Batch Generate</span>
-          </button>
 
           <button
             onClick={() => {
@@ -345,108 +327,10 @@ export default function MarketingCouponsPage() {
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-        <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl space-y-1">
-          <span className="text-slate-400 text-xs font-semibold">Total Issued</span>
-          <div className="text-2xl font-black text-white font-mono">{summary.total_coupons}</div>
-          <span className="text-[10px] text-slate-500">In database</span>
-        </div>
 
-        <div className="p-4 rounded-2xl bg-slate-900 border border-emerald-900/40 shadow-xl space-y-1">
-          <span className="text-emerald-400 text-xs font-semibold flex items-center gap-1">
-            <CheckCircle2 className="w-3.5 h-3.5" /> Available to Redeem
-          </span>
-          <div className="text-2xl font-black text-emerald-400 font-mono">{summary.available_coupons}</div>
-          <span className="text-[10px] text-emerald-500 font-mono">Ready for checkout</span>
-        </div>
-
-        <div className="p-4 rounded-2xl bg-slate-900 border border-amber-900/40 shadow-xl space-y-1">
-          <span className="text-amber-400 text-xs font-semibold">Already Redeemed</span>
-          <div className="text-2xl font-black text-amber-400 font-mono">{summary.redeemed_coupons}</div>
-          <span className="text-[10px] text-amber-500 font-mono">{summary.redemption_rate}% redemption rate</span>
-        </div>
-
-        <div className="p-4 rounded-2xl bg-slate-900 border border-indigo-900/40 shadow-xl space-y-1">
-          <span className="text-indigo-400 text-xs font-semibold flex items-center gap-1">
-            <Users className="w-3.5 h-3.5" /> Customer-Bound
-          </span>
-          <div className="text-2xl font-black text-indigo-400 font-mono">{summary.customer_bound_coupons}</div>
-          <span className="text-[10px] text-indigo-500 font-mono">Exclusive to members</span>
-        </div>
-
-        <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl space-y-1">
-          <span className="text-slate-400 text-xs font-semibold">Expired</span>
-          <div className="text-2xl font-black text-slate-400 font-mono">{summary.expired_coupons}</div>
-          <span className="text-[10px] text-slate-500 font-mono">Past expiry date</span>
-        </div>
-      </div>
-
-      {/* Tabs & Table Container */}
+      {/* Coupons Table Container */}
       <div className="rounded-2xl border border-slate-800 bg-slate-900 overflow-hidden shadow-xl">
-        {/* Navigation Tabs Header */}
-        <div className="p-4 border-b border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-950/30">
-          <div className="flex items-center gap-2 overflow-x-auto">
-            <button
-              onClick={() => setActiveTab("all")}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${activeTab === "all"
-                  ? "bg-amber-500/10 text-amber-400 border border-amber-500/30 shadow-sm"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-                }`}
-            >
-              <Ticket className="w-3.5 h-3.5" />
-              <span>All Coupons ({coupons.length})</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab("customer_bound")}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${activeTab === "customer_bound"
-                  ? "bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 shadow-sm"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-                }`}
-            >
-              <Users className="w-3.5 h-3.5" />
-              <span>Customer-Bound VIP ({customerBoundCoupons.length})</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab("redeemed")}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${activeTab === "redeemed"
-                  ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 shadow-sm"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-                }`}
-            >
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>Redemption History ({redeemedCoupons.length})</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab("proc_tester")}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${activeTab === "proc_tester"
-                  ? "bg-purple-500/10 text-purple-400 border border-purple-500/30 shadow-sm"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-                }`}
-            >
-              <ShieldCheck className="w-3.5 h-3.5 text-purple-400" />
-              <span>Procedure Tester (proc_apply_coupon)</span>
-            </button>
-          </div>
-
-          <button
-            onClick={loadData}
-            disabled={loading}
-            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors self-end md:self-auto"
-            title="Refresh Coupon List"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-          </button>
-        </div>
-
-        {/* ========================================================================= */}
-        {/* TAB 1: All Coupons Table */}
-        {/* ========================================================================= */}
-        {activeTab === "all" && (
-          <div className="space-y-4">
+        <div className="space-y-4">
             {/* Filter Bar */}
             <div className="p-4 border-b border-slate-800/60 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-900/50">
               <div className="relative w-full sm:w-80">
@@ -469,13 +353,21 @@ export default function MarketingCouponsPage() {
                     key={s}
                     onClick={() => setStatusFilter(s)}
                     className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${statusFilter === s
-                        ? "bg-amber-500 text-slate-950 shadow-md"
-                        : "bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white"
+                      ? "bg-amber-500 text-slate-950 shadow-md"
+                      : "bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white"
                       }`}
                   >
                     {s}
                   </button>
                 ))}
+                <button
+                  onClick={loadData}
+                  disabled={loading}
+                  className="p-1.5 ml-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                  title="Refresh Coupon List"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+                </button>
               </div>
             </div>
 
@@ -554,10 +446,10 @@ export default function MarketingCouponsPage() {
                         <td className="py-3 px-4 text-center">
                           <span
                             className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold ${cp.status === "AVAILABLE"
-                                ? "bg-emerald-950 text-emerald-300 border border-emerald-800/50"
-                                : cp.status === "REDEEMED"
-                                  ? "bg-slate-800 text-slate-400"
-                                  : "bg-rose-950 text-rose-300 border border-rose-800/50"
+                              ? "bg-emerald-950 text-emerald-300 border border-emerald-800/50"
+                              : cp.status === "REDEEMED"
+                                ? "bg-slate-800 text-slate-400"
+                                : "bg-rose-950 text-rose-300 border border-rose-800/50"
                               }`}
                           >
                             {cp.status}
@@ -565,18 +457,6 @@ export default function MarketingCouponsPage() {
                         </td>
                         <td className="py-3 px-4 text-right">
                           <div className="flex items-center justify-end gap-1.5 font-sans">
-                            {cp.status === "AVAILABLE" && (
-                              <button
-                                onClick={() => {
-                                  setTestCouponCode(cp.code);
-                                  setActiveTab("proc_tester");
-                                }}
-                                className="px-2 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-[10px] font-bold border border-amber-500/20 transition-all"
-                                title="Test apply with proc_apply_coupon"
-                              >
-                                Test Apply
-                              </button>
-                            )}
                             <button
                               onClick={() => handleDeleteCoupon(cp.coupon_id, cp.code)}
                               className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
@@ -593,230 +473,6 @@ export default function MarketingCouponsPage() {
               </table>
             </div>
           </div>
-        )}
-
-        {/* ========================================================================= */}
-        {/* TAB 2: Customer-Bound VIP Coupons */}
-        {/* ========================================================================= */}
-        {activeTab === "customer_bound" && (
-          <div className="space-y-4">
-            <div className="p-4 bg-indigo-950/20 border-b border-indigo-800/30 flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-indigo-400" />
-                <span className="text-indigo-300 font-semibold">
-                  Personalized Customer Coupons (customer_id IS NOT NULL)
-                </span>
-                <span className="text-slate-400 hidden sm:inline">
-                  — The stored procedure <code className="text-indigo-400 font-mono">proc_apply_coupon()</code> enforces
-                  that only the designated customer can redeem this code.
-                </span>
-              </div>
-              <span className="font-mono font-bold text-indigo-400">{customerBoundCoupons.length} vouchers</span>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-slate-800 bg-slate-950/40 text-slate-400 font-semibold">
-                    <th className="py-3 px-4 font-mono">Coupon Code</th>
-                    <th className="py-3 px-4">Designated Customer</th>
-                    <th className="py-3 px-4">Card No</th>
-                    <th className="py-3 px-4">Campaign Offer</th>
-                    <th className="py-3 px-4 text-center">Discount</th>
-                    <th className="py-3 px-4">Expiry Date</th>
-                    <th className="py-3 px-4 text-center">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60 font-mono">
-                  {customerBoundCoupons.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="py-12 text-center text-slate-500 font-sans">
-                        No customer-bound coupons issued yet. When creating a coupon, select a customer from the dropdown.
-                      </td>
-                    </tr>
-                  ) : (
-                    customerBoundCoupons.map((cp) => (
-                      <tr key={cp.coupon_id} className="hover:bg-slate-800/30 transition-colors">
-                        <td className="py-3 px-4 font-bold text-amber-400 text-sm tracking-wider">{cp.code}</td>
-                        <td className="py-3 px-4 font-sans font-medium text-white">{cp.customer_name}</td>
-                        <td className="py-3 px-4 text-indigo-400 font-bold">{cp.customer_card_no}</td>
-                        <td className="py-3 px-4 font-sans text-slate-300">{cp.promo_name}</td>
-                        <td className="py-3 px-4 text-center font-bold text-emerald-400">
-                          {Number(cp.discount_percent || 10)}% OFF
-                        </td>
-                        <td className="py-3 px-4 text-slate-400 text-[11px]">
-                          {cp.expiry_date ? new Date(cp.expiry_date).toLocaleDateString() : "No Expiry"}
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          <span
-                            className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold ${cp.status === "AVAILABLE"
-                                ? "bg-emerald-950 text-emerald-300 border border-emerald-800/50"
-                                : cp.status === "REDEEMED"
-                                  ? "bg-slate-800 text-slate-400"
-                                  : "bg-rose-950 text-rose-300 border border-rose-800/50"
-                              }`}
-                          >
-                            {cp.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* ========================================================================= */}
-        {/* TAB 3: Redemption History */}
-        {/* ========================================================================= */}
-        {activeTab === "redeemed" && (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-slate-800 bg-slate-950/40 text-slate-400 font-semibold">
-                  <th className="py-3 px-4 font-mono">Coupon Code</th>
-                  <th className="py-3 px-4">Campaign Offer</th>
-                  <th className="py-3 px-4 text-center">Discount Applied</th>
-                  <th className="py-3 px-4">Redeemed By</th>
-                  <th className="py-3 px-4">Redemption Timestamp (used_at)</th>
-                  <th className="py-3 px-4 text-center">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60 font-mono">
-                {redeemedCoupons.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="py-12 text-center text-slate-500 font-sans">
-                      No redeemed coupons recorded yet. Once checkout sales redeem coupons via proc_apply_coupon, they will appear here.
-                    </td>
-                  </tr>
-                ) : (
-                  redeemedCoupons.map((cp) => (
-                    <tr key={cp.coupon_id} className="hover:bg-slate-800/30 transition-colors">
-                      <td className="py-3 px-4 font-bold text-amber-400">{cp.code}</td>
-                      <td className="py-3 px-4 font-sans text-white">{cp.promo_name}</td>
-                      <td className="py-3 px-4 text-center font-bold text-emerald-400">
-                        {Number(cp.discount_percent || 10)}%
-                      </td>
-                      <td className="py-3 px-4 font-sans text-slate-300">
-                        {cp.customer_name ? `${cp.customer_name} (${cp.customer_card_no})` : "General Customer"}
-                      </td>
-                      <td className="py-3 px-4 text-slate-400 text-[11px]">
-                        {cp.used_at ? new Date(cp.used_at).toLocaleString() : "Recently used"}
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-slate-800 text-slate-400">
-                          REDEEMED
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* ========================================================================= */}
-        {/* TAB 4: Procedure Tester (proc_apply_coupon) */}
-        {/* ========================================================================= */}
-        {activeTab === "proc_tester" && (
-          <div className="p-6 space-y-6">
-            <div className="max-w-2xl mx-auto">
-              {/* Form Box */}
-              <div className="p-5 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-4">
-                <div className="flex items-center gap-2 pb-3 border-b border-slate-800">
-                  <ShieldCheck className="w-5 h-5 text-purple-400" />
-                  <div>
-                    <h3 className="font-bold text-white text-sm">Procedure: proc_apply_coupon(p_sale_id, p_code)</h3>
-                    <p className="text-[11px] text-slate-400">
-                      Executes transactional locks, verifies coupon and applies discount to an open sale
-                    </p>
-                  </div>
-                </div>
-
-                <form onSubmit={handleApplyCouponProc} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                      Select Open Sale or Enter Sale ID <span className="text-rose-400">*</span>
-                    </label>
-                    {openSales.length > 0 ? (
-                      <select
-                        value={testSaleId}
-                        onChange={(e) => setTestSaleId(e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:outline-none focus:border-purple-500 mb-2"
-                      >
-                        <option value="">-- Choose an Open Sale --</option>
-                        {openSales.map((s) => (
-                          <option key={s.sale_id} value={s.sale_id}>
-                            Sale #{s.sale_id} — {s.customer_name ? `${s.customer_name} (${s.card_no})` : "Walk-in"}{" "}
-                            (Subtotal: Rs. {Number(s.subtotal).toFixed(2)})
-                          </option>
-                        ))}
-                      </select>
-                    ) : null}
-
-                    <input
-                      type="number"
-                      placeholder="Or enter manual sale_id (e.g. 1)"
-                      value={testSaleId}
-                      onChange={(e) => setTestSaleId(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white font-mono focus:outline-none focus:border-purple-500"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                      Coupon Code <span className="text-rose-400">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. FESTIVE20"
-                      value={testCouponCode}
-                      onChange={(e) => setTestCouponCode(e.target.value.toUpperCase())}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 font-mono text-sm text-amber-300 font-bold focus:outline-none focus:border-purple-500"
-                      required
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={testingProc}
-                    className="w-full py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-950/40 disabled:opacity-50"
-                  >
-                    {testingProc ? (
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <ShieldCheck className="w-3.5 h-3.5" />
-                    )}
-                    <span>Execute CALL proc_apply_coupon()</span>
-                  </button>
-                </form>
-
-                {procResult && (
-                  <div
-                    className={`p-4 rounded-xl text-xs space-y-1 animate-in fade-in ${procResult.success
-                        ? "bg-emerald-950/30 border border-emerald-800/40 text-emerald-300"
-                        : "bg-rose-950/30 border border-rose-800/40 text-rose-300"
-                      }`}
-                  >
-                    <div className="font-bold flex items-center gap-1.5">
-                      {procResult.success ? (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                      ) : (
-                        <AlertTriangle className="w-4 h-4 text-rose-400" />
-                      )}
-                      <span>{procResult.success ? "Procedure Executed Successfully" : "Stored Procedure Validation Error"}</span>
-                    </div>
-                    <p className="text-[11px] text-slate-300">{procResult.message || procResult.error}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* ========================================================================= */}
