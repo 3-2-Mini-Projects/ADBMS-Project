@@ -6,9 +6,16 @@ import { usePathname, useRouter } from "next/navigation";
 import { CashierProvider, useCashier } from "@/lib/cashierContext";
 import { CashierNotificationBell } from "@/components/CashierNotificationBell";
 
-const CASHIER_TABS = [
+interface CashierTab {
+  label: string;
+  href: string;
+  icon: string;
+  badge?: string;
+}
+
+const CASHIER_TABS: CashierTab[] = [
   { label: "Dashboard", href: "/cashier/dashboard", icon: "📊" },
-  { label: "POS Billing", href: "/cashier/pos", icon: "🛒", badge: "F2" },
+  { label: "POS Billing", href: "/cashier/pos", icon: "🛒" },
   { label: "Transaction History", href: "/cashier/history", icon: "📋" },
   { label: "Daily Summary", href: "/cashier/summary", icon: "📑" },
   { label: "Sign-in Logs & Alerts", href: "/cashier/activity", icon: "🔔" },
@@ -317,7 +324,7 @@ function CashierLayoutContent({ children }: { children: React.ReactNode }) {
             {/* Quick POS Button */}
             {pathname !== "/cashier/pos" && (
               <Link href="/cashier/pos" className="btn btn-emerald" style={{ padding: "6px 14px", fontSize: 12 }}>
-                🛒 New Sale (F2)
+                🛒 New Sale
               </Link>
             )}
 

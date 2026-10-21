@@ -182,7 +182,7 @@ export default function CashierSettingsPage() {
         </div>
 
         <Link href="/cashier/pos" className="btn btn-emerald" style={{ padding: "6px 14px", fontSize: 12 }}>
-          🛒 Open POS (F2)
+          🛒 Open POS
         </Link>
       </div>
 

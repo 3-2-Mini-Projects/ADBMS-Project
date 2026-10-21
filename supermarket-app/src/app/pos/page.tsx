@@ -62,17 +62,9 @@ export default function POSPage() {
 
   const barcodeInputRef = useRef<HTMLInputElement>(null);
 
-  // Focus barcode input on mount and F2 key shortcut
+  // Focus barcode input on mount
   useEffect(() => {
     barcodeInputRef.current?.focus();
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "F2") {
-        e.preventDefault();
-        barcodeInputRef.current?.focus();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   // Fetch Categories
@@ -390,7 +382,7 @@ export default function POSPage() {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Scan barcode or type product name... (Press F2 to focus)"
+              placeholder="Scan barcode or type product name..."
               className="w-full pl-11 pr-4 py-3 rounded-xl bg-slate-950 border border-slate-700/80 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-sm text-white placeholder-slate-500 transition-all font-mono"
             />
             {search && (
