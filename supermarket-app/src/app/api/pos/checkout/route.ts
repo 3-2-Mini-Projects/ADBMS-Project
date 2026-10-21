@@ -149,12 +149,23 @@ export async function POST(req: Request) {
       throw new Error(`Payment amount ($${totalPaid.toFixed(2)}) is less than total due ($${total_amount.toFixed(2)})`);
     }
 
+    const amountTenderedInput = (body as any).amount_tendered ?? (body as any).amountTendered;
+    const cashPay = payments.find((p) => p.method === "CASH");
+    const cashLineAmount = cashPay ? Number(cashPay.amount) : 0;
+    const effectiveTendered = amountTenderedInput !== undefined && amountTenderedInput !== null
+      ? Number(amountTenderedInput)
+      : totalPaid;
+    const changeDue = cashPay && effectiveTendered > cashLineAmount
+      ? Number((effectiveTendered - cashLineAmount).toFixed(2))
+      : 0;
+
     // 4. Create Sale Record
     const [saleRes]: any = await connection.query(
       `INSERT INTO sales (
         branch_id, cashier_id, customer_id, promo_id, coupon_id,
-        sale_date, status, subtotal, discount_total, tax_total, total_amount
-      ) VALUES (?, ?, ?, ?, ?, NOW(), 'COMPLETED', ?, ?, ?, ?)`,
+        sale_date, status, subtotal, discount_total, tax_total, total_amount,
+        tendered_amount, change_amount
+      ) VALUES (?, ?, ?, ?, ?, NOW(), 'COMPLETED', ?, ?, ?, ?, ?, ?)`,
       [
         branch_id,
         cashier_id,
@@ -165,6 +176,8 @@ export async function POST(req: Request) {
         discount_total.toFixed(2),
         tax_total.toFixed(2),
         total_amount.toFixed(2),
+        effectiveTendered.toFixed(2),
+        changeDue.toFixed(2),
       ]
     );
 

@@ -20,6 +20,8 @@ export async function GET(_: Request, context: { params: Promise<{ id: string }>
         s.discount_total,
         s.tax_total,
         s.total_amount,
+        s.tendered_amount,
+        s.change_amount,
         s.branch_id,
         b.name AS branch_name,
         b.branch_code,
@@ -108,6 +110,8 @@ export async function GET(_: Request, context: { params: Promise<{ id: string }>
     return NextResponse.json({
       ...sale,
       receipt_number: receiptNumber,
+      amountTendered: sale.tendered_amount != null ? Number(sale.tendered_amount) : undefined,
+      changeDue: sale.change_amount != null ? Number(sale.change_amount) : undefined,
       items,
       payments,
       returns,

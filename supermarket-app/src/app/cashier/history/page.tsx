@@ -35,7 +35,7 @@ export default function TransactionHistoryPage() {
   // Filters
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("ALL");
-  const [dateFilter, setDateFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState("today");
   const [scopeAllCashiers, setScopeAllCashiers] = useState(false);
 
   // Pagination
@@ -60,7 +60,7 @@ export default function TransactionHistoryPage() {
       }
       if (status !== "ALL") p.set("status", status);
       if (search.trim()) p.set("search", search.trim());
-      if (dateFilter !== "all") p.set("dateFilter", dateFilter);
+      if (dateFilter !== "today") p.set("dateFilter", dateFilter);
       p.set("page", String(page));
       p.set("pageSize", String(pageSize));
 
@@ -111,17 +111,19 @@ export default function TransactionHistoryPage() {
           },
           customer: sale.customer_name
             ? {
-                full_name: sale.customer_name,
-                card_no: sale.customer_card,
-                tier: sale.customer_tier,
-                points_balance: sale.customer_points,
-              }
+              full_name: sale.customer_name,
+              card_no: sale.customer_card,
+              tier: sale.customer_tier,
+              points_balance: sale.customer_points,
+            }
             : null,
           items: sale.items || [],
           subtotal: sale.subtotal,
           discountTotal: sale.discount_total,
           taxTotal: sale.tax_total,
           totalAmount: sale.total_amount,
+          amountTendered: sale.amountTendered !== undefined ? Number(sale.amountTendered) : (sale.tendered_amount !== undefined && sale.tendered_amount !== null ? Number(sale.tendered_amount) : undefined),
+          changeDue: sale.changeDue !== undefined ? Number(sale.changeDue) : (sale.change_amount !== undefined && sale.change_amount !== null ? Number(sale.change_amount) : undefined),
           payments: sale.payments || [],
         });
       }
@@ -166,7 +168,7 @@ export default function TransactionHistoryPage() {
                 setPage(1);
               }}
             >
-              My Cashier Sales ({cashier?.full_name?.split(" ")[0]})
+              My Sales ({cashier?.full_name?.split(" ")[0]})
             </button>
             <button
               className={`btn ${scopeAllCashiers ? "btn-primary" : "btn-ghost"}`}
@@ -176,7 +178,7 @@ export default function TransactionHistoryPage() {
                 setPage(1);
               }}
             >
-              All Branch Sales
+              All Sales
             </button>
           </div>
         </div>
@@ -343,8 +345,8 @@ export default function TransactionHistoryPage() {
                         s.status === "COMPLETED"
                           ? "badge badge-completed"
                           : s.status === "OPEN"
-                          ? "badge badge-open"
-                          : "badge badge-cancelled"
+                            ? "badge badge-open"
+                            : "badge badge-cancelled"
                       }
                     >
                       {s.status}

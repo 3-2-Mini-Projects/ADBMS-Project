@@ -165,8 +165,9 @@ export async function POST(req: Request) {
       const [saleInsertResult]: any = await conn.query(
         `INSERT INTO sales (
           branch_id, cashier_id, customer_id, promo_id, coupon_id,
-          sale_date, status, subtotal, discount_total, tax_total, total_amount
-        ) VALUES (?, ?, ?, ?, ?, NOW(), 'COMPLETED', ?, ?, ?, ?)`,
+          sale_date, status, subtotal, discount_total, tax_total, total_amount,
+          tendered_amount, change_amount
+        ) VALUES (?, ?, ?, ?, ?, NOW(), 'COMPLETED', ?, ?, ?, ?, ?, ?)`,
         [
           branchId,
           cashierId,
@@ -177,6 +178,8 @@ export async function POST(req: Request) {
           calculatedDiscountTotal.toFixed(2),
           calculatedTaxTotal.toFixed(2),
           calculatedGrandTotal.toFixed(2),
+          effectiveCashTendered.toFixed(2),
+          changeDue.toFixed(2),
         ]
       );
 
