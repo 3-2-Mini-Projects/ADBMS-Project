@@ -257,8 +257,15 @@ export async function GET(req: Request) {
       topCustomers = [];
     }
 
-    // 8. Recent Loyalty Points Transactions (Filtered by branch sale/customer)
+    // 8. Recent Loyalty Points Transactions & Summary (Filtered by branch sale/customer)
     let recentLoyaltyActivity: any[] = [];
+    let loyaltySummary = {
+      total_transactions: 0,
+      active_members: 0,
+      total_points_earned: 0,
+      total_points_redeemed: 0,
+    };
+
     try {
       let loyaltySql = `
         SELECT 
@@ -268,8 +275,18 @@ export async function GET(req: Request) {
           c.card_no,
           c.tier,
           lt.sale_id,
-          lt.points_change,
-          lt.transaction_type,
+          lt.points,
+          CASE 
+            WHEN lt.type = 'REDEEM' THEN -ABS(lt.points)
+            ELSE ABS(lt.points)
+          END AS points_change,
+          lt.type,
+          CASE 
+            WHEN lt.type = 'EARN' THEN 'EARNED'
+            WHEN lt.type = 'REDEEM' THEN 'REDEEMED'
+            ELSE lt.type
+          END AS transaction_type,
+          lt.note,
           lt.created_at
         FROM loyalty_transactions lt
         JOIN customers c ON lt.customer_id = c.customer_id
@@ -281,6 +298,29 @@ export async function GET(req: Request) {
       }
       loyaltySql += ` ORDER BY lt.created_at DESC LIMIT 50`;
       recentLoyaltyActivity = await query(loyaltySql, loyaltyParams);
+
+      // Summary details from loyalty_transactions
+      let summarySql = `
+        SELECT 
+          COUNT(*) AS total_transactions,
+          COUNT(DISTINCT lt.customer_id) AS active_members,
+          COALESCE(SUM(CASE WHEN lt.type = 'EARN' THEN lt.points ELSE 0 END), 0) AS total_points_earned,
+          COALESCE(SUM(CASE WHEN lt.type = 'REDEEM' THEN ABS(lt.points) ELSE 0 END), 0) AS total_points_redeemed
+        FROM loyalty_transactions lt
+        JOIN customers c ON lt.customer_id = c.customer_id
+      `;
+      if (branchId) {
+        summarySql += ` WHERE 1=1 ${custBranchFilter}`;
+      }
+      const [sumRow]: any = await query(summarySql, loyaltyParams);
+      if (sumRow) {
+        loyaltySummary = {
+          total_transactions: Number(sumRow.total_transactions || 0),
+          active_members: Number(sumRow.active_members || 0),
+          total_points_earned: Number(sumRow.total_points_earned || 0),
+          total_points_redeemed: Number(sumRow.total_points_redeemed || 0),
+        };
+      }
     } catch {
       recentLoyaltyActivity = [];
     }
@@ -378,6 +418,7 @@ export async function GET(req: Request) {
       topCustomers,
       activePromotions,
       recentLoyaltyActivity,
+      loyaltySummary,
       tierHistory,
       discountTrend: discountTrend.reverse(),
     });

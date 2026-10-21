@@ -276,8 +276,8 @@ export async function GET(req: Request) {
             DATE_FORMAT(lt.created_at, '%Y-%m') AS transaction_month,
             COALESCE(SUM(
               CASE 
-                WHEN lt.transaction_type = 'EARNED' OR lt.transaction_type = 'EARN' 
-                THEN COALESCE(lt.points_change, 0) 
+                WHEN lt.type = 'EARN' OR lt.type = 'EARNED' 
+                THEN COALESCE(lt.points, 0) 
                 ELSE 0 
               END
             ), 0) AS total_points_earned
@@ -307,9 +307,9 @@ export async function GET(req: Request) {
           LEFT JOIN (
             SELECT 
               customer_id, 
-              SUM(CASE WHEN transaction_type = 'EARNED' OR transaction_type = 'EARN' THEN COALESCE(points_change, 0) ELSE 0 END) AS points_earned_month
+              SUM(CASE WHEN type = 'EARN' OR type = 'EARNED' THEN COALESCE(points, 0) ELSE 0 END) AS points_earned_month
             FROM loyalty_transactions
-            WHERE (transaction_type = 'EARNED' OR transaction_type = 'EARN')
+            WHERE (type = 'EARN' OR type = 'EARNED')
               AND DATE_FORMAT(created_at, '%Y-%m') = ?
             GROUP BY customer_id
           ) lt_m ON c.customer_id = lt_m.customer_id
@@ -331,9 +331,9 @@ export async function GET(req: Request) {
           LEFT JOIN (
             SELECT 
               customer_id, 
-              SUM(CASE WHEN transaction_type = 'EARNED' OR transaction_type = 'EARN' THEN COALESCE(points_change, 0) ELSE 0 END) AS total_points_earned
+              SUM(CASE WHEN type = 'EARN' OR type = 'EARNED' THEN COALESCE(points, 0) ELSE 0 END) AS total_points_earned
             FROM loyalty_transactions
-            WHERE (transaction_type = 'EARNED' OR transaction_type = 'EARN')
+            WHERE (type = 'EARN' OR type = 'EARNED')
             GROUP BY customer_id
           ) lt_agg ON c.customer_id = lt_agg.customer_id
           WHERE c.is_active = 1
@@ -369,37 +369,18 @@ export async function GET(req: Request) {
           const rows = await query(`
             SELECT csv.*
             FROM customer_summary_vw csv
-            JOIN customers c ON csv.customer_id = c.customer_id
-            WHERE c.is_active = 1 ${branchFilter}
+            WHERE csv.is_active = 1 AND csv.branch_id = ?
             ORDER BY csv.points_balance DESC
             LIMIT 100
-          `, branchParams);
+          `, [Number(branchId)]);
           return NextResponse.json(rows);
         } catch {
           const rows = await query(`
-            SELECT 
-              c.customer_id, c.card_no, c.full_name, c.phone, c.email, c.tier, c.points_balance,
-              COALESCE(lt_agg.total_points_earned, 0) AS total_points_earned,
-              COALESCE(lt_agg.total_points_redeemed, 0) AS total_points_redeemed,
-              COALESCE(s.total_spent, 0) AS total_spent,
-              COALESCE(s.total_orders, 0) AS total_orders
-            FROM customers c
-            LEFT JOIN (
-              SELECT
-                customer_id,
-                SUM(CASE WHEN transaction_type = 'EARNED' THEN points_change ELSE 0 END) AS total_points_earned,
-                SUM(CASE WHEN transaction_type = 'REDEEMED' THEN ABS(points_change) ELSE 0 END) AS total_points_redeemed
-              FROM loyalty_transactions
-              GROUP BY customer_id
-            ) lt_agg ON c.customer_id = lt_agg.customer_id
-            LEFT JOIN (
-              SELECT customer_id, SUM(total_amount) AS total_spent, COUNT(sale_id) AS total_orders
-              FROM sales
-              WHERE status = 'COMPLETED' AND customer_id IS NOT NULL
-              GROUP BY customer_id
-            ) s ON c.customer_id = s.customer_id
+            SELECT csv.*
+            FROM customer_summary_vw csv
+            JOIN customers c ON csv.customer_id = c.customer_id
             WHERE c.is_active = 1 ${branchFilter}
-            ORDER BY c.points_balance DESC, c.full_name ASC
+            ORDER BY csv.points_balance DESC
             LIMIT 100
           `, branchParams);
           return NextResponse.json(rows);

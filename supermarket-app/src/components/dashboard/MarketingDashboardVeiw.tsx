@@ -109,6 +109,12 @@ interface DashboardData {
     total_sales: number;
     transactions: number;
   }>;
+  loyaltySummary?: {
+    total_transactions: number;
+    active_members: number;
+    total_points_earned: number;
+    total_points_redeemed: number;
+  };
 }
 
 export function MarketingDashboardVeiw() {
@@ -146,6 +152,7 @@ export function MarketingDashboardVeiw() {
   const promotions = data?.activePromotions ?? [];
   const recentLoyalty = data?.recentLoyaltyActivity ?? [];
   const tierHistory = data?.tierHistory ?? [];
+  const discountTrend = data?.discountTrend ?? [];
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
@@ -196,7 +203,7 @@ export function MarketingDashboardVeiw() {
       </div>
 
       {/* Main KPI Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {/* KPI 1: Total Loyalty Members */}
         <div className="rounded-2xl bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 p-5 shadow-xl relative overflow-hidden group hover:border-slate-700 transition-all">
           <div className="flex items-center justify-between">
@@ -206,19 +213,55 @@ export function MarketingDashboardVeiw() {
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-3xl font-black text-white font-mono tracking-tight">
+            <div className="text-2xl font-black text-white font-mono tracking-tight">
               {loading ? "..." : (summary?.total_customers ?? 0).toLocaleString()}
             </div>
             <div className="flex items-center gap-2 mt-2 text-[11px] text-emerald-400 font-medium">
               <span className="flex items-center gap-1 bg-emerald-950/50 px-2 py-0.5 rounded-full border border-emerald-800/40">
                 <ArrowUpRight className="w-3 h-3" />
-                +{summary?.new_customers_30d ?? 0} new this month
+                +{summary?.new_customers_30d ?? 0} new
               </span>
             </div>
           </div>
         </div>
 
-        {/* KPI 2: Loyalty Points Balance */}
+        {/* KPI 2: Total Discounts Granted */}
+        <div className="rounded-2xl bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 p-5 shadow-xl relative overflow-hidden group hover:border-slate-700 transition-all">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-400">Total Discounts Given</span>
+            <div className="w-9 h-9 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400">
+              <Percent className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-2xl font-black text-rose-400 font-mono tracking-tight">
+              {loading ? "..." : `Rs. ${Number(summary?.total_discounts_given ?? 0).toLocaleString(undefined, { minimumFractionDigits: 0 })}`}
+            </div>
+            <div className="mt-2 text-[11px] text-slate-400">
+              Promos & Vouchers
+            </div>
+          </div>
+        </div>
+
+        {/* KPI 3: Loyalty Member Sales Share */}
+        <div className="rounded-2xl bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 p-5 shadow-xl relative overflow-hidden group hover:border-slate-700 transition-all">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-400">Member Sales Total</span>
+            <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+              <Award className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-2xl font-black text-amber-300 font-mono tracking-tight">
+              {loading ? "..." : `Rs. ${Number(summary?.member_revenue ?? 0).toLocaleString(undefined, { minimumFractionDigits: 0 })}`}
+            </div>
+            <div className="mt-2 text-[11px] text-emerald-400 font-medium">
+              {summary?.member_revenue_percent ?? 0}% of revenue
+            </div>
+          </div>
+        </div>
+
+        {/* KPI 4: Loyalty Points Balance */}
         <div className="rounded-2xl bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 p-5 shadow-xl relative overflow-hidden group hover:border-slate-700 transition-all">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-400">Total Point balance</span>
@@ -227,48 +270,48 @@ export function MarketingDashboardVeiw() {
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-3xl font-black text-amber-400 font-mono tracking-tight">
+            <div className="text-2xl font-black text-amber-400 font-mono tracking-tight">
               {loading ? "..." : (summary?.total_points_balance ?? 0).toLocaleString()}{" "}
-              <span className="text-sm font-semibold text-amber-300">pts</span>
+              <span className="text-xs font-semibold text-amber-300">pts</span>
             </div>
             <div className="mt-2 text-[11px] text-slate-400 font-mono">
-              Avg {summary?.avg_points_per_customer ?? 0} pts per member
+              Avg {summary?.avg_points_per_customer ?? 0} pts/mbr
             </div>
           </div>
         </div>
 
-        {/* KPI 3: Active Promotions */}
+        {/* KPI 5: Active Promotions */}
         <div className="rounded-2xl bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 p-5 shadow-xl relative overflow-hidden group hover:border-slate-700 transition-all">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-400">Total Active promotions</span>
+            <span className="text-xs font-semibold text-slate-400">Active Promotions</span>
             <div className="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
               <Tag className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-3xl font-black text-purple-300 font-mono tracking-tight">
+            <div className="text-2xl font-black text-purple-300 font-mono tracking-tight">
               {loading ? "..." : summary?.active_promotions ?? 0}
             </div>
             <div className="mt-2 text-[11px] text-slate-400">
-              Out of {summary?.total_promotions ?? 0} total campaigns
+              Out of {summary?.total_promotions ?? 0} total
             </div>
           </div>
         </div>
 
-        {/* KPI 4: Coupon Redemption */}
+        {/* KPI 6: Coupon Redemption */}
         <div className="rounded-2xl bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 p-5 shadow-xl relative overflow-hidden group hover:border-slate-700 transition-all">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-400">Coupon Redemption Rate</span>
+            <span className="text-xs font-semibold text-slate-400">Coupon Success</span>
             <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
               <Ticket className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-3xl font-black text-emerald-400 font-mono tracking-tight">
+            <div className="text-2xl font-black text-emerald-400 font-mono tracking-tight">
               {loading ? "..." : `${summary?.redemption_rate ?? 0}%`}
             </div>
             <div className="mt-2 text-[11px] text-slate-400">
-              {summary?.redeemed_coupons ?? 0} redeemed / {summary?.total_coupons ?? 0} issued
+              {summary?.redeemed_coupons ?? 0} of {summary?.total_coupons ?? 0} redeemed
             </div>
           </div>
         </div>
@@ -687,12 +730,12 @@ export function MarketingDashboardVeiw() {
           </div>
         </div>
 
-        {/* Right: Recent Loyalty Points Ledger Activity */}
+        {/* Right: Loyalty Points Activity Summary */}
         <div className="rounded-2xl border border-slate-800 bg-slate-900/40 overflow-hidden shadow-xl flex flex-col">
           <div className="p-4 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between">
             <h3 className="text-xs font-bold text-white flex items-center gap-2">
               <Gift className="w-4 h-4 text-emerald-400" />
-              <span>Recent Loyalty Points Activity (loyalty_transactions)</span>
+              <span>Loyalty Points Activity Summary</span>
             </h3>
             <Link
               href="/marketing/loyalty"
@@ -700,6 +743,34 @@ export function MarketingDashboardVeiw() {
             >
               Full Ledger
             </Link>
+          </div>
+
+          {/* Main Details Summary-Wise Metrics */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-3 bg-slate-950/50 border-b border-slate-800/80 font-mono text-center">
+            <div className="p-2 rounded-xl bg-slate-900/80 border border-slate-800/80">
+              <div className="text-[10px] text-slate-400 font-sans">Points Earned</div>
+              <div className="text-sm font-bold text-emerald-400 mt-0.5">
+                +{data?.loyaltySummary?.total_points_earned ?? 0} pts
+              </div>
+            </div>
+            <div className="p-2 rounded-xl bg-slate-900/80 border border-slate-800/80">
+              <div className="text-[10px] text-slate-400 font-sans">Points Redeemed</div>
+              <div className="text-sm font-bold text-rose-400 mt-0.5">
+                -{data?.loyaltySummary?.total_points_redeemed ?? 0} pts
+              </div>
+            </div>
+            <div className="p-2 rounded-xl bg-slate-900/80 border border-slate-800/80">
+              <div className="text-[10px] text-slate-400 font-sans">Transactions</div>
+              <div className="text-sm font-bold text-amber-400 mt-0.5">
+                {data?.loyaltySummary?.total_transactions ?? 0}
+              </div>
+            </div>
+            <div className="p-2 rounded-xl bg-slate-900/80 border border-slate-800/80">
+              <div className="text-[10px] text-slate-400 font-sans">Active Members</div>
+              <div className="text-sm font-bold text-blue-400 mt-0.5">
+                {data?.loyaltySummary?.active_members ?? 0}
+              </div>
+            </div>
           </div>
 
           <div className="p-4 flex-1 overflow-x-auto">
@@ -710,33 +781,35 @@ export function MarketingDashboardVeiw() {
             ) : (
               <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="border-b border-slate-800 text-slate-400 font-semibold">
+                  <tr className="border-b border-slate-800 text-slate-400 font-semibold font-sans">
                     <th className="pb-2.5">Customer</th>
-                    <th className="pb-2.5 font-mono">Card</th>
-                    <th className="pb-2.5">Type</th>
+                    <th className="pb-2.5">Card</th>
+                    <th className="pb-2.5 text-center">Type</th>
                     <th className="pb-2.5 text-right">Points</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60">
-                  {recentLoyalty.map((lt) => (
+                <tbody className="divide-y divide-slate-800/60 font-mono">
+                  {recentLoyalty.slice(0, 5).map((lt) => (
                     <tr key={lt.loyalty_id} className="hover:bg-slate-800/30 transition-colors">
-                      <td className="py-3 font-medium text-white truncate max-w-[130px]">
+                      <td className="py-2.5 font-medium text-white truncate max-w-[130px] font-sans">
                         {lt.customer_name}
                       </td>
-                      <td className="py-3 font-mono text-[11px] text-amber-400">{lt.card_no}</td>
-                      <td className="py-3">
+                      <td className="py-2.5 text-[11px] text-amber-400">{lt.card_no}</td>
+                      <td className="py-2.5 text-center">
                         <span
-                          className={`text-[9px] font-mono px-1.5 py-0.5 rounded font-bold ${lt.transaction_type === "EARNED"
-                            ? "bg-emerald-950 text-emerald-300 border border-emerald-800/40"
-                            : "bg-rose-950 text-rose-300 border border-rose-800/40"
-                            }`}
+                          className={`text-[9px] px-2 py-0.5 rounded font-bold ${
+                            lt.transaction_type === "EARNED" || lt.points_change > 0
+                              ? "bg-emerald-950 text-emerald-300 border border-emerald-800/40"
+                              : "bg-rose-950 text-rose-300 border border-rose-800/40"
+                          }`}
                         >
-                          {lt.transaction_type}
+                          {lt.transaction_type || "EARNED"}
                         </span>
                       </td>
                       <td
-                        className={`py-3 text-right font-mono font-bold ${lt.points_change > 0 ? "text-emerald-400" : "text-rose-400"
-                          }`}
+                        className={`py-2.5 text-right font-bold ${
+                          lt.points_change > 0 ? "text-emerald-400" : "text-rose-400"
+                        }`}
                       >
                         {lt.points_change > 0 ? `+${lt.points_change}` : lt.points_change} pts
                       </td>
