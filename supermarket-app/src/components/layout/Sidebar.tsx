@@ -200,15 +200,6 @@ const CATALOG_NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    group: "INVENTORY OVERVIEW",
-    items: [
-      { title: "Inventory Dashboard", href: "/inventory/dashboard", icon: LayoutGrid },
-      { title: "Inventory Stock", href: "/inventory", icon: Boxes },
-      { title: "Product Batches", href: "/inventory/batches", icon: PackagePlus },
-      { title: "Stock Alerts", href: "/inventory/stock-alerts", icon: AlertTriangle },
-    ],
-  },
-  {
     group: "ACCOUNT",
     items: [
       { title: "My Profile", href: "/profile", icon: UserCircle },
