@@ -485,39 +485,55 @@ export default function InventoryPage() {
                     </td>
                   </tr>
                 ) : (
-                  batches.map((b) => (
-                    <tr key={b.batch_id} className={theme.rowHover}>
-                      <td className={`py-3 px-4 font-mono ${theme.batchNo}`}>{b.batch_no}</td>
-                      <td className={`py-3 px-4 ${theme.productName}`}>{b.product_name}</td>
-                      <td className={`py-3 px-4 ${theme.branchText}`}>{b.branch_name}</td>
-                      <td className={`py-3 px-4 text-right font-mono font-black ${theme.qtyText}`}>
-                        {b.quantity}
-                      </td>
-                      <td className={`py-3 px-4 font-mono ${theme.categoryText}`}>
-                        {b.received_date ? new Date(b.received_date).toLocaleDateString() : "—"}
-                      </td>
-                      <td className={`py-3 px-4 font-mono ${theme.branchText}`}>
-                        {b.expiry_date ? new Date(b.expiry_date).toLocaleDateString() : "No Expiry"}
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <span
-                          className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold ${
-                            b.expiry_status === "EXPIRED"
-                              ? theme.badgeOutOfStock
-                              : b.expiry_status === "NEAR_EXPIRY"
-                              ? theme.badgeLowStock
-                              : theme.badgeInStock
-                          }`}
-                        >
-                          {b.expiry_status === "EXPIRED"
-                            ? "EXPIRED"
-                            : b.expiry_status === "NEAR_EXPIRY"
-                            ? `EXPIRING (${b.days_to_expiry}d)`
-                            : "FRESH / GOOD"}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
+                  batches.map((b) => {
+                    const daysLeft = b.days_to_expiry !== undefined ? Number(b.days_to_expiry) : null;
+                    const isExpired =
+                      b.expiry_status === "EXPIRED" ||
+                      (daysLeft !== null && daysLeft < 0);
+                    const isNearExpiry =
+                      !isExpired &&
+                      (b.expiry_status === "NEAR_EXPIRY" ||
+                        b.expiry_status === "EXPIRING_SOON" ||
+                        (daysLeft !== null && daysLeft <= 30));
+
+                    return (
+                      <tr key={b.batch_id} className={theme.rowHover}>
+                        <td className={`py-3 px-4 font-mono ${theme.batchNo}`}>{b.batch_no}</td>
+                        <td className={`py-3 px-4 ${theme.productName}`}>{b.product_name}</td>
+                        <td className={`py-3 px-4 ${theme.branchText}`}>{b.branch_name}</td>
+                        <td className={`py-3 px-4 text-right font-mono font-black ${theme.qtyText}`}>
+                          {b.quantity}
+                        </td>
+                        <td className={`py-3 px-4 font-mono ${theme.categoryText}`}>
+                          {b.received_date ? new Date(b.received_date).toLocaleDateString() : "—"}
+                        </td>
+                        <td className={`py-3 px-4 font-mono ${theme.branchText}`}>
+                          {b.expiry_date ? new Date(b.expiry_date).toLocaleDateString() : "No Expiry"}
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <span
+                            className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold ${
+                              isExpired
+                                ? theme.badgeOutOfStock
+                                : isNearExpiry
+                                ? theme.badgeLowStock
+                                : theme.badgeInStock
+                            }`}
+                          >
+                            {isExpired
+                              ? "EXPIRED"
+                              : isNearExpiry
+                              ? daysLeft !== null
+                                ? daysLeft === 0
+                                  ? "EXPIRING TODAY"
+                                  : `EXPIRING (${daysLeft}d)`
+                                : "NEAR EXPIRY"
+                              : "FRESH / GOOD"}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
