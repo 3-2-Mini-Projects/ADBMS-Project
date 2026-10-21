@@ -5,6 +5,7 @@ import type { RowDataPacket } from "mysql2";
 export interface MarketingSummaryRow {
   total_revenue: number;
   total_discounts: number;
+  discount_ratio_pct: number;
   member_revenue: number;
   member_revenue_pct: number;
   member_transactions: number;
@@ -19,11 +20,14 @@ export interface MarketingSummaryRow {
   points_currency_redeemed: number;
   total_promotions: number;
   active_promotions: number;
+  scheduled_promotions: number;
+  expired_promotions: number;
   total_coupons: number;
   available_coupons: number;
   redeemed_coupons: number;
   expired_coupons: number;
   vip_coupons: number;
+  public_coupons: number;
   coupon_redemption_rate: number;
 }
 
@@ -47,6 +51,7 @@ export interface BranchReportRow {
   subtotal: number;
   total_sales: number;
   total_discount: number;
+  discount_pct: number;
 }
 
 export interface TierReportRow {
@@ -62,18 +67,6 @@ export interface DailyTrendRow {
   total_sales: number;
 }
 
-export interface Top10VipCouponRow {
-  coupon_id: number;
-  coupon_code: string;
-  customer_name: string;
-  customer_card_no: string;
-  customer_tier: string;
-  promo_name: string;
-  discount_percent: number | string;
-  expiry_date: string;
-  status: string;
-}
-
 // GET /api/marketing/reports
 export async function GET(req: Request) {
   try {
@@ -82,6 +75,13 @@ export async function GET(req: Request) {
     const branchId = branchIdParam ? Number(branchIdParam) : null;
     const branchFilter = branchId ? "AND s.branch_id = ?" : "";
     const branchParams = branchId ? [branchId] : [];
+
+    const branchInfo = branchId
+      ? await query<{ branch_id: number; name: string; city: string }>(
+          "SELECT branch_id, name, city FROM branches WHERE branch_id = ? LIMIT 1",
+          [branchId]
+        ).then((rows) => rows[0] || null)
+      : null;
 
     const [
       salesImpactRows,
@@ -93,7 +93,6 @@ export async function GET(req: Request) {
       branchSalesRows,
       tierRows,
       dailyTrendRows,
-      vipCouponRows,
     ] = await Promise.all([
       // 1. Sales & Loyalty Member Impact
       query<RowDataPacket & {
@@ -140,13 +139,15 @@ export async function GET(req: Request) {
         available_coupons: number;
         expired_coupons: number;
         vip_coupons: number;
+        public_coupons: number;
       }>(`
         SELECT 
           COUNT(*) AS total_coupons,
           COALESCE(SUM(CASE WHEN is_used = 1 THEN 1 ELSE 0 END), 0) AS redeemed_coupons,
           COALESCE(SUM(CASE WHEN is_used = 0 AND expiry_date >= CURRENT_DATE THEN 1 ELSE 0 END), 0) AS available_coupons,
           COALESCE(SUM(CASE WHEN is_used = 0 AND expiry_date < CURRENT_DATE THEN 1 ELSE 0 END), 0) AS expired_coupons,
-          COALESCE(SUM(CASE WHEN customer_id IS NOT NULL THEN 1 ELSE 0 END), 0) AS vip_coupons
+          COALESCE(SUM(CASE WHEN customer_id IS NOT NULL THEN 1 ELSE 0 END), 0) AS vip_coupons,
+          COALESCE(SUM(CASE WHEN customer_id IS NULL THEN 1 ELSE 0 END), 0) AS public_coupons
         FROM coupons
       `),
 
@@ -154,10 +155,14 @@ export async function GET(req: Request) {
       query<RowDataPacket & {
         total_promotions: number;
         active_promotions: number;
+        scheduled_promotions: number;
+        expired_promotions: number;
       }>(`
         SELECT 
           COUNT(*) AS total_promotions,
-          COALESCE(SUM(CASE WHEN CURRENT_DATE BETWEEN start_date AND end_date AND is_active = 1 THEN 1 ELSE 0 END), 0) AS active_promotions
+          COALESCE(SUM(CASE WHEN CURRENT_DATE BETWEEN start_date AND end_date AND is_active = 1 THEN 1 ELSE 0 END), 0) AS active_promotions,
+          COALESCE(SUM(CASE WHEN CURRENT_DATE < start_date AND is_active = 1 THEN 1 ELSE 0 END), 0) AS scheduled_promotions,
+          COALESCE(SUM(CASE WHEN CURRENT_DATE > end_date OR is_active = 0 THEN 1 ELSE 0 END), 0) AS expired_promotions
         FROM promotions
       `),
 
@@ -165,12 +170,12 @@ export async function GET(req: Request) {
       query<RowDataPacket & {
         total_points_currency_redeemed: number | string;
       }>(`
-        SELECT COALESCE(SUM(amount), 0) AS total_points_currency_redeemed
-        FROM payments
-        WHERE payment_method = 'POINTS'
-      `),
+        SELECT COALESCE(SUM(p.amount), 0) AS total_points_currency_redeemed
+        FROM payments p
+        ${branchId ? "JOIN sales s ON p.sale_id = s.sale_id WHERE p.method = 'POINTS' AND s.branch_id = ?" : "WHERE p.method = 'POINTS'"}
+      `, branchParams),
 
-      // 6. Promotions Detail List with linked coupon stats
+      // 6. Active Promotions Detail List with linked coupon stats
       query<PromoReportRow & RowDataPacket>(`
         SELECT 
           p.promo_id,
@@ -179,15 +184,12 @@ export async function GET(req: Request) {
           p.start_date,
           p.end_date,
           p.is_active,
-          CASE 
-            WHEN p.is_active = 1 AND CURDATE() BETWEEN p.start_date AND p.end_date THEN 'ACTIVE'
-            WHEN p.is_active = 1 AND CURDATE() < p.start_date THEN 'SCHEDULED'
-            ELSE 'EXPIRED'
-          END AS status,
+          'ACTIVE' AS status,
           (SELECT COUNT(*) FROM coupons cp WHERE cp.promo_id = p.promo_id) AS associated_coupons,
           (SELECT COUNT(*) FROM coupons cp WHERE cp.promo_id = p.promo_id AND cp.is_used = 1) AS redeemed_coupons
         FROM promotions p
-        ORDER BY p.is_active DESC, p.start_date DESC
+        WHERE p.is_active = 1 AND CURDATE() BETWEEN p.start_date AND p.end_date
+        ORDER BY p.start_date DESC, p.promo_id DESC
       `),
 
       // 7. Branch comparison from branch_sales_vw
@@ -199,9 +201,17 @@ export async function GET(req: Request) {
           COALESCE(bs.transactions, 0) AS transactions,
           COALESCE(bs.subtotal, 0) AS subtotal,
           COALESCE(bs.total_sales, 0) AS total_sales,
-          COALESCE(bs.total_discount, 0) AS total_discount
+          COALESCE(bs.total_discount, 0) AS total_discount,
+          ROUND(
+            CASE 
+              WHEN bs.total_sales > 0 THEN (bs.total_discount / bs.total_sales) * 100 
+              ELSE 0 
+            END, 
+            1
+          ) AS discount_pct
         FROM branch_sales_vw bs
         LEFT JOIN branches b ON bs.branch_id = b.branch_id
+        ${branchId ? "WHERE bs.branch_id = " + Number(branchId) : ""}
         ORDER BY bs.total_sales DESC
       `),
 
@@ -236,23 +246,6 @@ export async function GET(req: Request) {
         ORDER BY sale_date DESC
         LIMIT 14
       `),
-
-      // 10. Top 10 VIP Coupons Audit from top10_loyalty_coupons_vw
-      query<Top10VipCouponRow & RowDataPacket>(`
-        SELECT 
-          coupon_id,
-          coupon_code,
-          customer_name,
-          customer_card_no,
-          customer_tier,
-          promo_name,
-          discount_percent,
-          expiry_date,
-          status
-        FROM top10_loyalty_coupons_vw
-        ORDER BY coupon_id DESC
-        LIMIT 10
-      `),
     ]);
 
     const sImpact = salesImpactRows[0];
@@ -264,6 +257,7 @@ export async function GET(req: Request) {
     const totalRev = Number(sImpact?.total_revenue || 0);
     const memberRev = Number(sImpact?.member_revenue || 0);
     const totalDisc = Number(sImpact?.total_discounts_given || 0);
+    const discountRatioPct = totalRev > 0 ? Math.round((totalDisc / totalRev) * 1000) / 10 : 0;
     const memberRevPct = totalRev > 0 ? Math.round((memberRev / totalRev) * 100) : 0;
     const avgMemberBasket = Number(sImpact?.avg_member_basket || 0);
     const avgNonMemberBasket = Number(sImpact?.avg_non_member_basket || 0);
@@ -278,6 +272,7 @@ export async function GET(req: Request) {
     const summary: MarketingSummaryRow = {
       total_revenue: totalRev,
       total_discounts: totalDisc,
+      discount_ratio_pct: discountRatioPct,
       member_revenue: memberRev,
       member_revenue_pct: memberRevPct,
       member_transactions: Number(sImpact?.member_transactions || 0),
@@ -292,22 +287,25 @@ export async function GET(req: Request) {
       points_currency_redeemed: Number(ptMetrics?.total_points_currency_redeemed || 0),
       total_promotions: Number(pMetrics?.total_promotions || 0),
       active_promotions: Number(pMetrics?.active_promotions || 0),
+      scheduled_promotions: Number(pMetrics?.scheduled_promotions || 0),
+      expired_promotions: Number(pMetrics?.expired_promotions || 0),
       total_coupons: totalCoupons,
       available_coupons: Number(cpMetrics?.available_coupons || 0),
       redeemed_coupons: redeemedCoupons,
       expired_coupons: Number(cpMetrics?.expired_coupons || 0),
       vip_coupons: Number(cpMetrics?.vip_coupons || 0),
+      public_coupons: Number(cpMetrics?.public_coupons || 0),
       coupon_redemption_rate: redemptionRate,
     };
 
     return NextResponse.json({
       success: true,
+      branch: branchInfo,
       summary,
       promotions: promoRows,
       branchSales: branchSalesRows,
       tierBreakdown: tierRows,
       dailyTrend: dailyTrendRows.reverse(),
-      vipCoupons: vipCouponRows,
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Internal server error";

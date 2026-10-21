@@ -83,12 +83,6 @@ export default function LoyaltyManagementPage() {
   const [pointsInput, setPointsInput] = useState<string>("");
   const [noteInput, setNoteInput] = useState<string>("");
 
-  // Top 10 Assign Coupons Modal state
-  const [rewardModalOpen, setRewardModalOpen] = useState(false);
-  const [promotionsList, setPromotionsList] = useState<RewardPromo[]>([]);
-  const [selectedPromoId, setSelectedPromoId] = useState<number | "">("");
-  const [validDaysInput, setValidDaysInput] = useState<number>(30);
-  const [submittingReward, setSubmittingReward] = useState(false);
   const [copiedCouponId, setCopiedCouponId] = useState<string | null>(null);
 
   const loadData = async () => {
@@ -113,12 +107,6 @@ export default function LoyaltyManagementPage() {
       if (dashRes && !dashRes.error) setData(dashRes);
       if (Array.isArray(summaryRes)) setCustomerSummaries(summaryRes);
 
-      if (rewardTop10Res?.active_promotions && Array.isArray(rewardTop10Res.active_promotions)) {
-        setPromotionsList(rewardTop10Res.active_promotions);
-        if (rewardTop10Res.active_promotions.length > 0 && !selectedPromoId) {
-          setSelectedPromoId(rewardTop10Res.active_promotions[0].promo_id);
-        }
-      }
 
       // Map active coupon codes for top customers
       const couponMap = new Map<number, { code: string; expiry: string }>();
@@ -186,51 +174,6 @@ export default function LoyaltyManagementPage() {
     setSelectedCustomerId(customerId ?? (customersList.length > 0 ? customersList[0].customer_id : ""));
     setPointsInput("");
     setRedeemModalOpen(true);
-  };
-
-  // Open Assign Coupons Modal for Top 10
-  const openRewardModal = () => {
-    if (promotionsList.length > 0 && !selectedPromoId) {
-      setSelectedPromoId(promotionsList[0].promo_id);
-    }
-    setValidDaysInput(30);
-    setRewardModalOpen(true);
-  };
-
-  // Submit Batch Reward Top 10 Coupons
-  const handleBatchRewardSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedPromoId) {
-      showToast("Please select a promotion campaign.", "error");
-      return;
-    }
-
-    setSubmittingReward(true);
-    try {
-      const res = await fetch("/api/marketing/coupons/reward-top10", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          promo_id: selectedPromoId,
-          valid_days: validDaysInput,
-          custom_prefix: "VIP",
-        }),
-      });
-
-      const resData = await res.json();
-      if (res.ok && resData.success) {
-        showToast(resData.message || "Assigned VIP coupons to Top 10 customers!", "success");
-        setRewardModalOpen(false);
-        await loadData();
-      } else {
-        showToast(resData.error || "Failed to assign coupons.", "error");
-      }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Error assigning coupons";
-      showToast(msg, "error");
-    } finally {
-      setSubmittingReward(false);
-    }
   };
 
   // Copy coupon code to clipboard
@@ -550,20 +493,6 @@ export default function LoyaltyManagementPage() {
         {/* ========================================================================= */}
         {activeTab === "top" && (
           <div className="space-y-4">
-            <div className="p-4 border-b border-slate-800/60 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-900/50">
-              <div className="text-xs text-slate-400">
-                Top loyalty customers ranked by total points earned. Batch reward them with exclusive coupons.
-              </div>
-              <button
-                onClick={openRewardModal}
-                disabled={loading || topCustomers.length === 0}
-                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md shadow-amber-950/30 transition-all disabled:opacity-50 shrink-0"
-              >
-                <Gift className="w-4 h-4" />
-                <span>Assign Coupons to Top 10</span>
-              </button>
-            </div>
-
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
@@ -899,116 +828,6 @@ export default function LoyaltyManagementPage() {
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* MODAL 3: Assign VIP Coupons to Top 10 Customers (proc_assign_top10_coupons) */}
-      {/* ========================================================================= */}
-      {rewardModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl relative space-y-5">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400">
-                  <Gift className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-white">Assign VIP Coupons to Top 10 Customers</h3>
-                  <p className="text-[11px] text-slate-400">Generates personalized coupons via database procedure</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setRewardModalOpen(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleBatchRewardSubmit} className="space-y-4">
-              {/* Promotion selection */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  Select Promotion Campaign
-                </label>
-                <select
-                  value={selectedPromoId}
-                  onChange={(e) => setSelectedPromoId(Number(e.target.value))}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-amber-500"
-                  required
-                >
-                  {promotionsList.map((p) => (
-                    <option key={p.promo_id} value={p.promo_id}>
-                      {p.name} ({Number(p.discount_percent)}% OFF)
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Validity Duration */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  Coupon Validity Period
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {[14, 30, 60].map((d) => (
-                    <button
-                      key={d}
-                      type="button"
-                      onClick={() => setValidDaysInput(d)}
-                      className={`py-2 rounded-xl text-xs font-bold border transition-all ${
-                        validDaysInput === d
-                          ? "bg-amber-500/10 text-amber-400 border-amber-500/40"
-                          : "bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-700"
-                      }`}
-                    >
-                      {d} Days
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Recipients Preview */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  Eligible Top Customers ({topCustomers.length})
-                </label>
-                <div className="max-h-36 overflow-y-auto space-y-1 rounded-xl bg-slate-950 p-2 border border-slate-800/80 divide-y divide-slate-800/40 font-mono text-[11px]">
-                  {topCustomers.map((c, i) => (
-                    <div key={c.customer_id} className="flex items-center justify-between py-1 px-1.5">
-                      <span className="text-white font-sans font-medium">
-                        #{i + 1} {c.full_name} ({c.card_no})
-                      </span>
-                      <span className="text-amber-400 font-bold">{c.points_balance} pts</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setRewardModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submittingReward || topCustomers.length === 0}
-                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 text-xs font-bold shadow-lg shadow-amber-950/40 flex items-center gap-2 transition-all disabled:opacity-50"
-                >
-                  {submittingReward ? (
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <Gift className="w-3.5 h-3.5" />
-                  )}
-                  <span>{submittingReward ? "Issuing Coupons..." : `Issue ${topCustomers.length} VIP Coupons`}</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -22,6 +22,21 @@ import {
   Lock,
 } from "lucide-react";
 
+interface LoyaltyLedgerItem {
+  loyalty_id: number;
+  customer_id: number;
+  sale_id: number | null;
+  branch_id: number | null;
+  branch_name?: string | null;
+  points: number;
+  points_change?: number;
+  type: string;
+  transaction_type?: string;
+  note: string | null;
+  sale_total?: number | string | null;
+  created_at: string;
+}
+
 export default function CustomersPage() {
   const { showToast, currentBranch, currentEmployee } = useApp();
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -31,7 +46,7 @@ export default function CustomersPage() {
   // Customer Loyalty Ledger Modal State
   const [ledgerModalOpen, setLedgerModalOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-  const [loyaltyHistory, setLoyaltyHistory] = useState<any[]>([]);
+  const [loyaltyHistory, setLoyaltyHistory] = useState<LoyaltyLedgerItem[]>([]);
   const [tierHistory, setTierHistory] = useState<any[]>([]);
   const [loadingLedger, setLoadingLedger] = useState(false);
 
@@ -326,17 +341,13 @@ export default function CustomersPage() {
       {/* MODAL: Customer Loyalty Ledger */}
       {ledgerModalOpen && selectedCustomer && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-xl p-6 shadow-2xl space-y-5 max-h-[90vh] flex flex-col">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-4xl p-6 shadow-2xl space-y-5 max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <div>
                 <h3 className="font-bold text-base text-white flex items-center gap-2">
                   <Star className="w-4 h-4 text-amber-400" />
                   <span>Loyalty Ledger: {selectedCustomer.full_name}</span>
                 </h3>
-                <div className="text-[11px] text-slate-400 font-mono mt-0.5">
-                  Card: {selectedCustomer.card_no} • Tier: {selectedCustomer.tier} • Current Points:{" "}
-                  <strong className="text-emerald-400 font-bold">{selectedCustomer.points_balance} pts</strong>
-                </div>
               </div>
               <button
                 onClick={() => setLedgerModalOpen(false)}
@@ -349,77 +360,80 @@ export default function CustomersPage() {
             {/* Transactions List */}
             <div className="flex-1 overflow-y-auto space-y-4">
               <div>
-                <h4 className="text-xs font-bold text-slate-300 mb-2">Points Transaction History</h4>
                 {loadingLedger ? (
                   <div className="py-6 text-center text-slate-500 text-xs">Loading ledger records...</div>
                 ) : loyaltyHistory.length === 0 ? (
                   <div className="py-6 text-center text-slate-500 text-xs">No points transactions recorded.</div>
                 ) : (
-                  <table className="w-full text-left text-xs">
-                    <thead>
-                      <tr className="border-b border-slate-800 text-slate-400">
-                        <th className="pb-2 font-semibold">Date</th>
-                        <th className="pb-2 font-semibold">Sale Ref</th>
-                        <th className="pb-2 font-semibold">Type</th>
-                        <th className="pb-2 font-semibold text-right">Points Change</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-800/60">
-                      {loyaltyHistory.map((lt) => (
-                        <tr key={lt.loyalty_id} className="text-slate-300">
-                          <td className="py-2 font-mono text-[11px] text-slate-400">
-                            {new Date(lt.created_at).toLocaleString()}
-                          </td>
-                          <td className="py-2 font-mono text-blue-400">
-                            {lt.sale_id ? `#SALE-${lt.sale_id}` : "Bonus/Manual"}
-                          </td>
-                          <td className="py-2">
-                            <span
-                              className={`text-[9px] font-mono px-1.5 py-0.2 rounded font-bold ${lt.transaction_type === "EARNED"
-                                ? "bg-emerald-950 text-emerald-300"
-                                : "bg-rose-950 text-rose-300"
-                                }`}
-                            >
-                              {lt.transaction_type}
-                            </span>
-                          </td>
-                          <td
-                            className={`py-2 text-right font-mono font-bold ${lt.points_change > 0 ? "text-emerald-400" : "text-rose-400"
-                              }`}
-                          >
-                            {lt.points_change > 0 ? `+${lt.points_change}` : lt.points_change} pts
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  <div className="space-y-4">
+                    <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/40">
+                      <table className="w-full text-left text-xs">
+                        <thead>
+                          <tr className="border-b border-slate-800 text-slate-300 bg-slate-950/80 font-semibold font-sans">
+                            <th className="py-3 px-4">Date & Time</th>
+                            <th className="py-3 px-4">Sale Amount</th>
+                            <th className="py-3 px-4">Store Branch</th>
+                            <th className="py-3 px-4 text-center">Type</th>
+                            <th className="py-3 px-4">Transaction Note</th>
+                            <th className="py-3 px-4 text-right">Earned Points</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-800/60 font-mono">
+                          {loyaltyHistory.map((lt: LoyaltyLedgerItem) => {
+                            const isEarn = lt.type === "EARN" || lt.transaction_type === "EARNED" || Number(lt.points_change || lt.points) > 0;
+                            const ptsVal = Math.abs(Number(lt.points || lt.points_change || 0));
+                            return (
+                              <tr key={lt.loyalty_id} className="text-slate-300 hover:bg-slate-800/30 transition-colors">
+                                <td className="py-3 px-4 text-slate-400 whitespace-nowrap text-[11px]">
+                                  {new Date(lt.created_at).toLocaleString()}
+                                </td>
+                                <td className="py-3 px-4 font-mono text-white font-medium">
+                                  {lt.sale_total ? (
+                                    <span>Rs. {Number(lt.sale_total).toFixed(2)}</span>
+                                  ) : (
+                                    <span className="text-slate-500">—</span>
+                                  )}
+                                </td>
+                                <td className="py-3 px-4 font-sans text-slate-300">
+                                  {lt.branch_name || "—"}
+                                </td>
+                                <td className="py-3 px-4 text-center">
+                                  <span
+                                    className={`text-[9px] px-2 py-0.5 rounded-full font-bold ${
+                                      isEarn
+                                        ? "bg-emerald-950 text-emerald-300 border border-emerald-800/50"
+                                        : "bg-rose-950 text-rose-300 border border-rose-800/50"
+                                    }`}
+                                  >
+                                    {isEarn ? "EARNED" : "REDEEMED"}
+                                  </span>
+                                </td>
+                                <td className="py-3 px-4 text-xs font-sans text-slate-300">
+                                  {lt.note || "Points updated"}
+                                </td>
+                                <td
+                                  className={`py-3 px-4 text-right font-bold text-sm ${
+                                    isEarn ? "text-emerald-400" : "text-rose-400"
+                                  }`}
+                                >
+                                  {isEarn ? `+${ptsVal}` : `-${ptsVal}`} pts
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="flex items-center justify-between text-xs px-1 text-slate-400 font-mono">
+                      <span>Total Transactions: <strong className="text-white">{loyaltyHistory.length}</strong></span>
+                      <span className="text-emerald-400 font-bold text-sm">
+                        Total Points Earned: +{loyaltyHistory.filter((lt: LoyaltyLedgerItem) => lt.type === 'EARN' || lt.transaction_type === 'EARNED' || Number(lt.points || lt.points_change) > 0).reduce((sum: number, lt: LoyaltyLedgerItem) => sum + Math.abs(Number(lt.points || lt.points_change || 0)), 0)} pts
+                      </span>
+                    </div>
+                  </div>
                 )}
               </div>
 
-              {/* Tier Upgrade History */}
-              {tierHistory.length > 0 && (
-                <div className="pt-3 border-t border-slate-800">
-                  <h4 className="text-xs font-bold text-slate-300 mb-2">Customer Tier Progression (customer_tier_history)</h4>
-                  <div className="space-y-1.5">
-                    {tierHistory.map((th) => (
-                      <div
-                        key={th.history_id}
-                        className="p-2.5 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-between text-xs"
-                      >
-                        <div>
-                          <span className="text-slate-400">{th.old_tier}</span>
-                          <span className="text-slate-500 mx-2">→</span>
-                          <span className="font-bold text-amber-300">{th.new_tier}</span>
-                          <div className="text-[10px] text-slate-400 mt-0.5">{th.reason || "Points threshold met"}</div>
-                        </div>
-                        <span className="text-[10px] font-mono text-slate-500">
-                          {new Date(th.changed_at).toLocaleDateString()}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
 
             <div className="pt-2 border-t border-slate-800 text-right">

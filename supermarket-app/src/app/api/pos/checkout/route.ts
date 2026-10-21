@@ -263,9 +263,9 @@ export async function POST(req: Request) {
         );
 
         await connection.query(
-          `INSERT INTO loyalty_transactions (customer_id, sale_id, points_change, transaction_type, created_at)
-           VALUES (?, ?, ?, 'EARNED', NOW())`,
-          [customer_id, sale_id, earnedPoints]
+          `INSERT INTO loyalty_transactions (customer_id, branch_id, sale_id, points, type, note, created_at)
+           VALUES (?, ?, ?, ?, 'EARN', CONCAT('Points earned from sale #SALE-', ?), NOW())`,
+          [customer_id, branch_id, sale_id, earnedPoints, sale_id]
         );
       }
 
@@ -279,9 +279,9 @@ export async function POST(req: Request) {
         );
 
         await connection.query(
-          `INSERT INTO loyalty_transactions (customer_id, sale_id, points_change, transaction_type, created_at)
-           VALUES (?, ?, ?, 'REDEEMED', NOW())`,
-          [customer_id, sale_id, -pointsDeducted]
+          `INSERT INTO loyalty_transactions (customer_id, branch_id, sale_id, points, type, note, created_at)
+           VALUES (?, ?, ?, ?, 'REDEEM', CONCAT('Points redeemed on sale #SALE-', ?), NOW())`,
+          [customer_id, branch_id, sale_id, -pointsDeducted, sale_id]
         );
       }
     }
