@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useApp } from "@/lib/context";
 import {
   Settings,
@@ -21,8 +22,15 @@ import {
 } from "lucide-react";
 
 export default function UserSettingsPage() {
+  const router = useRouter();
   const { currentEmployee, currentBranch, showToast } = useApp();
   const isCashier = currentEmployee?.role === "CASHIER";
+
+  useEffect(() => {
+    if (isCashier) {
+      router.replace("/cashier/settings");
+    }
+  }, [isCashier, router]);
   const isAdminOrManager =
     currentEmployee?.role === "ADMIN" || currentEmployee?.role === "MANAGER";
 

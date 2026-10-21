@@ -1,13 +1,21 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useApp } from "@/lib/context";
 import { UserCircle, ShieldCheck, Mail, Phone, Calendar, DollarSign, Building2, ArrowLeft } from "lucide-react";
 
 export default function ProfilePage() {
+  const router = useRouter();
   const { currentEmployee, currentBranch } = useApp();
   const isAdmin = currentEmployee?.role === "ADMIN";
+
+  useEffect(() => {
+    if (currentEmployee?.role === "CASHIER") {
+      router.replace("/cashier/profile");
+    }
+  }, [currentEmployee, router]);
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto animate-in fade-in duration-300">

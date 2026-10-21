@@ -17,9 +17,9 @@ const CASHIER_TABS = [
 ];
 
 const ACCOUNT_TABS = [
-  { label: "Profile", href: "/profile", icon: "👤" },
-  { label: "Settings", href: "/settings", icon: "⚙️" },
-  { label: "Logout", href: "/logout", icon: "🚪" },
+  { label: "Profile", href: "/cashier/profile", icon: "👤" },
+  { label: "Settings", href: "/cashier/settings", icon: "⚙️" },
+  { label: "Logout", href: "/cashier/logout", icon: "🚪" },
 ];
 
 function CashierLayoutContent({ children }: { children: React.ReactNode }) {
@@ -255,7 +255,7 @@ function CashierLayoutContent({ children }: { children: React.ReactNode }) {
                   marginBottom: 3,
                   fontSize: 13,
                   fontWeight: isActive ? 600 : 500,
-                  color: tab.href === "/logout"
+                  color: tab.href === "/cashier/logout"
                     ? "var(--accent-rose)"
                     : isActive
                     ? "var(--text-primary)"
@@ -376,7 +376,7 @@ function CashierLayoutContent({ children }: { children: React.ReactNode }) {
             )}
 
             <Link
-              href="/logout"
+              href="/cashier/logout"
               className="btn btn-ghost"
               style={{ padding: "5px 10px", fontSize: 11, color: "var(--accent-rose)" }}
               title="Sign Out"

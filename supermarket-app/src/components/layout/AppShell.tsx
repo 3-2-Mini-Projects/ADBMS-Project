@@ -10,6 +10,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const isStandalone =
     pathname === "/login" ||
     pathname === "/activate-account" ||
+    pathname === "/logout" ||
     pathname.startsWith("/cashier") ||
     pathname.startsWith("/sales");
 
