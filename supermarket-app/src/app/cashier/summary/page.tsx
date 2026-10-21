@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCashier } from "@/lib/cashierContext";
+import PrintableDailySummary from "@/components/PrintableDailySummary";
 
 interface CashierSummaryData {
   transactions_count: number;
@@ -49,7 +50,7 @@ interface CashierHistoricalDay {
 
 export default function CashierDailySummaryPage() {
   const router = useRouter();
-  const { cashier } = useCashier();
+  const { cashier, branches } = useCashier();
 
   const todayStr = new Date().toISOString().split("T")[0];
   const [selectedDate, setSelectedDate] = useState<string>(todayStr);
@@ -58,6 +59,7 @@ export default function CashierDailySummaryPage() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const [showPrintModal, setShowPrintModal] = useState(false);
 
   const [cashierSummary, setCashierSummary] = useState<CashierSummaryData | null>(null);
   const [paymentsByMethod, setPaymentsByMethod] = useState<PaymentMethodBreakdown[]>([]);
@@ -217,7 +219,7 @@ export default function CashierDailySummaryPage() {
 
           <button
             type="button"
-            onClick={() => window.print()}
+            onClick={() => setShowPrintModal(true)}
             className="btn btn-primary"
             style={{ padding: "8px 14px", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}
           >
@@ -691,6 +693,40 @@ export default function CashierDailySummaryPage() {
             )}
           </div>
         </div>
+      )}
+
+      {showPrintModal && cashier && (
+        <PrintableDailySummary
+          data={{
+            branch: {
+              name: cashier.branch_name,
+              branch_code: cashier.branch_code,
+              city: cashier.city,
+              address: branches?.find((b) => b.branch_id === cashier.branch_id)?.address,
+              phone: branches?.find((b) => b.branch_id === cashier.branch_id)?.phone,
+            },
+            cashier: {
+              full_name: cashier.full_name,
+              employee_id: cashier.employee_id,
+              role: cashier.role,
+            },
+            summaryDate: selectedDate,
+            generatedAt: new Date().toLocaleString("en-LK", {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            }),
+            cashierSummary,
+            paymentsByMethod,
+            cashierReturns,
+            branchSummaryForDate,
+            activeCashiers,
+          }}
+          onClose={() => setShowPrintModal(false)}
+        />
       )}
     </div>
   );
