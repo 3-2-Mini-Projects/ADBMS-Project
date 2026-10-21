@@ -28,7 +28,6 @@ import {
   FileText,
 } from "lucide-react";
 import RegisterCustomerModal from "@/components/RegisterCustomerModal";
-import AwardPointsModal from "@/components/AwardPointsModal";
 
 interface LoyaltyLedgerItem {
   loyalty_id: number;
@@ -65,9 +64,6 @@ export default function CustomersPage() {
   const [tierHistory, setTierHistory] = useState<any[]>([]);
   const [loadingLedger, setLoadingLedger] = useState(false);
 
-  // Award / Adjust Points Modal State
-  const [awardModalOpen, setAwardModalOpen] = useState(false);
-  const [customerForAward, setCustomerForAward] = useState<Customer | null>(null);
 
   // Register Customer Modal State
   const [registerModalOpen, setRegisterModalOpen] = useState(false);
@@ -178,24 +174,6 @@ export default function CustomersPage() {
     }
   };
 
-  const openAwardPoints = (customer: Customer) => {
-    setCustomerForAward(customer);
-    setAwardModalOpen(true);
-  };
-
-  const handleAwardSuccess = (res: any) => {
-    showToast(res.message || "Points transaction processed!", "success");
-    fetchCustomers();
-    if (selectedCustomer && selectedCustomer.customer_id === res.result?.customer_id) {
-      const updated = {
-        ...selectedCustomer,
-        points_balance: res.result.new_balance,
-        tier: res.result.tier || selectedCustomer.tier,
-      };
-      setSelectedCustomer(updated);
-      openCustomerLedger(updated);
-    }
-  };
 
   const handleRegisterSuccess = (newMember: any) => {
     showToast(`Registered ${newMember.full_name}! Card: ${newMember.card_no}`, "success");
@@ -364,15 +342,6 @@ export default function CustomersPage() {
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center justify-center gap-1.5">
-                        {/* Award / Earn Points Button */}
-                        <button
-                          onClick={() => openAwardPoints(c)}
-                          className="px-2.5 py-1 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 hover:text-emerald-300 border border-emerald-500/30 transition-all flex items-center gap-1 text-[11px] font-semibold"
-                          title="Award / Adjust Points"
-                        >
-                          <Coins className="w-3.5 h-3.5" />
-                          <span>Award</span>
-                        </button>
 
                         {/* View Loyalty Ledger Button */}
                         <button
@@ -408,41 +377,21 @@ export default function CustomersPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-4xl p-6 shadow-2xl space-y-5 max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <div>
-                <h3 className="font-bold text-base text-white flex items-center gap-2">
-                  <Star className="w-4 h-4 text-amber-400" />
-                  <span>Loyalty Ledger: {selectedCustomer.full_name}</span>
-                </h3>
-                <div className="text-[11px] text-slate-400 font-mono mt-0.5">
-                  Card: <span className="text-amber-400 font-bold">{selectedCustomer.card_no}</span> • Tier:{" "}
-                  <span className="font-bold text-amber-300">{selectedCustomer.tier}</span> • Current Points:{" "}
-                  <strong className="text-emerald-400 font-bold">{selectedCustomer.points_balance || 0} pts</strong>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => openAwardPoints(selectedCustomer)}
-                  className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md transition-all"
-                >
-                  <Coins className="w-3.5 h-3.5" />
-                  <span>Award / Adjust</span>
-                </button>
-                <button
-                  onClick={() => setLedgerModalOpen(false)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-white"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
+              <h3 className="font-bold text-base text-white flex items-center gap-2">
+                <Star className="w-4 h-4 text-amber-400" />
+                <span>Loyalty Ledger: {selectedCustomer.full_name}</span>
+              </h3>
+              <button
+                onClick={() => setLedgerModalOpen(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
 
             {/* Transactions List */}
             <div className="flex-1 overflow-y-auto space-y-4 pr-1">
               <div>
-                <h4 className="text-xs font-bold text-slate-300 mb-2 flex items-center gap-1.5">
-                  <FileText className="w-3.5 h-3.5 text-blue-400" />
-                  <span>Points Transaction Audit History (loyalty_transactions)</span>
-                </h4>
                 {loadingLedger ? (
                   <div className="py-6 text-center text-slate-500 text-xs">Loading ledger records...</div>
                 ) : loyaltyHistory.length === 0 ? (
@@ -519,35 +468,6 @@ export default function CustomersPage() {
                 )}
               </div>
 
-              {/* Tier Upgrade History */}
-              {tierHistory.length > 0 && (
-                <div className="pt-3 border-t border-slate-800">
-                  <h4 className="text-xs font-bold text-slate-300 mb-2 flex items-center gap-1.5">
-                    <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
-                    <span>Customer Tier Progression (customer_tier_history)</span>
-                  </h4>
-                  <div className="space-y-1.5">
-                    {tierHistory.map((th) => (
-                      <div
-                        key={th.history_id}
-                        className="p-2.5 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-between text-xs"
-                      >
-                        <div>
-                          <span className="text-slate-400 font-semibold">{th.old_tier || "INITIAL"}</span>
-                          <span className="text-slate-500 mx-2">→</span>
-                          <span className="font-bold text-amber-300">{th.new_tier}</span>
-                          <div className="text-[10px] text-slate-400 mt-0.5">
-                            {th.reason || "Points threshold milestone reached"}
-                          </div>
-                        </div>
-                        <span className="text-[10px] font-mono text-slate-500 whitespace-nowrap">
-                          {new Date(th.changed_at).toLocaleDateString()}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
 
             <div className="pt-3 border-t border-slate-800 flex justify-end">
@@ -570,16 +490,6 @@ export default function CustomersPage() {
         onSuccess={handleRegisterSuccess}
       />
 
-      {/* MODAL: Award / Adjust Loyalty Points */}
-      <AwardPointsModal
-        isOpen={awardModalOpen}
-        onClose={() => {
-          setAwardModalOpen(false);
-          setCustomerForAward(null);
-        }}
-        customer={customerForAward}
-        onSuccess={handleAwardSuccess}
-      />
 
       {/* MODAL: Edit Customer Details */}
       {editModalOpen && editingCustomer && (
