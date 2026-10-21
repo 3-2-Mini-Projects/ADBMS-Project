@@ -634,7 +634,7 @@ export function InventoryDashboardView() {
         {[
           { href: "/inventory", icon: Boxes, label: "Stock Inventory Grid", badge: "Live Grid", color: "indigo" },
           { href: "/inventory/stock-alerts", icon: AlertTriangle, label: "Stock Alerts Center", badge: "Real-time", color: "amber" },
-          { href: "/inventory/transfers", icon: ArrowLeftRight, label: "Inter-Branch Transfers", badge: "sp_transfer", color: "emerald" },
+          { href: "/inventory/transfers", icon: ArrowLeftRight, label: "Inter-Branch Transfers", badge: "Transfer", color: "emerald" },
           { href: "/purchases", icon: ShieldAlert, label: "Purchase Orders", badge: "Purchasing", color: "blue" },
         ].map((action) => {
           const Icon = action.icon;

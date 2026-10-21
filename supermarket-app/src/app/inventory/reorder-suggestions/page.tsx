@@ -125,9 +125,6 @@ export default function ReorderSuggestionsPage() {
       ? "text-2xl font-black text-slate-900 flex items-center gap-2.5"
       : "text-2xl font-black text-white flex items-center gap-2.5",
     subtitle: isClerk ? "mt-1 text-sm text-slate-500 font-medium" : "mt-1 text-sm text-slate-400",
-    badgeUdf: isClerk
-      ? "text-[10px] font-mono bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full font-bold"
-      : "text-[10px] font-mono bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-full font-bold",
     recalcBtn: isClerk
       ? "px-3 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold flex items-center gap-1.5 border border-slate-200 shadow-sm transition-all"
       : "px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1.5 border border-slate-700/50 transition-all",
@@ -192,9 +189,6 @@ export default function ReorderSuggestionsPage() {
               <ClipboardCheck className="w-6 h-6 text-teal-600" />
               <span>Smart Reorder Replenishment</span>
             </h1>
-            <span className={theme.badgeUdf}>
-              UDFs: fn_suggested_reorder_qty • fn_branch_replenishment_cost
-            </span>
           </div>
           <p className={theme.subtitle}>
             Automated stock replenishment advised by 30-day velocity, lead days, and safety stock.
@@ -250,7 +244,7 @@ export default function ReorderSuggestionsPage() {
             Rs. {estimatedCost.toFixed(2)}
           </div>
           <div className={theme.kpiSubtext}>
-            via fn_branch_replenishment_cost
+            Based on current replenishment demand
           </div>
         </div>
       </div>
@@ -316,7 +310,7 @@ export default function ReorderSuggestionsPage() {
                 <tr>
                   <td colSpan={8} className="py-12 text-center text-slate-500">
                     <Sparkles className="w-5 h-5 animate-spin mx-auto text-teal-600 mb-2" />
-                    Calculating reorder requirements via fn_suggested_reorder_qty...
+                    Calculating reorder requirements...
                   </td>
                 </tr>
               ) : filteredItems.length === 0 ? (

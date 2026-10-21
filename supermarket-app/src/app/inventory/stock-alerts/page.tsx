@@ -207,9 +207,6 @@ export default function StockAlertsPage() {
               <AlertTriangle className="w-6 h-6 text-amber-500" />
               <span>Stock Alerts Management</span>
             </h1>
-            <span className={theme.badgeView}>
-              VIEW: vw_stock_alert_dashboard
-            </span>
           </div>
           <p className={theme.subtitle}>
             Real-time low stock thresholds and expiration warnings monitored live across supermarket inventory.
@@ -337,7 +334,7 @@ export default function StockAlertsPage() {
                 <tr>
                   <td colSpan={9} className="py-12 text-center text-slate-500">
                     <Sparkles className="w-5 h-5 animate-spin mx-auto text-teal-600 mb-2" />
-                    Checking live inventory and querying vw_stock_alert_dashboard...
+                    Checking live inventory alerts...
                   </td>
                 </tr>
               ) : filteredAlerts.length === 0 ? (

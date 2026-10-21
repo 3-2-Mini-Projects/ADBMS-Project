@@ -177,7 +177,7 @@ export default function StockTransfersPage() {
 
       const data = await res.json();
       if (res.ok) {
-        showToast(data.message || "Stock transferred successfully via sp_transfer_stock!", "success");
+        showToast(data.message || "Stock transferred successfully!", "success");
         setTransferQty("");
         setSelectedProductId("");
         setProductSearch("");
@@ -305,9 +305,9 @@ export default function StockTransfersPage() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-teal-500"></span>
             </span>
-            <span className="font-mono text-teal-700 dark:text-teal-400 font-bold">sp_transfer_stock</span>
+            <span className="text-teal-700 dark:text-teal-400 font-bold">Direct Branch Transfer</span>
             <span className="text-slate-400 dark:text-slate-600">·</span>
-            <span className={isClerk ? "text-slate-600 font-mono" : "text-slate-400 font-mono"}>Row-Level Locks (FOR UPDATE)</span>
+            <span className={isClerk ? "text-slate-600 font-medium" : "text-slate-400 font-medium"}>Atomic Stock Sync</span>
           </div>
           <h1 className={theme.title}>
             <ArrowLeftRight className="w-7 h-7 text-teal-600 dark:text-teal-400" />
@@ -646,7 +646,7 @@ export default function StockTransfersPage() {
               {submitting ? (
                 <>
                   <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>Executing Transaction via sp_transfer_stock...</span>
+                  <span>Processing Transfer...</span>
                 </>
               ) : (
                 <>

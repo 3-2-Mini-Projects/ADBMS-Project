@@ -251,7 +251,7 @@ export default function InventoryBatchesPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        showToast(data.message || "Stock disposed successfully via sp_record_stock_disposal!", "success");
+        showToast(data.message || "Stock disposed successfully!", "success");
         setDisposalModalOpen(false);
         fetchSummary();
         fetchBatches();
@@ -681,7 +681,7 @@ export default function InventoryBatchesPage() {
                               ? "bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200"
                               : "bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700"
                           }`}
-                          title="Dispose / Write-off stock via sp_record_stock_disposal"
+                          title="Dispose / Write-off stock"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                           <span className="hidden md:inline">Write Off</span>
@@ -816,7 +816,7 @@ export default function InventoryBatchesPage() {
                   ? "bg-rose-50 text-rose-800 border-rose-200"
                   : "text-slate-400 bg-rose-500/10 border-rose-500/20"
               }`}>
-                ⚠️ Executing this will permanently deduct stock from <strong>product_batches</strong> and <strong>inventory</strong> via <code>sp_record_stock_disposal</code> and write an entry into <strong>audit_log</strong>.
+                ⚠️ Executing this will permanently deduct stock from batch and branch inventory and record an official write-off entry in the audit history.
               </div>
 
               <div className="flex items-center gap-3 pt-2">
@@ -869,8 +869,8 @@ export default function InventoryBatchesPage() {
                   <h3 className={`font-bold text-sm ${isClerk ? "text-slate-900" : "text-white"}`}>
                     Stock Disposal & Write-Off Audit Trail
                   </h3>
-                  <div className={`text-[11px] font-mono ${isClerk ? "text-slate-500" : "text-slate-400"}`}>
-                    vw_stock_movement_audit • table: product_batches
+                  <div className={`text-[11px] ${isClerk ? "text-slate-500 font-medium" : "text-slate-400"}`}>
+                    Verified inventory disposal records & audit history
                   </div>
                 </div>
               </div>

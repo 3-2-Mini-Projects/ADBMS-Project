@@ -349,10 +349,10 @@ export default function InventoryPage() {
               type="button"
               onClick={() => handleRunAudit("low_stock")}
               className="px-3.5 py-2.5 rounded-xl border border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 shadow-sm"
-              title="Audit using Stored Procedure sp_check_low_stock"
+              title="Run automated stock health check"
             >
               <Sparkles className="w-3.5 h-3.5 text-blue-400" />
-              <span>SP Audit (sp_check_low_stock)</span>
+              <span>Stock Health Audit</span>
             </button>
           </div>
 
@@ -585,14 +585,14 @@ export default function InventoryPage() {
               <div className="p-2.5 bg-blue-500/10 border border-blue-500/20 rounded-xl space-y-1 text-[11px] mt-2">
                 <div className="font-semibold text-blue-400 flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5 text-blue-400" />
-                  <span>ADBMS Analytics (UDF Functions)</span>
+                  <span>Stock Movement Analytics</span>
                 </div>
-                <div className="flex justify-between text-slate-300 font-mono">
-                  <span>Sales Velocity (fn_product_sales_velocity):</span>
+                <div className="flex justify-between text-slate-300">
+                  <span>Sales Velocity:</span>
                   <span className="font-bold">{Number((selectedItem as any).sales_velocity || 0).toFixed(2)} units/day</span>
                 </div>
-                <div className="flex justify-between text-slate-300 font-mono">
-                  <span>Suggested Reorder (fn_suggested_reorder_qty):</span>
+                <div className="flex justify-between text-slate-300">
+                  <span>Suggested Reorder:</span>
                   <span className="font-bold text-amber-400">+{Number((selectedItem as any).suggested_reorder_qty || 0)} units</span>
                 </div>
               </div>
@@ -759,11 +759,11 @@ export default function InventoryPage() {
                 <div>
                   <h3 className={`font-bold text-sm ${isClerk ? "text-slate-900" : "text-white"}`}>
                     {auditType === "low_stock"
-                      ? "Stored Procedure: sp_check_low_stock"
-                      : "Stored Procedure: sp_expiring_batches"}
+                      ? "Low Stock Inventory Audit"
+                      : "Batch Expiry Audit"}
                   </h3>
-                  <div className="text-[11px] font-mono text-teal-600 dark:text-teal-400 font-semibold">
-                    CALL {auditType === "low_stock" ? "sp_check_low_stock(?)" : "sp_expiring_batches(?)"}
+                  <div className={`text-[11px] ${isClerk ? "text-slate-500 font-medium" : "text-teal-400 font-medium"}`}>
+                    {auditType === "low_stock" ? "Automated threshold scan across current branch stock" : "Automated scan for near-expiry product batches"}
                   </div>
                 </div>
               </div>
@@ -814,14 +814,14 @@ export default function InventoryPage() {
                       <tr>
                         <td colSpan={auditType === "low_stock" ? 4 : 5} className="py-8 text-center text-slate-500">
                           <Sparkles className="w-4 h-4 animate-spin mx-auto text-teal-500 mb-1" />
-                          Executing stored procedure on MySQL...
+                          Running automated stock diagnostic...
                         </td>
                       </tr>
                     ) : auditResults.length === 0 ? (
                       <tr>
                         <td colSpan={auditType === "low_stock" ? 4 : 5} className="py-8 text-center text-slate-500">
                           <CheckCircle2 className="w-5 h-5 mx-auto text-emerald-500 mb-1 opacity-70" />
-                          No issues detected by stored procedure audit.
+                          No issues detected by stock health audit.
                         </td>
                       </tr>
                     ) : (
