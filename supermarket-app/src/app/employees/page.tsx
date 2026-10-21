@@ -1,7 +1,5 @@
-import { redirect } from "next/navigation";
+"use client";
 
-export default function EmployeesRedirectPage() {
-  redirect("/admin/employees");
 import React, { useState, useEffect } from "react";
 import { useApp } from "@/lib/context";
 import { Employee, UserRole } from "@/lib/types";

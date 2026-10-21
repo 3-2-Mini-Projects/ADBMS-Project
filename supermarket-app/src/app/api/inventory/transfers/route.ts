@@ -24,28 +24,33 @@ export async function GET(req: Request) {
 
     let sql = `
       SELECT 
-        audit_id AS log_id,
-        audit_id,
-        record_id,
-        action,
-        new_value,
-        changed_by,
-        changed_at
-      FROM audit_log
-      WHERE table_name = 'inventory' 
-        AND record_id LIKE 'transfer_%'
+        a.audit_id AS log_id,
+        a.audit_id,
+        a.record_id,
+        a.action,
+        a.new_value,
+        a.changed_by,
+        a.changed_at,
+        p.name AS product_name,
+        p.barcode,
+        e.full_name AS operator_name
+      FROM audit_log a
+      LEFT JOIN products p ON p.product_id = CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(a.new_value, '$.product_id')), 'null') AS UNSIGNED)
+      LEFT JOIN employees e ON a.changed_by LIKE 'employee_%' AND e.employee_id = CAST(SUBSTRING(a.changed_by, 10) AS UNSIGNED)
+      WHERE a.table_name = 'inventory' 
+        AND a.record_id LIKE 'transfer_%'
     `;
     const params: any[] = [];
 
     if (branchId) {
       sql += ` AND (
-        JSON_UNQUOTE(JSON_EXTRACT(new_value, '$.from_branch_id')) = ? 
-        OR JSON_UNQUOTE(JSON_EXTRACT(new_value, '$.to_branch_id')) = ?
+        JSON_UNQUOTE(JSON_EXTRACT(a.new_value, '$.from_branch_id')) = ? 
+        OR JSON_UNQUOTE(JSON_EXTRACT(a.new_value, '$.to_branch_id')) = ?
       )`;
       params.push(branchId, branchId);
     }
 
-    sql += ` ORDER BY audit_id DESC LIMIT 50`;
+    sql += ` ORDER BY a.audit_id DESC LIMIT 50`;
 
     const logs: any = await query(sql, params);
 
@@ -59,6 +64,9 @@ export async function GET(req: Request) {
       }
       return {
         ...l,
+        product_name: l.product_name || details?.product_name || null,
+        barcode: l.barcode || null,
+        operator_name: l.operator_name || l.changed_by,
         details,
       };
     });
