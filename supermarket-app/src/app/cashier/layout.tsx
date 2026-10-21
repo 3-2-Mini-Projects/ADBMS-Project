@@ -4,12 +4,14 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { CashierProvider, useCashier } from "@/lib/cashierContext";
+import { CashierNotificationBell } from "@/components/CashierNotificationBell";
 
 const CASHIER_TABS = [
   { label: "Dashboard", href: "/cashier/dashboard", icon: "📊" },
   { label: "POS Billing", href: "/cashier/pos", icon: "🛒", badge: "F2" },
   { label: "Transaction History", href: "/cashier/history", icon: "📋" },
   { label: "Daily Summary", href: "/cashier/summary", icon: "📑" },
+  { label: "Sign-in Logs & Alerts", href: "/cashier/activity", icon: "🔔" },
   { label: "Product & Stock", href: "/cashier/products", icon: "🔍" },
   { label: "Returns & Refunds", href: "/cashier/returns", icon: "↩️" },
 ];
@@ -334,6 +336,9 @@ function CashierLayoutContent({ children }: { children: React.ReactNode }) {
             >
               {clockStr}
             </div>
+
+            {/* Cashier Real-Time Notifications & Sign-in Log Bell */}
+            <CashierNotificationBell />
 
             {cashier && (
               <div
