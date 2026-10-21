@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Link from "next/link";
 import { useApp } from "@/lib/context";
 import {
   BarChart3,
@@ -14,8 +13,6 @@ import {
   RefreshCw,
   Sparkles,
   ShieldAlert,
-  Users,
-  Trophy,
 } from "lucide-react";
 import type {
   MarketingSummaryRow,
@@ -96,14 +93,6 @@ export default function MarketingReportsPage() {
           </h1>
         </div>
         <div className="flex items-center gap-2 print:hidden flex-wrap">
-          <Link
-            href="/marketing/reports/top-loyalty-customers"
-            className="px-3.5 py-2 rounded-xl bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 text-xs font-bold flex items-center gap-1.5 transition-colors border border-amber-500/30 shadow-md"
-          >
-            <Trophy className="w-3.5 h-3.5 text-amber-400" />
-            <span>Top 10 Loyalty Report</span>
-          </Link>
-
           <button
             onClick={loadReportData}
             disabled={loading}

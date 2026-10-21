@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { useApp } from "@/lib/context";
 import { Customer } from "@/lib/types";
 import {
@@ -45,7 +46,13 @@ interface LoyaltyLedgerItem {
 }
 
 export default function CustomersPage() {
-  const { showToast, branches } = useApp();
+  const pathname = usePathname();
+  const { showToast, branches, currentEmployee, authenticatedUser } = useApp();
+  const isMarketing =
+    pathname?.startsWith("/marketing") ||
+    currentEmployee?.role === "MARKETING" ||
+    authenticatedUser?.role === "MARKETING";
+
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -211,14 +218,16 @@ export default function CustomersPage() {
           </p>
         </div>
 
-        {/* Action Button: Register Customer */}
-        <button
-          onClick={() => setRegisterModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-lg shadow-emerald-950/40 transition-all hover:scale-[1.02] active:scale-[0.98] self-start sm:self-auto"
-        >
-          <Plus className="w-4 h-4" />
-          <span>+ Register New Customer</span>
-        </button>
+        {/* Action Button: Register Customer (Hidden for Marketing Manager) */}
+        {!isMarketing && (
+          <button
+            onClick={() => setRegisterModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-lg shadow-emerald-950/40 transition-all hover:scale-[1.02] active:scale-[0.98] self-start sm:self-auto"
+          >
+            <Plus className="w-4 h-4" />
+            <span>+ Register New Customer</span>
+          </button>
+        )}
       </div>
 
       {/* Search & Branch Filter Controls */}
