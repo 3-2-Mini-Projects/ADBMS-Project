@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useApp } from "@/lib/context";
 import { canAccess, PermissionKey } from "@/lib/permissions";
+import { UserRole } from "@/lib/types";
 import {
   LayoutDashboard,
   AlertTriangle,
@@ -252,7 +253,14 @@ export function Sidebar() {
     return null;
   }
 
-  const role = currentEmployee?.role ?? "ADMIN";
+  const cachedRole =
+    typeof window !== "undefined"
+      ? (localStorage.getItem("adbms_cached_role") as UserRole | null)
+      : null;
+  const role: UserRole =
+    currentEmployee?.role ||
+    cachedRole ||
+    (pathname.startsWith("/cashier") ? "CASHIER" : "CASHIER");
   const isAdmin = role === "ADMIN";
   const navGroups =
     isAdmin
