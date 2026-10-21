@@ -11,7 +11,6 @@ USE supermarket_oltp;
 -- ============================================================
 
 DROP VIEW IF EXISTS customer_summary_vw;
-DROP VIEW IF EXISTS top_customers_vw;
 DROP VIEW IF EXISTS active_promotions_vw;
 DROP VIEW IF EXISTS customer_etl_vw;
 
@@ -77,36 +76,7 @@ LEFT JOIN categories c ON c.category_id = p.category_id
 WHERE p.is_active = 1 
   AND CURDATE() BETWEEN p.start_date AND p.end_date;
 
--- ------------------------------------------------------------
--- VIEW 3: Top Customers Leaderboard by Points Earned (Month-wise)
--- ------------------------------------------------------------
-CREATE OR REPLACE VIEW top_customers_vw AS
-SELECT
-    c.customer_id,
-    c.card_no,
-    c.full_name,
-    c.tier,
-    c.points_balance,
-    DATE_FORMAT(lt.created_at, '%Y-%m') AS transaction_month,
-    COALESCE(SUM(
-        CASE
-            WHEN lt.transaction_type = 'EARNED' OR lt.transaction_type = 'EARN'
-            THEN COALESCE(lt.points_change, 0)
-            ELSE 0
-        END
-    ), 0) AS total_points_earned
-FROM customers c
-LEFT JOIN loyalty_transactions lt
-    ON c.customer_id = lt.customer_id
-WHERE c.is_active = 1
-  AND c.points_balance > 0
-GROUP BY
-    c.customer_id,
-    c.card_no,
-    c.full_name,
-    c.tier,
-    c.points_balance,
-    DATE_FORMAT(lt.created_at, '%Y-%m');
+
 
 
 -- ------------------------------------------------------------

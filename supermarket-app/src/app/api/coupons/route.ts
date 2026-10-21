@@ -14,6 +14,8 @@ export async function GET(req: Request) {
         cp.promo_id,
         pr.name AS promo_name,
         pr.discount_percent,
+        pr.start_date AS promo_start_date,
+        pr.end_date AS promo_end_date,
         cp.customer_id,
         c.full_name AS customer_name,
         c.card_no AS customer_card_no,
@@ -23,15 +25,12 @@ export async function GET(req: Request) {
         cp.expiry_date,
         cp.is_used,
         cp.used_at,
-        COALESCE(cp.max_products, 5) AS max_products,
-        COALESCE(cp.purchase_limit, 3000.00) AS purchase_limit,
-        cp.sms_phone,
-        COALESCE(cp.sms_status, 'SENT') AS sms_status,
-        cp.sms_message,
-        cp.created_at,
+        5 AS max_products,
+        3000.00 AS purchase_limit,
         CASE
           WHEN cp.is_used = 1 THEN 'REDEEMED'
           WHEN cp.expiry_date IS NOT NULL AND cp.expiry_date < CURDATE() THEN 'EXPIRED'
+          WHEN pr.start_date IS NOT NULL AND pr.start_date > CURDATE() THEN 'INACTIVE'
           ELSE 'AVAILABLE'
         END AS status,
         DATEDIFF(cp.expiry_date, CURDATE()) AS days_until_expiry
@@ -65,6 +64,8 @@ export async function GET(req: Request) {
           cp.promo_id,
           pr.name AS promo_name,
           pr.discount_percent,
+          pr.start_date AS promo_start_date,
+          pr.end_date AS promo_end_date,
           cp.customer_id,
           c.full_name AS customer_name,
           c.card_no AS customer_card_no,
@@ -76,13 +77,10 @@ export async function GET(req: Request) {
           cp.used_at,
           5 AS max_products,
           3000.00 AS purchase_limit,
-          c.phone AS sms_phone,
-          'SENT' AS sms_status,
-          NULL AS sms_message,
-          NULL AS created_at,
           CASE
             WHEN cp.is_used = 1 THEN 'REDEEMED'
             WHEN cp.expiry_date IS NOT NULL AND cp.expiry_date < CURDATE() THEN 'EXPIRED'
+            WHEN pr.start_date IS NOT NULL AND pr.start_date > CURDATE() THEN 'INACTIVE'
             ELSE 'AVAILABLE'
           END AS status,
           DATEDIFF(cp.expiry_date, CURDATE()) AS days_until_expiry
@@ -93,48 +91,28 @@ export async function GET(req: Request) {
       `);
     }
 
-    // 2. Fetch Top 10 Loyalty Customers
-    let top10Customers: any[] = [];
+    // Top 10 customers with active coupon status
+    let top10Customers: unknown[] = [];
     try {
       top10Customers = await query(`
         SELECT 
-          c.customer_id,
-          c.card_no,
-          c.full_name,
-          c.phone,
-          c.email,
-          c.city,
-          c.tier,
-          c.points_balance,
-          COALESCE(s.total_spent, 0) AS total_spent,
-          COALESCE(s.total_orders, 0) AS total_orders,
-          COALESCE(active_cp.active_coupons, 0) AS active_coupons
+          c.customer_id, c.card_no, c.full_name, c.phone, c.tier, c.points_balance,
+          (
+            SELECT cp.code 
+            FROM coupons cp 
+            WHERE cp.customer_id = c.customer_id 
+              AND cp.is_used = 0 
+              AND cp.expiry_date >= CURDATE() 
+            ORDER BY cp.coupon_id DESC 
+            LIMIT 1
+          ) AS active_coupon_code
         FROM customers c
-        LEFT JOIN (
-          SELECT customer_id, SUM(total_amount) AS total_spent, COUNT(sale_id) AS total_orders
-          FROM sales
-          WHERE status = 'COMPLETED'
-          GROUP BY customer_id
-        ) s ON c.customer_id = s.customer_id
-        LEFT JOIN (
-          SELECT customer_id, COUNT(*) AS active_coupons
-          FROM coupons
-          WHERE is_used = 0 AND (expiry_date IS NULL OR expiry_date >= CURDATE())
-          GROUP BY customer_id
-        ) active_cp ON c.customer_id = active_cp.customer_id
         WHERE c.is_active = 1
-        ORDER BY c.points_balance DESC, s.total_spent DESC
+        ORDER BY c.points_balance DESC, c.customer_id ASC
         LIMIT 10
       `);
-    } catch (topErr) {
-      console.warn("Could not query top10 with sales aggregation, falling back to points:", topErr);
-      top10Customers = await query(`
-        SELECT customer_id, card_no, full_name, phone, email, city, tier, points_balance, 0 AS total_spent, 0 AS total_orders, 0 AS active_coupons
-        FROM customers
-        WHERE is_active = 1
-        ORDER BY points_balance DESC
-        LIMIT 10
-      `);
+    } catch {
+      top10Customers = [];
     }
 
     // 3. Coupon Summary metrics
@@ -153,15 +131,7 @@ export async function GET(req: Request) {
     const redemptionRate = total > 0 ? Math.round((redeemed / total) * 100) : 0;
 
     // Count SMS sent
-    let smsSentCount = 0;
-    try {
-      const [smsRow]: any = await query(`
-        SELECT COUNT(*) AS sms_count FROM coupons WHERE sms_status = 'SENT' OR sms_phone IS NOT NULL
-      `);
-      smsSentCount = Number(smsRow?.sms_count || 0);
-    } catch {
-      smsSentCount = Number(summary?.customer_bound_coupons || 0);
-    }
+    let smsSentCount = Number(summary?.customer_bound_coupons || 0);
 
     // 4. Active Promotions (from active_promotions_vw or promotions table)
     let promotions: any[] = [];
@@ -252,8 +222,8 @@ export async function POST(req: Request) {
       const couponRows: any = await query(
         `SELECT 
           cp.coupon_id, cp.code, cp.promo_id, cp.customer_id, cp.expiry_date, cp.is_used,
-          COALESCE(cp.max_products, 5) AS max_products,
-          COALESCE(cp.purchase_limit, 3000.00) AS purchase_limit,
+          5 AS max_products,
+          3000.00 AS purchase_limit,
           pr.discount_percent, pr.name AS promo_name
          FROM coupons cp
          JOIN promotions pr ON cp.promo_id = pr.promo_id
@@ -367,113 +337,78 @@ export async function POST(req: Request) {
       });
     }
 
-    // Action 2: Batch Allocate Exclusive Coupons to All Top 10 Customers
-    if (action === "batch_top10") {
-      const { promo_id, prefix = "TOP10" } = body;
-      if (!promo_id) {
-        return NextResponse.json({ error: "Linked campaign promotion is required." }, { status: 400 });
-      }
-
-      // Fetch top 10 customers
-      const top10: any[] = await query(`
-        SELECT customer_id, card_no, full_name, phone, tier, points_balance
-        FROM customers
-        WHERE is_active = 1
-        ORDER BY points_balance DESC
-        LIMIT 10
-      `);
-
-      if (top10.length === 0) {
-        return NextResponse.json({ error: "No active top customers found to allocate coupons." }, { status: 400 });
-      }
-
-      const expiryDate = defaultTwoMonthsDate();
-      const allocatedCoupons: any[] = [];
-
-      for (const cust of top10) {
-        const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
-        const cleanCard = (cust.card_no || "").replace(/[^A-Z0-9]/gi, "").slice(-4) || "VIP";
-        const code = `${prefix}-${cleanCard}-${rand}`.toUpperCase();
-
-        const smsMsg = `Congratulations ${cust.full_name}! You have won the exclusive coupon "${code}". Valid for 2 months (expires ${expiryDate}). You can purchase up to 5 products with a limit of LKR 3,000. One-time use only. Present this code at checkout!`;
-
-        try {
-          await query(
-            `INSERT INTO coupons 
-             (code, promo_id, customer_id, expiry_date, is_used, max_products, purchase_limit, sms_phone, sms_status, sms_message, created_at)
-             VALUES (?, ?, ?, ?, 0, 5, 3000.00, ?, 'SENT', ?, NOW())`,
-            [code, Number(promo_id), cust.customer_id, expiryDate, cust.phone || null, smsMsg]
-          );
-
-          allocatedCoupons.push({
-            code,
-            customer_id: cust.customer_id,
-            customer_name: cust.full_name,
-            phone: cust.phone,
-            expiry_date: expiryDate,
-            sms_message: smsMsg,
-          });
-        } catch (e: any) {
-          console.warn("Error inserting batch coupon for customer:", cust.customer_id, e.message);
+    // Action 2: Batch Assign Coupons to Top 10 Loyalty Customers
+    if (action === "assign_top10") {
+      const { promo_id, valid_days = 30 } = body;
+      let finalPromoId = promo_id ? Number(promo_id) : null;
+      if (!finalPromoId) {
+        const anyPromo = await query<{ promo_id: number }>(
+          "SELECT promo_id FROM promotions WHERE is_active = 1 ORDER BY discount_percent DESC, promo_id DESC LIMIT 1"
+        );
+        if (anyPromo.length > 0) {
+          finalPromoId = anyPromo[0].promo_id;
+        } else {
+          return NextResponse.json({ error: "No active promotion found to link coupons with." }, { status: 400 });
         }
       }
 
+      let issuedCount = 0;
+      const days = Number(valid_days) > 0 ? Number(valid_days) : 30;
+
+      try {
+        await query("CALL proc_assign_top10_coupons(?, ?, @issued)", [finalPromoId, days]);
+        const resCount = await query<{ issued_count: number }>("SELECT @issued AS issued_count");
+        issuedCount = Number(resCount?.[0]?.issued_count ?? 0);
+      } catch (procErr: unknown) {
+        const procMsg = procErr instanceof Error ? procErr.message : "Stored procedure execution error";
+        console.warn("proc_assign_top10_coupons fallback in /api/coupons:", procMsg);
+        const insertRes = await query<{ affectedRows?: number }>(`
+          INSERT INTO coupons (code, promo_id, customer_id, expiry_date, is_used, sms_phone, sms_status, sms_message)
+          SELECT 
+            CONCAT('TOP10-', REPLACE(c.card_no, ' ', ''), '-', UPPER(SUBSTRING(MD5(CONCAT(RAND(), UUID(), c.customer_id)), 1, 4))),
+            ?,
+            c.customer_id,
+            DATE_ADD(CURDATE(), INTERVAL ? DAY),
+            0,
+            c.phone,
+            'SENT',
+            CONCAT('Congratulations ', c.full_name, '! As a Top 10 Loyalty Customer, you have been awarded an exclusive VIP coupon valid for ', ?, ' days.')
+          FROM (
+            SELECT customer_id, card_no, full_name, phone
+            FROM customers
+            WHERE is_active = 1
+            ORDER BY points_balance DESC, customer_id ASC
+            LIMIT 10
+          ) c
+          WHERE NOT EXISTS (
+            SELECT 1 
+            FROM coupons existing
+            WHERE existing.customer_id = c.customer_id 
+              AND existing.promo_id = ? 
+              AND existing.is_used = 0 
+              AND existing.expiry_date >= CURDATE()
+          )
+        `, [finalPromoId, days, days, finalPromoId]);
+        const packet = insertRes as unknown as { affectedRows?: number };
+        issuedCount = packet?.affectedRows || 0;
+      }
+
       return NextResponse.json({
         success: true,
-        count: allocatedCoupons.length,
-        expiry_date: expiryDate,
-        allocatedCoupons,
-        message: `Successfully allocated exclusive 2-month coupons to ${allocatedCoupons.length} Top 10 VIP customers! SMS notifications dispatched with 5 products / LKR 3,000 purchase limits.`,
+        issued_count: issuedCount,
+        message: issuedCount > 0 
+          ? `Successfully assigned ${issuedCount} VIP coupons to Top 10 Loyalty Customers!`
+          : `All eligible Top 10 customers already have an active coupon for this promotion.`,
       });
     }
 
-    // Action 3: Resend SMS for a Coupon
-    if (action === "resend_sms") {
-      const { coupon_id } = body;
-      if (!coupon_id) {
-        return NextResponse.json({ error: "Coupon ID is required." }, { status: 400 });
-      }
-
-      const cpRows: any = await query(
-        `SELECT cp.coupon_id, cp.code, cp.expiry_date, cp.sms_phone, cp.sms_message, c.full_name, c.phone
-         FROM coupons cp
-         LEFT JOIN customers c ON cp.customer_id = c.customer_id
-         WHERE cp.coupon_id = ?`,
-        [Number(coupon_id)]
-      );
-
-      if (cpRows.length === 0) {
-        return NextResponse.json({ error: "Coupon not found" }, { status: 404 });
-      }
-
-      const cp = cpRows[0];
-      const targetPhone = cp.sms_phone || cp.phone;
-      if (!targetPhone) {
-        return NextResponse.json({ error: "Customer does not have a registered phone number to send SMS." }, { status: 400 });
-      }
-
-      const updatedMsg = cp.sms_message || `Congratulations ${cp.full_name || 'Valued Customer'}! You have won the coupon "${cp.code}". Valid for 2 months. You can purchase up to 5 products with a limit of LKR 3,000. One-time use only.`;
-
-      await query(
-        `UPDATE coupons
-         SET sms_phone = ?, sms_status = 'SENT', sms_message = ?
-         WHERE coupon_id = ?`,
-        [targetPhone, updatedMsg, Number(coupon_id)]
-      );
-
-      return NextResponse.json({
-        success: true,
-        phone: targetPhone,
-        message: `SMS message re-sent successfully to ${targetPhone}!`,
-        sms_preview: updatedMsg,
-      });
-    }
-
-    // Action 4: Issue Single Coupon (Policy: Top 10 customer, valid 2 months, max 5 products, limit 3000, send SMS)
+    // Action 2: Issue / Create Coupon
     const { 
       code, 
       promo_id, 
+      coupon_name,
       customer_id, 
+      start_date,
       expiry_date, 
       phone, 
       max_products = 5, 
@@ -481,12 +416,42 @@ export async function POST(req: Request) {
       custom_sms 
     } = body;
 
-    if (!code || !promo_id) {
-      return NextResponse.json({ error: "Coupon code and linked promotion are required." }, { status: 400 });
+    if (!code) {
+      return NextResponse.json({ error: "Coupon code is required." }, { status: 400 });
     }
 
     const cleanCode = code.toUpperCase().trim();
     const finalExpiry = expiry_date && expiry_date.trim() ? expiry_date : defaultTwoMonthsDate();
+
+    // Resolve promo_id from coupon_name or promo_id
+    let finalPromoId = promo_id ? Number(promo_id) : null;
+    const cleanCouponName = (coupon_name || "").trim();
+
+    if (!finalPromoId && cleanCouponName) {
+      const existingPromo: any = await query(
+        "SELECT promo_id FROM promotions WHERE name = ? LIMIT 1",
+        [cleanCouponName]
+      );
+      if (existingPromo.length > 0) {
+        finalPromoId = existingPromo[0].promo_id;
+      } else {
+        const createPromoRes: any = await query(
+          `INSERT INTO promotions (name, discount_percent, start_date, end_date, is_active)
+           VALUES (?, 10.00, COALESCE(?, CURDATE()), COALESCE(?, DATE_ADD(CURDATE(), INTERVAL 2 MONTH)), 1)`,
+          [cleanCouponName, start_date || null, finalExpiry]
+        );
+        finalPromoId = createPromoRes.insertId;
+      }
+    }
+
+    if (!finalPromoId) {
+      const anyPromo: any = await query("SELECT promo_id FROM promotions ORDER BY promo_id ASC LIMIT 1");
+      if (anyPromo.length > 0) {
+        finalPromoId = anyPromo[0].promo_id;
+      } else {
+        return NextResponse.json({ error: "Coupon name or promotion is required." }, { status: 400 });
+      }
+    }
 
     // Fetch customer details if bound
     let customerName = "Valued Customer";
@@ -503,26 +468,19 @@ export async function POST(req: Request) {
       }
     }
 
-    // Standard message mandated by user:
-    // "Congratulations you have won the coupon. coupon allocate can purchase 5 products limit 3000. valid 2 month of coupon. one-time use only"
     const smsMessage = custom_sms && custom_sms.trim() 
       ? custom_sms.trim()
-      : `Congratulations ${customerName}! You have won the exclusive coupon "${cleanCode}". You can purchase up to ${max_products} products with a limit of LKR ${Number(purchase_limit).toLocaleString()}. Valid for 2 months (expires ${finalExpiry}). One-time use only!`;
+      : `Congratulations ${customerName}! You have won the coupon "${cleanCode}". Valid from ${start_date || 'today'} to ${finalExpiry}. One-time use only!`;
 
     try {
       const res: any = await query(
-        `INSERT INTO coupons 
-         (code, promo_id, customer_id, expiry_date, is_used, max_products, purchase_limit, sms_phone, sms_status, sms_message, created_at)
-         VALUES (?, ?, ?, ?, 0, ?, ?, ?, 'SENT', ?, NOW())`,
+        `INSERT INTO coupons (code, promo_id, customer_id, expiry_date, is_used)
+         VALUES (?, ?, ?, ?, 0)`,
         [
           cleanCode,
-          Number(promo_id),
+          finalPromoId,
           customer_id ? Number(customer_id) : null,
           finalExpiry,
-          Number(max_products) || 5,
-          Number(purchase_limit) || 3000.00,
-          customerPhone,
-          smsMessage,
         ]
       );
 
@@ -531,14 +489,7 @@ export async function POST(req: Request) {
         coupon_id: res.insertId,
         code: cleanCode,
         expiry_date: finalExpiry,
-        max_products: Number(max_products) || 5,
-        purchase_limit: Number(purchase_limit) || 3000.00,
-        sms: {
-          sent_to: customerPhone,
-          status: "SENT",
-          message: smsMessage,
-        },
-        message: `Coupon "${cleanCode}" issued successfully! Valid for 2 months (expires ${finalExpiry}), max 5 products, limit LKR ${purchase_limit}. SMS notification dispatched to ${customerPhone || "customer"}.`,
+        message: `Coupon "${cleanCode}" created successfully! Valid until ${finalExpiry}.`,
       });
     } catch (insertErr: any) {
       if (insertErr.code === "ER_DUP_ENTRY") {

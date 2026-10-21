@@ -19,6 +19,9 @@ import {
   Phone,
   Sparkles,
   Ticket,
+  Gift,
+  Copy,
+  Check,
 } from "lucide-react";
 
 interface CustomerSummaryRow {
@@ -39,10 +42,19 @@ interface TopCustomerRow {
   customer_id: number;
   card_no: string;
   full_name: string;
+  phone?: string;
   tier: string;
   points_balance: number;
   total_points_earned: number;
   transaction_month?: string;
+  active_coupon_code?: string | null;
+  active_coupon_expiry?: string | null;
+}
+
+interface RewardPromo {
+  promo_id: number;
+  name: string;
+  discount_percent: number | string;
 }
 
 export default function LoyaltyManagementPage() {
@@ -71,6 +83,14 @@ export default function LoyaltyManagementPage() {
   const [pointsInput, setPointsInput] = useState<string>("");
   const [noteInput, setNoteInput] = useState<string>("");
 
+  // Top 10 Assign Coupons Modal state
+  const [rewardModalOpen, setRewardModalOpen] = useState(false);
+  const [promotionsList, setPromotionsList] = useState<RewardPromo[]>([]);
+  const [selectedPromoId, setSelectedPromoId] = useState<number | "">("");
+  const [validDaysInput, setValidDaysInput] = useState<number>(30);
+  const [submittingReward, setSubmittingReward] = useState(false);
+  const [copiedCouponId, setCopiedCouponId] = useState<string | null>(null);
+
   const loadData = async () => {
     // If the application context is still restoring auth & branch details on initial page refresh, wait for it
     if (isAppLoading && !currentBranch?.branch_id && !currentEmployee?.branch_id && !authenticatedUser?.branch_id) {
@@ -82,35 +102,63 @@ export default function LoyaltyManagementPage() {
       const branchParam = targetBranchId ? `&branchId=${targetBranchId}` : "";
       const queryParam = targetBranchId ? `?branchId=${targetBranchId}` : "";
 
-      const [dashRes, summaryRes, topRes, custRes] = await Promise.all([
+      const [dashRes, summaryRes, topRes, custRes, rewardTop10Res] = await Promise.all([
         fetch(`/api/marketing/dashboard${queryParam}`).then((r) => r.json()),
         fetch(`/api/marketing/actions?view=customer_summary${branchParam}`).then((r) => r.json()),
         fetch(`/api/marketing/actions?view=top_customers${branchParam}`).then((r) => r.json()),
         fetch(`/api/customers${queryParam}`).then((r) => r.json()),
+        fetch("/api/marketing/coupons/reward-top10").then((r) => r.json()).catch(() => null),
       ]);
 
       if (dashRes && !dashRes.error) setData(dashRes);
       if (Array.isArray(summaryRes)) setCustomerSummaries(summaryRes);
 
+      if (rewardTop10Res?.active_promotions && Array.isArray(rewardTop10Res.active_promotions)) {
+        setPromotionsList(rewardTop10Res.active_promotions);
+        if (rewardTop10Res.active_promotions.length > 0 && !selectedPromoId) {
+          setSelectedPromoId(rewardTop10Res.active_promotions[0].promo_id);
+        }
+      }
+
+      // Map active coupon codes for top customers
+      const couponMap = new Map<number, { code: string; expiry: string }>();
+      if (rewardTop10Res?.top_customers && Array.isArray(rewardTop10Res.top_customers)) {
+        for (const tc of rewardTop10Res.top_customers) {
+          if (tc.active_coupon_code) {
+            couponMap.set(tc.customer_id, { code: tc.active_coupon_code, expiry: tc.active_coupon_expiry });
+          }
+        }
+      }
+
+      const attachCouponInfo = (list: TopCustomerRow[]): TopCustomerRow[] => {
+        return list.map((c) => {
+          const activeInfo = couponMap.get(c.customer_id);
+          return {
+            ...c,
+            active_coupon_code: activeInfo?.code ?? c.active_coupon_code ?? null,
+            active_coupon_expiry: activeInfo?.expiry ?? c.active_coupon_expiry ?? null,
+          };
+        });
+      };
+
       // Handle topRes format: either { customers: [...], months: [...] } or array
-      const custArray = Array.isArray(topRes)
+      const custArray: TopCustomerRow[] = Array.isArray(topRes)
         ? topRes
         : Array.isArray(topRes?.customers)
           ? topRes.customers
           : [];
 
       if (custArray.length > 0) {
-        setTopCustomers(custArray.slice(0, 10));
+        setTopCustomers(attachCouponInfo(custArray.slice(0, 10)));
       } else if (Array.isArray(summaryRes) && summaryRes.length > 0) {
         const top10 = [...summaryRes]
           .filter((c) => Number(c.points_balance || 0) > 0)
           .sort((a, b) => Number(b.total_points_earned || 0) - Number(a.total_points_earned || 0))
           .slice(0, 10);
-        setTopCustomers(top10);
+        setTopCustomers(attachCouponInfo(top10));
       } else {
         setTopCustomers([]);
       }
-
       if (Array.isArray(custRes)) setCustomersList(custRes);
     } catch (err) {
       console.error("Error loading loyalty management data:", err);
@@ -138,6 +186,61 @@ export default function LoyaltyManagementPage() {
     setSelectedCustomerId(customerId ?? (customersList.length > 0 ? customersList[0].customer_id : ""));
     setPointsInput("");
     setRedeemModalOpen(true);
+  };
+
+  // Open Assign Coupons Modal for Top 10
+  const openRewardModal = () => {
+    if (promotionsList.length > 0 && !selectedPromoId) {
+      setSelectedPromoId(promotionsList[0].promo_id);
+    }
+    setValidDaysInput(30);
+    setRewardModalOpen(true);
+  };
+
+  // Submit Batch Reward Top 10 Coupons
+  const handleBatchRewardSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedPromoId) {
+      showToast("Please select a promotion campaign.", "error");
+      return;
+    }
+
+    setSubmittingReward(true);
+    try {
+      const res = await fetch("/api/marketing/coupons/reward-top10", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          promo_id: selectedPromoId,
+          valid_days: validDaysInput,
+          custom_prefix: "VIP",
+        }),
+      });
+
+      const resData = await res.json();
+      if (res.ok && resData.success) {
+        showToast(resData.message || "Assigned VIP coupons to Top 10 customers!", "success");
+        setRewardModalOpen(false);
+        await loadData();
+      } else {
+        showToast(resData.error || "Failed to assign coupons.", "error");
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Error assigning coupons";
+      showToast(msg, "error");
+    } finally {
+      setSubmittingReward(false);
+    }
+  };
+
+  // Copy coupon code to clipboard
+  const copyCouponCode = (code: string) => {
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(code);
+    }
+    setCopiedCouponId(code);
+    showToast(`Copied VIP coupon "${code}" to clipboard!`, "info");
+    setTimeout(() => setCopiedCouponId(null), 2500);
   };
 
   // Submit Award Points (add_ltpoints)
@@ -446,91 +549,125 @@ export default function LoyaltyManagementPage() {
         {/* TAB 2: Top 10 Customers by Points Earned (top_customers_vw) */}
         {/* ========================================================================= */}
         {activeTab === "top" && (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-slate-800 bg-slate-950/40 text-slate-400 font-semibold">
-                  <th className="py-3 px-4 text-center">Rank</th>
-                  <th className="py-3 px-4 font-mono">Card No</th>
-                  <th className="py-3 px-4">Customer Name</th>
-                  <th className="py-3 px-4">Tier</th>
-                  <th className="py-3 px-4 text-right">Points Earned (Highest)</th>
-                  <th className="py-3 px-4 text-right">Points Balance</th>
-                  <th className="py-3 px-4 text-center">Exclusive Coupon</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60 font-mono">
-                {loading ? (
-                  <tr>
-                    <td colSpan={7} className="py-12 text-center text-slate-500 font-sans">
-                      <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-amber-500" />
-                      Loading top 10 customers...
-                    </td>
+          <div className="space-y-4">
+            <div className="p-4 border-b border-slate-800/60 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-900/50">
+              <div className="text-xs text-slate-400">
+                Top loyalty customers ranked by total points earned. Batch reward them with exclusive coupons.
+              </div>
+              <button
+                onClick={openRewardModal}
+                disabled={loading || topCustomers.length === 0}
+                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md shadow-amber-950/30 transition-all disabled:opacity-50 shrink-0"
+              >
+                <Gift className="w-4 h-4" />
+                <span>Assign Coupons to Top 10</span>
+              </button>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-slate-800 bg-slate-950/40 text-slate-400 font-semibold">
+                    <th className="py-3 px-4 text-center">Rank</th>
+                    <th className="py-3 px-4 font-mono">Card No</th>
+                    <th className="py-3 px-4">Customer Name</th>
+                    <th className="py-3 px-4">Tier</th>
+                    <th className="py-3 px-4 text-right">Points Earned (Highest)</th>
+                    <th className="py-3 px-4 text-right">Points Balance</th>
+                    <th className="py-3 px-4 text-center">Exclusive Coupon</th>
                   </tr>
-                ) : topCustomers.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="py-12 text-center text-slate-500 font-sans">
-                      No customers found for this period.
-                    </td>
-                  </tr>
-                ) : (
-                  topCustomers.slice(0, 10).map((c, index) => (
-                    <tr key={c.customer_id} className="hover:bg-slate-800/30 transition-colors">
-                      <td className="py-3 px-4 text-center">
-                        {index === 0 ? (
-                          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-400 text-slate-950 font-black text-xs shadow-md shadow-amber-400/20" title="Rank 1">
-                            🥇
-                          </span>
-                        ) : index === 1 ? (
-                          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-300 text-slate-950 font-black text-xs shadow-md shadow-slate-300/20" title="Rank 2">
-                            🥈
-                          </span>
-                        ) : index === 2 ? (
-                          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-700 text-white font-black text-xs shadow-md shadow-amber-700/20" title="Rank 3">
-                            🥉
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-slate-800 text-slate-400 font-bold text-xs border border-slate-700">
-                            #{index + 1}
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 text-amber-400 font-bold">{c.card_no}</td>
-                      <td className="py-3 px-4 font-sans font-medium text-white">{c.full_name}</td>
-                      <td className="py-3 px-4">
-                        <span
-                          className={`text-[10px] px-2 py-0.5 rounded font-bold ${c.tier === "PLATINUM"
-                              ? "bg-purple-950 text-purple-300 border border-purple-800/40"
-                              : c.tier === "GOLD"
-                                ? "bg-amber-950 text-amber-300 border border-amber-800/40"
-                                : c.tier === "SILVER"
-                                  ? "bg-slate-800 text-slate-200 border border-slate-700"
-                                  : "bg-orange-950 text-orange-300 border border-orange-800/40"
-                            }`}
-                        >
-                          {c.tier}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-right text-emerald-400 font-bold">
-                        +{Number(c.total_points_earned || 0).toLocaleString()} pts
-                      </td>
-                      <td className="py-3 px-4 text-right text-amber-300 font-bold">
-                        {Number(c.points_balance || 0).toLocaleString()} pts
-                      </td>
-                      <td className="py-3 px-4 text-center font-sans">
-                        <Link
-                          href="/marketing/coupons"
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gradient-to-r from-amber-600/90 to-orange-600/90 hover:from-amber-500 hover:to-orange-500 text-white font-bold text-[10px] shadow-sm transition-all"
-                        >
-                          <Ticket className="w-3 h-3" />
-                          <span>Issue VIP Coupon</span>
-                        </Link>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60 font-mono">
+                  {loading ? (
+                    <tr>
+                      <td colSpan={7} className="py-12 text-center text-slate-500 font-sans">
+                        <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-amber-500" />
+                        Loading top 10 customers...
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : topCustomers.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-12 text-center text-slate-500 font-sans">
+                        No customers found for this period.
+                      </td>
+                    </tr>
+                  ) : (
+                    topCustomers.slice(0, 10).map((c, index) => (
+                      <tr key={c.customer_id} className="hover:bg-slate-800/30 transition-colors">
+                        <td className="py-3 px-4 text-center">
+                          {index === 0 ? (
+                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-400 text-slate-950 font-black text-xs shadow-md shadow-amber-400/20" title="Rank 1">
+                              🥇
+                            </span>
+                          ) : index === 1 ? (
+                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-300 text-slate-950 font-black text-xs shadow-md shadow-slate-300/20" title="Rank 2">
+                              🥈
+                            </span>
+                          ) : index === 2 ? (
+                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-700 text-white font-black text-xs shadow-md shadow-amber-700/20" title="Rank 3">
+                              🥉
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-slate-800 text-slate-400 font-bold text-xs border border-slate-700">
+                              #{index + 1}
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-amber-400 font-bold">{c.card_no}</td>
+                        <td className="py-3 px-4 font-sans font-medium text-white">{c.full_name}</td>
+                        <td className="py-3 px-4">
+                          <span
+                            className={`text-[10px] px-2 py-0.5 rounded font-bold ${c.tier === "PLATINUM"
+                                ? "bg-purple-950 text-purple-300 border border-purple-800/40"
+                                : c.tier === "GOLD"
+                                  ? "bg-amber-950 text-amber-300 border border-amber-800/40"
+                                  : c.tier === "SILVER"
+                                    ? "bg-slate-800 text-slate-200 border border-slate-700"
+                                    : "bg-orange-950 text-orange-300 border border-orange-800/40"
+                              }`}
+                          >
+                            {c.tier}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-right text-emerald-400 font-bold">
+                          +{Number(c.total_points_earned || 0).toLocaleString()} pts
+                        </td>
+                        <td className="py-3 px-4 text-right text-amber-300 font-bold">
+                          {Number(c.points_balance || 0).toLocaleString()} pts
+                        </td>
+                        <td className="py-3 px-4 text-center font-sans">
+                          {c.active_coupon_code ? (
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 font-mono font-bold text-[11px]">
+                              <Ticket className="w-3 h-3 text-emerald-400" />
+                              <span>{c.active_coupon_code}</span>
+                              <button
+                                onClick={() => copyCouponCode(c.active_coupon_code!)}
+                                className="text-slate-400 hover:text-white p-0.5 ml-1 transition-colors"
+                                title="Copy coupon code"
+                              >
+                                {copiedCouponId === c.active_coupon_code ? (
+                                  <Check className="w-3 h-3 text-emerald-400" />
+                                ) : (
+                                  <Copy className="w-3 h-3" />
+                                )}
+                              </button>
+                            </div>
+                          ) : (
+                            <Link
+                              href="/marketing/coupons"
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gradient-to-r from-amber-600/90 to-orange-600/90 hover:from-amber-500 hover:to-orange-500 text-white font-bold text-[10px] shadow-sm transition-all"
+                            >
+                              <Ticket className="w-3 h-3" />
+                              <span>Issue VIP Coupon</span>
+                            </Link>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
@@ -755,6 +892,117 @@ export default function LoyaltyManagementPage() {
                     <Minus className="w-3.5 h-3.5" />
                   )}
                   <span>{submittingAction ? "Redeeming..." : "Redeem Points"}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL 3: Assign VIP Coupons to Top 10 Customers (proc_assign_top10_coupons) */}
+      {/* ========================================================================= */}
+      {rewardModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl relative space-y-5">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400">
+                  <Gift className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">Assign VIP Coupons to Top 10 Customers</h3>
+                  <p className="text-[11px] text-slate-400">Generates personalized coupons via database procedure</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setRewardModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleBatchRewardSubmit} className="space-y-4">
+              {/* Promotion selection */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  Select Promotion Campaign
+                </label>
+                <select
+                  value={selectedPromoId}
+                  onChange={(e) => setSelectedPromoId(Number(e.target.value))}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-amber-500"
+                  required
+                >
+                  {promotionsList.map((p) => (
+                    <option key={p.promo_id} value={p.promo_id}>
+                      {p.name} ({Number(p.discount_percent)}% OFF)
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Validity Duration */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  Coupon Validity Period
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[14, 30, 60].map((d) => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => setValidDaysInput(d)}
+                      className={`py-2 rounded-xl text-xs font-bold border transition-all ${
+                        validDaysInput === d
+                          ? "bg-amber-500/10 text-amber-400 border-amber-500/40"
+                          : "bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-700"
+                      }`}
+                    >
+                      {d} Days
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Recipients Preview */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  Eligible Top Customers ({topCustomers.length})
+                </label>
+                <div className="max-h-36 overflow-y-auto space-y-1 rounded-xl bg-slate-950 p-2 border border-slate-800/80 divide-y divide-slate-800/40 font-mono text-[11px]">
+                  {topCustomers.map((c, i) => (
+                    <div key={c.customer_id} className="flex items-center justify-between py-1 px-1.5">
+                      <span className="text-white font-sans font-medium">
+                        #{i + 1} {c.full_name} ({c.card_no})
+                      </span>
+                      <span className="text-amber-400 font-bold">{c.points_balance} pts</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setRewardModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingReward || topCustomers.length === 0}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 text-xs font-bold shadow-lg shadow-amber-950/40 flex items-center gap-2 transition-all disabled:opacity-50"
+                >
+                  {submittingReward ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Gift className="w-3.5 h-3.5" />
+                  )}
+                  <span>{submittingReward ? "Issuing Coupons..." : `Issue ${topCustomers.length} VIP Coupons`}</span>
                 </button>
               </div>
             </form>
