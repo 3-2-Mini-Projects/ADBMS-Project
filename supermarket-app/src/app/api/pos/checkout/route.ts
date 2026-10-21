@@ -164,8 +164,8 @@ export async function POST(req: Request) {
       `INSERT INTO sales (
         branch_id, cashier_id, customer_id, promo_id, coupon_id,
         sale_date, status, subtotal, discount_total, tax_total, total_amount,
-        tendered_cash, tendered_amount, change_amount
-      ) VALUES (?, ?, ?, ?, ?, NOW(), 'COMPLETED', ?, ?, ?, ?, ?, ?, ?)`,
+        tendered_cash, change_amount
+      ) VALUES (?, ?, ?, ?, ?, NOW(), 'COMPLETED', ?, ?, ?, ?, ?, ?)`,
       [
         branch_id,
         cashier_id,
@@ -176,7 +176,6 @@ export async function POST(req: Request) {
         discount_total.toFixed(2),
         tax_total.toFixed(2),
         total_amount.toFixed(2),
-        effectiveTendered.toFixed(2),
         effectiveTendered.toFixed(2),
         changeDue.toFixed(2),
       ]

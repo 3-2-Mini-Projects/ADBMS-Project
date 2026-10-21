@@ -92,7 +92,6 @@ export async function GET(req: Request) {
         s.tax_total,
         s.total_amount,
         s.tendered_cash,
-        s.tendered_amount,
         s.change_amount,
         COUNT(DISTINCT si.sale_item_id) AS items_count,
         (SELECT GROUP_CONCAT(DISTINCT method SEPARATOR ', ') FROM payments WHERE sale_id = s.sale_id) AS payment_methods,
