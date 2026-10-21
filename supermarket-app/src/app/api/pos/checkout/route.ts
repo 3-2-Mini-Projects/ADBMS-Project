@@ -117,7 +117,10 @@ export async function POST(req: Request) {
 
     if (coupon_code && coupon_code.trim()) {
       const [couponRows]: any = await connection.query(
-        `SELECT c.coupon_id, c.promo_id, c.is_used, c.expiry_date, p.discount_percent
+        `SELECT c.coupon_id, c.promo_id, c.customer_id, c.is_used, c.expiry_date,
+                COALESCE(c.max_products, 5) AS max_products,
+                COALESCE(c.purchase_limit, 3000.00) AS purchase_limit,
+                p.discount_percent
          FROM coupons c
          JOIN promotions p ON c.promo_id = p.promo_id
          WHERE c.code = ? AND c.is_used = 0 AND c.expiry_date >= CURRENT_DATE FOR UPDATE`,
@@ -126,13 +129,29 @@ export async function POST(req: Request) {
 
       if (couponRows.length > 0) {
         const cp = couponRows[0];
+        
+        // Rule: Customer-bound check
+        if (cp.customer_id && (!customer_id || Number(customer_id) !== Number(cp.customer_id))) {
+          throw new Error(`Coupon "${coupon_code}" is exclusively reserved for an authorized Top Customer.`);
+        }
+
+        // Rule: Max 5 products limit check
+        const maxProd = Number(cp.max_products || 5);
+        if (validatedItems.length > maxProd) {
+          throw new Error(`Coupon "${coupon_code}" allows a maximum of ${maxProd} products (Cart contains ${validatedItems.length} products).`);
+        }
+
         coupon_id = cp.coupon_id;
         promo_id = cp.promo_id;
-        const couponDiscPct = Number(cp.discount_percent);
-        const additionalDiscount = (subtotal * couponDiscPct) / 100;
+        const couponDiscPct = Number(cp.discount_percent || 10);
+        const purchaseLimit = Number(cp.purchase_limit || 3000.00);
+
+        // Apply discount capped at purchase limit (e.g. 3000)
+        const eligibleBase = Math.min(subtotal, purchaseLimit);
+        const additionalDiscount = (eligibleBase * couponDiscPct) / 100;
         discount_total += additionalDiscount;
       } else {
-        throw new Error(`Coupon "${coupon_code}" is invalid or expired.`);
+        throw new Error(`Coupon "${coupon_code}" is invalid, already used, or expired.`);
       }
     }
 

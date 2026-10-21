@@ -100,7 +100,7 @@
       "email": "kamala@shop.lk",
       "password_hash": null,
       "phone": "0771110007",
-      "hire_date": "2020-01-31T18:30:00.000Z",
+      "hire_date": "2020-01-29T18:30:00.000Z",
       "monthly_salary": "60000.00",
       "is_active": 1,
       "created_at": "2026-10-11T01:58:39.000Z"
@@ -187,7 +187,7 @@
       "region": "Western",
       "address": "12 Galle Road, Colombo 03",
       "phone": "0112000001",
-      "manager_id": 1,
+      "manager_id": null,
       "opened_date": "2018-01-09T18:30:00.000Z",
       "is_active": 1
     },
@@ -199,7 +199,7 @@
       "region": "Central",
       "address": "45 Peradeniya Road, Kandy",
       "phone": "0812000002",
-      "manager_id": 4,
+      "manager_id": null,
       "opened_date": "2019-03-14T18:30:00.000Z",
       "is_active": 1
     }
@@ -509,10 +509,10 @@
       "inventory_id": 1,
       "branch_id": 3,
       "product_id": 11,
-      "quantity_on_hand": 87,
+      "quantity_on_hand": 94,
       "reserved_qty": 0,
       "reorder_level": 10,
-      "last_updated": "2026-10-11T01:58:46.000Z"
+      "last_updated": "2026-10-13T06:44:52.000Z"
     },
     {
       "inventory_id": 2,
@@ -1074,7 +1074,7 @@
   "promotions_sample": [
     {
       "promo_id": 1,
-      "name": "Dairy week",
+      "name": "Dairy Week",
       "discount_percent": "10.00",
       "start_date": "2026-09-26T18:30:00.000Z",
       "end_date": "2026-11-09T18:30:00.000Z",
@@ -1084,7 +1084,7 @@
     },
     {
       "promo_id": 2,
-      "name": "Weekend snacks",
+      "name": "Weekend Snacks",
       "discount_percent": "15.00",
       "start_date": "2026-09-26T18:30:00.000Z",
       "end_date": "2026-10-24T18:30:00.000Z",
