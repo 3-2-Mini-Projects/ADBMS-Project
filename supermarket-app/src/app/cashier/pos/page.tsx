@@ -1284,7 +1284,7 @@ export default function POSBillingPage() {
                     <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px dashed rgba(147, 51, 234, 0.3)" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                         <span style={{ fontSize: 11, fontWeight: 700, color: "#d8b4fe" }}>
-                          Spend Points at Checkout (Full or Partial):
+                          Redeem Points for Bill:
                         </span>
                         {currentRedeemedPoints > 0 && (
                           <span style={{ fontSize: 11, fontWeight: 800, color: "#c084fc" }}>
@@ -1293,70 +1293,46 @@ export default function POSBillingPage() {
                         )}
                       </div>
 
-                      {/* Quick Point Spend Chips */}
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+                      {/* Points Actions: None, Buy with Points (if points exceed/meet bill) or Use All */}
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8, alignItems: "center" }}>
                         <button
                           type="button"
                           className="btn btn-ghost"
                           style={{
-                            fontSize: 10,
-                            padding: "3px 8px",
+                            fontSize: 10.5,
+                            padding: "4px 8px",
                             border: "1px solid var(--border)",
-                            background: currentRedeemedPoints === 0 ? "rgba(255,255,255,0.1)" : "transparent",
+                            background: currentRedeemedPoints === 0 ? "rgba(255,255,255,0.12)" : "transparent",
                           }}
                           onClick={() => applyPointsRedemption(0)}
                         >
                           None (0 pts)
                         </button>
 
-                        {/* Pay Full Bill if customer balance covers the full bill */}
-                        {currentPoints >= Math.floor(finalTotal) && (
+                        {/* If points exceed or cover the bill: Customer can buy the product / pay full bill with points */}
+                        {currentPoints >= Math.floor(finalTotal) ? (
                           <button
                             type="button"
                             className="btn btn-ghost"
                             style={{
-                              fontSize: 10,
-                              padding: "3px 8px",
-                              fontWeight: 700,
-                              border: currentRedeemedPoints === Math.floor(finalTotal) ? "1px solid #10b981" : "1px solid rgba(16, 185, 129, 0.5)",
+                              fontSize: 11,
+                              padding: "4px 10px",
+                              fontWeight: 800,
+                              border: currentRedeemedPoints === Math.floor(finalTotal) ? "1px solid #10b981" : "1px solid rgba(16, 185, 129, 0.6)",
                               background: currentRedeemedPoints === Math.floor(finalTotal) ? "rgba(16, 185, 129, 0.3)" : "rgba(16, 185, 129, 0.15)",
                               color: "#a7f3d0",
                             }}
                             onClick={() => applyPointsRedemption(Math.floor(finalTotal))}
                           >
-                            ✨ Pay Full Bill ({Math.floor(finalTotal)} pts)
+                            🛍️ Buy with Points ({Math.floor(finalTotal)} pts = Pay Rs. 0)
                           </button>
-                        )}
-
-                        {[50, 100, 250, 500].map((preset) => {
-                          if (preset > currentPoints || preset >= Math.floor(finalTotal)) return null;
-                          return (
-                            <button
-                              key={preset}
-                              type="button"
-                              className="btn btn-ghost"
-                              style={{
-                                fontSize: 10,
-                                padding: "3px 8px",
-                                border: currentRedeemedPoints === preset ? "1px solid #a855f7" : "1px solid rgba(147, 51, 234, 0.4)",
-                                background: currentRedeemedPoints === preset ? "rgba(168, 85, 247, 0.25)" : "rgba(147, 51, 234, 0.1)",
-                                color: "#e9d5ff",
-                              }}
-                              onClick={() => applyPointsRedemption(preset)}
-                            >
-                              Partial: {preset} pts (-Rs.{preset})
-                            </button>
-                          );
-                        })}
-
-                        {/* Partial Max if balance < finalTotal */}
-                        {maxRedeemable > 0 && currentPoints < Math.floor(finalTotal) && (
+                        ) : (
                           <button
                             type="button"
                             className="btn btn-ghost"
                             style={{
-                              fontSize: 10,
-                              padding: "3px 8px",
+                              fontSize: 11,
+                              padding: "4px 10px",
                               fontWeight: 700,
                               border: currentRedeemedPoints === maxRedeemable ? "1px solid #a855f7" : "1px solid rgba(168, 85, 247, 0.5)",
                               background: currentRedeemedPoints === maxRedeemable ? "rgba(168, 85, 247, 0.3)" : "rgba(168, 85, 247, 0.15)",
@@ -1364,40 +1340,66 @@ export default function POSBillingPage() {
                             }}
                             onClick={() => applyPointsRedemption(maxRedeemable)}
                           >
-                            Partial Max ({maxRedeemable} pts)
+                            Use All Available ({maxRedeemable} pts)
                           </button>
                         )}
                       </div>
 
-                      {/* Custom Points Input */}
-                      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                      {/* Custom Points Input — Redeem any valid amount of points */}
+                      <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
                         <input
                           type="number"
                           className="input"
                           min="0"
                           max={maxRedeemable}
-                          style={{ width: 140, padding: "4px 8px", fontSize: 11 }}
-                          placeholder={`Custom pts (max ${maxRedeemable})`}
+                          style={{ width: 160, padding: "5px 8px", fontSize: 11.5 }}
+                          placeholder={`Redeem pts (max ${maxRedeemable})`}
                           value={customPointsInput}
-                          onChange={(e) => setCustomPointsInput(e.target.value)}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === "") {
+                              setCustomPointsInput("");
+                              return;
+                            }
+                            const num = parseInt(val, 10);
+                            if (isNaN(num)) return;
+                            // Clamp so points can never make the bill negative or exceed customer balance
+                            const clamped = Math.max(0, Math.min(num, maxRedeemable));
+                            setCustomPointsInput(String(clamped));
+                          }}
                           onKeyDown={(e) => {
                             if (e.key === "Enter") {
                               e.preventDefault();
-                              applyPointsRedemption(Number(customPointsInput));
+                              applyPointsRedemption(Number(customPointsInput || 0));
                             }
                           }}
                         />
                         <button
                           type="button"
                           className="btn btn-secondary"
-                          style={{ padding: "4px 10px", fontSize: 11 }}
-                          onClick={() => applyPointsRedemption(Number(customPointsInput))}
+                          style={{ padding: "5px 12px", fontSize: 11, fontWeight: 700 }}
+                          onClick={() => applyPointsRedemption(Number(customPointsInput || 0))}
                         >
                           Apply Points
                         </button>
-                        <span style={{ fontSize: 10.5, color: "var(--text-muted)", marginLeft: "auto" }}>
-                          Remaining balance after spend: <strong>{currentPoints - currentRedeemedPoints} pts</strong>
-                        </span>
+                        {currentRedeemedPoints > 0 && (
+                          <button
+                            type="button"
+                            className="btn btn-ghost"
+                            style={{ padding: "5px 8px", fontSize: 11, color: "var(--accent-rose)" }}
+                            onClick={() => applyPointsRedemption(0)}
+                          >
+                            ✕ Clear
+                          </button>
+                        )}
+                        <div style={{ fontSize: 11, color: "var(--text-muted)", marginLeft: "auto", display: "flex", gap: 12 }}>
+                          <span>
+                            Customer pays: <strong style={{ color: "var(--text-primary)" }}>Rs. {Math.max(0, finalTotal - currentRedeemedPoints).toFixed(2)}</strong>
+                          </span>
+                          <span>
+                            Points balance after spend: <strong style={{ color: "#c084fc" }}>{currentPoints - currentRedeemedPoints} pts</strong>
+                          </span>
+                        </div>
                       </div>
 
                     </div>

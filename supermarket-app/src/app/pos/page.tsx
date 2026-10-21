@@ -804,52 +804,30 @@ export default function POSPage() {
                         <button
                           type="button"
                           onClick={() => handleSetPointsToRedeem(Math.floor(totalDue))}
-                          className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all ${
+                          className={`px-3 py-1.5 rounded-lg text-xs font-extrabold border transition-all ${
                             effectivePointsToRedeem === Math.floor(totalDue)
                               ? "bg-emerald-600 text-white border-emerald-400"
                               : "bg-emerald-950/40 text-emerald-300 border-emerald-800/60 hover:bg-emerald-900/60"
                           }`}
                         >
-                          ✨ Pay Full Bill ({Math.floor(totalDue)} pts)
+                          🛍️ Buy with Points ({Math.floor(totalDue)} pts = Pay Rs. 0)
                         </button>
-                      )}
-
-                      {/* Partial points preset chips */}
-                      {[50, 100, 250, 500].map((preset) => {
-                        if (preset > customerBalance || preset >= Math.floor(totalDue)) return null;
-                        return (
-                          <button
-                            key={preset}
-                            type="button"
-                            onClick={() => handleSetPointsToRedeem(preset)}
-                            className={`px-2 py-1 rounded-lg text-[10px] font-semibold border transition-all ${
-                              effectivePointsToRedeem === preset
-                                ? "bg-purple-600 text-white border-purple-400"
-                                : "bg-purple-950/40 text-purple-300 border-purple-800/60 hover:bg-purple-900/60"
-                            }`}
-                          >
-                            Partial: {preset} pts (-Rs.{preset})
-                          </button>
-                        );
-                      })}
-
-                      {/* Max partial button if customer balance is less than total bill */}
-                      {maxRedeemablePoints > 0 && customerBalance < Math.floor(totalDue) && (
+                      ) : (
                         <button
                           type="button"
                           onClick={() => handleSetPointsToRedeem(maxRedeemablePoints)}
-                          className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all ${
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
                             effectivePointsToRedeem === maxRedeemablePoints
                               ? "bg-purple-600 text-white border-purple-400"
                               : "bg-purple-900/50 text-purple-200 border-purple-700 hover:bg-purple-800"
                           }`}
                         >
-                          Partial Max ({maxRedeemablePoints} pts)
+                          Use All Available ({maxRedeemablePoints} pts)
                         </button>
                       )}
                     </div>
 
-                    {/* Custom Partial Points Input */}
+                    {/* Custom Points Input — Redeem any valid amount of points */}
                     <div className="flex items-center gap-2 pt-0.5">
                       <div className="relative flex-1">
                         <input
@@ -857,12 +835,31 @@ export default function POSPage() {
                           min="0"
                           max={maxRedeemablePoints}
                           value={pointsToRedeem || ""}
-                          onChange={(e) => handleSetPointsToRedeem(Number(e.target.value))}
-                          placeholder={`Enter custom points to spend (up to ${maxRedeemablePoints})...`}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === "") {
+                              handleSetPointsToRedeem(0);
+                              return;
+                            }
+                            const num = parseInt(val, 10);
+                            if (isNaN(num)) return;
+                            const clamped = Math.max(0, Math.min(num, maxRedeemablePoints));
+                            handleSetPointsToRedeem(clamped);
+                          }}
+                          placeholder={`Enter any points to redeem (1 - ${maxRedeemablePoints})...`}
                           className="w-full px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white font-mono placeholder-slate-500 focus:border-purple-500"
                         />
                       </div>
                       <span className="text-[11px] text-slate-400 font-mono">pts</span>
+                      {effectivePointsToRedeem > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => handleSetPointsToRedeem(0)}
+                          className="text-[11px] text-rose-400 hover:text-rose-300 font-semibold px-2 py-1"
+                        >
+                          ✕ Clear
+                        </button>
+                      )}
                     </div>
 
                     {/* Points Balance and Earning Preview */}
