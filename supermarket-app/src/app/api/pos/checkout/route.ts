@@ -383,6 +383,7 @@ export async function POST(req: Request) {
         smsNotification = await sendLoyaltySaleSms({
           phone: customerPhone,
           customerName: customerFullName,
+          customerTier: customerTier,
           pointsEarned: earnedPoints || 0,
           pointsRedeemed: pointsRedeemed || 0,
           newPointsBalance: newPointsBalance || 0,

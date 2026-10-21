@@ -1,6 +1,6 @@
 /**
  * Text.lk SMS Gateway Integration
- * Handles sending loyalty points notifications (earned & redeemed) upon POS sales.
+ * Handles sending meaningful loyalty points notifications (earned & redeemed) upon POS sales.
  */
 
 export interface LoyaltySmsParams {
@@ -9,6 +9,8 @@ export interface LoyaltySmsParams {
   pointsEarned: number;
   pointsRedeemed: number;
   newPointsBalance: number;
+  customerTier?: string;
+  cardNumber?: string;
   receiptNumber?: string;
   totalAmount?: number | string;
   branchName?: string;
@@ -46,38 +48,50 @@ export function formatSriLankanPhoneNumber(phone: string): string | null {
 }
 
 /**
- * Build the message text for loyalty points earned and/or redeemed.
+ * Build a professional, meaningful message text detailing loyalty points earned,
+ * redeemed, money saved, current balance value, and tier.
  */
 export function buildLoyaltyMessage(params: LoyaltySmsParams): string {
-  const firstName = params.customerName?.trim()?.split(" ")[0] || "Valued Customer";
-  const store = params.branchName ? `${params.branchName}` : "Supermarket ADBMS";
+  const customerName = params.customerName?.trim() || "Valued Customer";
+  const store = params.branchName ? params.branchName : "Nexus Supermarket";
+  const totalStr = params.totalAmount ? `Rs. ${Number(params.totalAmount).toFixed(2)}` : null;
 
-  const parts: string[] = [];
-  parts.push(`Dear ${firstName}, thank you for shopping at ${store}!`);
+  const lines: string[] = [];
 
-  if (params.receiptNumber) {
-    parts.push(`Bill: ${params.receiptNumber}`);
+  // Header & Greeting
+  lines.push(`NEXUS LOYALTY REWARDS`);
+  lines.push(`Dear ${customerName}, thank you for shopping at ${store}!`);
+
+  // Bill reference & Total Amount
+  const billParts: string[] = [];
+  if (params.receiptNumber) billParts.push(`Bill: ${params.receiptNumber}`);
+  if (totalStr) billParts.push(`Total: ${totalStr}`);
+  if (billParts.length > 0) {
+    lines.push(billParts.join(" | "));
   }
 
-  // Points breakdown
-  const pointsDetails: string[] = [];
-  if (params.pointsRedeemed > 0) {
-    pointsDetails.push(`Redeemed: ${params.pointsRedeemed} pts`);
-  }
-  if (params.pointsEarned > 0) {
-    pointsDetails.push(`Earned: +${params.pointsEarned} pts`);
-  } else if (params.pointsRedeemed === 0) {
-    pointsDetails.push(`Earned: 0 pts`);
-  }
-
-  if (pointsDetails.length > 0) {
-    parts.push(pointsDetails.join(" | "));
+  // Meaningful Loyalty Points Breakdown
+  if (params.pointsRedeemed > 0 && params.pointsEarned > 0) {
+    lines.push(`Points Redeemed: ${params.pointsRedeemed} pts (Saved Rs. ${Number(params.pointsRedeemed).toFixed(2)})`);
+    lines.push(`Points Earned: +${params.pointsEarned} pts`);
+  } else if (params.pointsRedeemed > 0) {
+    lines.push(`Points Redeemed: ${params.pointsRedeemed} pts (Saved Rs. ${Number(params.pointsRedeemed).toFixed(2)})`);
+    lines.push(`Points Earned: 0 pts`);
+  } else if (params.pointsEarned > 0) {
+    lines.push(`Points Earned: +${params.pointsEarned} pts`);
+  } else {
+    lines.push(`Points Activity: 0 pts`);
   }
 
-  parts.push(`Available Balance: ${params.newPointsBalance} pts.`);
-  parts.push(`Have a great day!`);
+  // Current Balance & Value
+  const balanceValue = `(Value: Rs. ${Number(params.newPointsBalance).toFixed(2)})`;
+  const tierInfo = params.customerTier ? ` [${params.customerTier} Member]` : "";
+  lines.push(`New Balance: ${params.newPointsBalance} pts ${balanceValue}${tierInfo}`);
 
-  return parts.join(" ");
+  // Call to action
+  lines.push(`Redeem points on your next purchase!`);
+
+  return lines.join("\n");
 }
 
 /**

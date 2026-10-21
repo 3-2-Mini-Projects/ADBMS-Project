@@ -384,12 +384,14 @@ export async function POST(req: Request) {
         smsNotification = await sendLoyaltySaleSms({
           phone: customerInfo.phone,
           customerName: customerInfo.full_name,
+          customerTier: customerInfo.tier,
+          cardNumber: customerInfo.card_no,
           pointsEarned: saleResult.pointsEarned || 0,
           pointsRedeemed: saleResult.pointsRedeemed || 0,
           newPointsBalance: customerInfo.points_balance || 0,
           receiptNumber,
           totalAmount: saleResult.totalAmount,
-          branchName: branchInfo?.name || "Supermarket ADBMS",
+          branchName: branchInfo?.name || "Nexus Supermarket",
         });
       } catch (smsErr) {
         console.warn("[Cashier Sale] Loyalty SMS dispatch error:", smsErr);
