@@ -60,9 +60,13 @@ export async function GET(req: Request) {
     }
 
     if (status && ["GOOD", "NEAR_EXPIRY", "EXPIRED"].includes(status)) {
-      const viewStatus = status === "GOOD" ? "NORMAL" : status === "NEAR_EXPIRY" ? "EXPIRING_SOON" : "EXPIRED";
-      sql += ` AND expiry_status = ?`;
-      params.push(viewStatus);
+      if (status === "EXPIRED") {
+        sql += ` AND (days_to_expiry < 0 OR expiry_status = 'EXPIRED')`;
+      } else if (status === "NEAR_EXPIRY") {
+        sql += ` AND (expiry_status = 'EXPIRING_SOON' OR (days_to_expiry >= 0 AND days_to_expiry <= 30))`;
+      } else if (status === "GOOD") {
+        sql += ` AND (days_to_expiry > 30 OR (days_to_expiry IS NULL AND expiry_status = 'NORMAL'))`;
+      }
     }
 
     sql += ` ORDER BY expiry_date ASC, quantity DESC`;

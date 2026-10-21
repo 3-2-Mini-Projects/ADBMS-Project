@@ -490,7 +490,8 @@ export function InventoryDashboardView() {
                   expiringBatches.map((b: any) => {
                     const daysLeft = Number(b.days_to_expiry);
                     const isExpired = daysLeft < 0;
-                    const isUrgent = daysLeft <= 7 && !isExpired;
+                    const isToday = daysLeft === 0;
+                    const isUrgent = (daysLeft <= 7 && !isExpired) || isToday;
                     return (
                       <tr key={b.batch_id} className={theme.tableRowHover}>
                         <td className="py-3">
@@ -500,9 +501,15 @@ export function InventoryDashboardView() {
                         <td className={`py-3 text-right font-mono font-bold ${isClerk ? "text-slate-800" : "text-slate-200"}`}>{b.quantity}</td>
                         <td className="py-3 text-right">
                           <span className={`text-xs font-bold font-mono ${
-                            isExpired ? "text-rose-600 font-black" : isUrgent ? "text-amber-600 animate-pulse font-black" : "text-amber-600"
+                            isExpired
+                              ? "text-rose-600 font-black"
+                              : isToday
+                              ? "text-amber-600 animate-pulse font-black"
+                              : isUrgent
+                              ? "text-amber-600 animate-pulse font-black"
+                              : "text-amber-600"
                           }`}>
-                            {isExpired ? "EXPIRED" : `${daysLeft}d`}
+                            {isExpired ? "EXPIRED" : isToday ? "TODAY" : `${daysLeft}d`}
                           </span>
                         </td>
                       </tr>
