@@ -934,7 +934,17 @@ export default function InventoryBatchesPage() {
                           </span>
                         </td>
                         <td className={`py-2.5 px-3 text-right font-mono ${isClerk ? "text-slate-700" : "text-slate-300"}`}>
-                          {item.changed_by}
+                          {item.changed_by?.includes("SYSTEM") || item.details?.event === "AUTO_MIDNIGHT_EXPIRY" ? (
+                            <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                              isClerk
+                                ? "bg-blue-50 text-blue-700 border border-blue-200"
+                                : "bg-blue-950/60 text-blue-300 border border-blue-800"
+                            }`}>
+                              ⚡ 12:00 AM Auto
+                            </span>
+                          ) : (
+                            item.changed_by
+                          )}
                         </td>
                       </tr>
                     ))

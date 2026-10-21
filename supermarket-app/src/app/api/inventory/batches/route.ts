@@ -18,6 +18,13 @@ export async function GET(req: Request) {
     const status = searchParams.get("status"); // GOOD | NEAR_EXPIRY | EXPIRED
     const summary = searchParams.get("summary") === "true";
 
+    // 12:00 AM Midnight Auto-Expiry Disposal Routine (Only expired batches past date)
+    try {
+      await query("CALL sp_auto_dispose_expired_batches()");
+    } catch (err: any) {
+      console.warn("sp_auto_dispose_expired_batches error:", err.message);
+    }
+
     // ---------- SUMMARY MODE (Directly from View) ----------
     if (summary) {
       let sqlSum = `

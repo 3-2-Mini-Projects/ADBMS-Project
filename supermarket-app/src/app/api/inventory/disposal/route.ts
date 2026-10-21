@@ -21,6 +21,13 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const branchId = session.role === "ADMIN" ? searchParams.get("branchId") : String(session.branch_id);
 
+    // Ensure any expired batches past 12:00 AM are automatically recorded in disposal history
+    try {
+      await query("CALL sp_auto_dispose_expired_batches()");
+    } catch (err: any) {
+      console.warn("sp_auto_dispose_expired_batches error in disposal GET:", err.message);
+    }
+
     let sql = `
       SELECT 
         audit_id AS log_id,
