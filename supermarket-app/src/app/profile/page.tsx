@@ -20,11 +20,11 @@ export default function ProfilePage() {
           <h1 className="text-2xl font-black text-white mt-1">Staff Profile &amp; Role Credentials</h1>
         </div>
         <Link
-          href="/dashboard"
+          href={currentEmployee?.role === "CASHIER" ? "/cashier/dashboard" : "/dashboard"}
           className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 hover:text-white transition-all"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Dashboard</span>
+          <span>{currentEmployee?.role === "CASHIER" ? "Cashier Desk" : "Dashboard"}</span>
         </Link>
       </div>
 

@@ -14,6 +14,12 @@ const CASHIER_TABS = [
   { label: "Returns & Refunds", href: "/cashier/returns", icon: "↩️" },
 ];
 
+const ACCOUNT_TABS = [
+  { label: "Profile", href: "/profile", icon: "👤" },
+  { label: "Settings", href: "/settings", icon: "⚙️" },
+  { label: "Logout", href: "/logout", icon: "🚪" },
+];
+
 function CashierLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -216,36 +222,54 @@ function CashierLayoutContent({ children }: { children: React.ReactNode }) {
             );
           })}
 
-          {/* Access Policy Reminder Card */}
+          {/* Account Section (Just like other users) */}
           <div
             style={{
-              marginTop: 24,
-              padding: "12px 14px",
-              borderRadius: 10,
-              background: "rgba(17, 24, 39, 0.6)",
-              border: "1px solid var(--border)",
-              fontSize: 11,
-              lineHeight: 1.5,
-              color: "var(--text-secondary)",
+              fontSize: 10,
+              fontWeight: 700,
+              color: "var(--text-muted)",
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              padding: "0 6px",
+              marginTop: 20,
+              marginBottom: 8,
             }}
           >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                fontWeight: 700,
-                color: "var(--accent-amber)",
-                marginBottom: 4,
-                fontSize: 11.5,
-              }}
-            >
-              🔒 Active Session
-            </div>
-            <p style={{ margin: 0, fontSize: 10.5, color: "var(--text-muted)" }}>
-              Bound to authenticated cashier account. Returns and voids require manager approval PIN.
-            </p>
+            Account
           </div>
+
+          {ACCOUNT_TABS.map((tab) => {
+            const isActive = pathname === tab.href;
+            return (
+              <Link
+                key={tab.href}
+                href={tab.href}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: "9px 12px",
+                  borderRadius: 8,
+                  marginBottom: 3,
+                  fontSize: 13,
+                  fontWeight: isActive ? 600 : 500,
+                  color: tab.href === "/logout"
+                    ? "var(--accent-rose)"
+                    : isActive
+                    ? "var(--text-primary)"
+                    : "var(--text-secondary)",
+                  background: isActive ? "var(--bg-card2)" : "transparent",
+                  textDecoration: "none",
+                  border: isActive ? "1px solid var(--border-light)" : "1px solid transparent",
+                  transition: "all 0.15s",
+                  boxShadow: isActive ? "0 2px 8px rgba(0,0,0,0.3)" : "none",
+                }}
+              >
+                <span style={{ fontSize: 16 }}>{tab.icon}</span>
+                <span>{tab.label}</span>
+              </Link>
+            );
+          })}
         </nav>
 
         {/* Logged-in Cashier Profile (No switcher - navigate by signin) */}
@@ -329,10 +353,10 @@ function CashierLayoutContent({ children }: { children: React.ReactNode }) {
         <header className="topbar">
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: 18 }}>
-              {CASHIER_TABS.find((t) => t.href === pathname)?.icon || "🛒"}
+              {[...CASHIER_TABS, ...ACCOUNT_TABS].find((t) => t.href === pathname)?.icon || "🛒"}
             </span>
             <span style={{ fontWeight: 700, fontSize: 15, color: "var(--text-primary)" }}>
-              {CASHIER_TABS.find((t) => t.href === pathname)?.label || "Cashier System"}
+              {[...CASHIER_TABS, ...ACCOUNT_TABS].find((t) => t.href === pathname)?.label || "Cashier System"}
             </span>
             {cashier && (
               <span

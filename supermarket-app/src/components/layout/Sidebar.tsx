@@ -220,9 +220,10 @@ const CASHIER_NAV_GROUPS: NavGroup[] = [
     group: "POINT OF SALE",
     items: [
       { title: "Cashier Dashboard", href: "/cashier/dashboard", icon: LayoutDashboard },
-      { title: "POS Checkout", href: "/pos", icon: ShoppingCart, badge: "Live", highlight: true },
-      { title: "Sales History", href: "/sales", icon: Receipt },
-      { title: "Returns & Refunds", href: "/returns", icon: RotateCcw },
+      { title: "POS Checkout", href: "/cashier/pos", icon: ShoppingCart, badge: "Live", highlight: true },
+      { title: "Transaction History", href: "/cashier/history", icon: Receipt },
+      { title: "Daily Summary", href: "/cashier/summary", icon: FileSpreadsheet },
+      { title: "Returns & Refunds", href: "/cashier/returns", icon: RotateCcw },
     ],
   },
   {
@@ -236,6 +237,7 @@ const CASHIER_NAV_GROUPS: NavGroup[] = [
     group: "ACCOUNT",
     items: [
       { title: "My Profile", href: "/profile", icon: UserCircle },
+      { title: "Settings", href: "/settings", icon: Settings },
       { title: "Logout", href: "/logout", icon: LogOut },
     ],
   },
