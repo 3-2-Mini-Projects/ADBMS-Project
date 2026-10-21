@@ -30,6 +30,11 @@ interface SaleDetailsData {
   discount_total: string | number;
   tax_total: string | number;
   total_amount: string | number;
+  tendered_cash?: string | number | null;
+  tendered_amount?: string | number | null;
+  amountTendered?: string | number | null;
+  change_amount?: string | number | null;
+  changeDue?: string | number | null;
   items: Array<{
     sale_item_id: number;
     product_id: number;
@@ -171,10 +176,10 @@ function SaleDetailInner({ saleId }: { saleId: string }) {
     discountTotal: sale.discount_total,
     taxTotal: sale.tax_total,
     totalAmount: sale.total_amount,
-    tendered_cash: sale.tendered_cash ?? sale.amountTendered,
-    amountTendered: sale.amountTendered !== undefined ? Number(sale.amountTendered) : (sale.tendered_cash !== undefined && sale.tendered_cash !== null ? Number(sale.tendered_cash) : undefined),
-    changeDue: sale.changeDue !== undefined ? Number(sale.changeDue) : (sale.change_amount !== undefined && sale.change_amount !== null ? Number(sale.change_amount) : undefined),
-    change_amount: sale.change_amount ?? sale.changeDue,
+    tendered_cash: (sale.tendered_cash ?? sale.amountTendered) ?? undefined,
+    amountTendered: sale.amountTendered !== undefined && sale.amountTendered !== null ? Number(sale.amountTendered) : (sale.tendered_cash !== undefined && sale.tendered_cash !== null ? Number(sale.tendered_cash) : undefined),
+    changeDue: sale.changeDue !== undefined && sale.changeDue !== null ? Number(sale.changeDue) : (sale.change_amount !== undefined && sale.change_amount !== null ? Number(sale.change_amount) : undefined),
+    change_amount: (sale.change_amount ?? sale.changeDue) ?? undefined,
     payments: sale.payments || [],
   };
 

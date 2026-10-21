@@ -779,53 +779,34 @@ export default function POSPage() {
                 {customerBalance > 0 ? (
                   <div className="space-y-2.5 pt-1 border-t border-purple-500/20">
                     <div className="flex items-center justify-between text-[11px] text-slate-300">
-                      <span>Redeem Points (Full or Partial):</span>
+                      <span>Redeem Loyalty Points (Max {maxRedeemablePoints} pts):</span>
                       <span className="font-mono font-bold text-purple-300">
                         {effectivePointsToRedeem > 0 ? `${effectivePointsToRedeem} pts = -Rs. ${effectivePointsToRedeem.toFixed(2)}` : "None"}
                       </span>
                     </div>
 
-                    {/* Full vs Partial Selection Controls */}
-                    <div className="flex flex-wrap gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => handleSetPointsToRedeem(0)}
-                        className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold border transition-all ${
-                          effectivePointsToRedeem === 0
-                            ? "bg-slate-700 text-white border-slate-500"
-                            : "bg-slate-800/80 text-slate-400 border-slate-700 hover:text-white"
-                        }`}
-                      >
-                        None (0 pts)
-                      </button>
-
-                      {/* Full payment button if customer has enough points to cover the entire bill */}
-                      {customerBalance >= Math.floor(totalDue) && (
+                    {/* Full purchase button if customer has enough points to cover entire bill */}
+                    {customerBalance >= Math.floor(totalDue) && (
+                      <div>
                         <button
                           type="button"
-                          onClick={() => handleSetPointsToRedeem(Math.floor(totalDue))}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-extrabold border transition-all ${
+                          onClick={() => {
+                            if (effectivePointsToRedeem === Math.floor(totalDue)) {
+                              handleSetPointsToRedeem(0);
+                            } else {
+                              handleSetPointsToRedeem(Math.floor(totalDue));
+                            }
+                          }}
+                          className={`w-full py-2 px-3 rounded-lg text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${
                             effectivePointsToRedeem === Math.floor(totalDue)
-                              ? "bg-emerald-600 text-white border-emerald-400"
+                              ? "bg-emerald-600 text-white border-emerald-400 shadow-sm"
                               : "bg-emerald-950/40 text-emerald-300 border-emerald-800/60 hover:bg-emerald-900/60"
                           }`}
                         >
-                          🛍️ Buy with Points ({Math.floor(totalDue)} pts = Pay Rs. 0)
+                          🛍️ {effectivePointsToRedeem === Math.floor(totalDue) ? "✓ Bought with Points (Customer pays Rs. 0)" : `Buy Product with Points (${Math.floor(totalDue)} pts = Pay Rs. 0)`}
                         </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => handleSetPointsToRedeem(maxRedeemablePoints)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
-                            effectivePointsToRedeem === maxRedeemablePoints
-                              ? "bg-purple-600 text-white border-purple-400"
-                              : "bg-purple-900/50 text-purple-200 border-purple-700 hover:bg-purple-800"
-                          }`}
-                        >
-                          Use All Available ({maxRedeemablePoints} pts)
-                        </button>
-                      )}
-                    </div>
+                      </div>
+                    )}
 
                     {/* Custom Points Input — Redeem any valid amount of points */}
                     <div className="flex items-center gap-2 pt-0.5">
