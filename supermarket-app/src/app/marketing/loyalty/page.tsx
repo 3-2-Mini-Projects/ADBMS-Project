@@ -65,6 +65,7 @@ export default function LoyaltyManagementPage() {
   const [customersList, setCustomersList] = useState<any[]>([]);
 
   const [loading, setLoading] = useState(true);
+  const [recalculating, setRecalculating] = useState(false);
   const [submittingAction, setSubmittingAction] = useState(false);
 
   // Active View Tab: 'summary' (customer_summary_vw) | 'top' (top_customers_vw)
@@ -86,10 +87,6 @@ export default function LoyaltyManagementPage() {
   const [copiedCouponId, setCopiedCouponId] = useState<string | null>(null);
 
   const loadData = async () => {
-    // If the application context is still restoring auth & branch details on initial page refresh, wait for it
-    if (isAppLoading && !currentBranch?.branch_id && !currentEmployee?.branch_id && !authenticatedUser?.branch_id) {
-      return;
-    }
     setLoading(true);
     try {
       const targetBranchId = currentBranch?.branch_id || currentEmployee?.branch_id || authenticatedUser?.branch_id;
@@ -106,8 +103,6 @@ export default function LoyaltyManagementPage() {
 
       if (dashRes && !dashRes.error) setData(dashRes);
       if (Array.isArray(summaryRes)) setCustomerSummaries(summaryRes);
-
-
       // Map active coupon codes for top customers
       const couponMap = new Map<number, { code: string; expiry: string }>();
       if (rewardTop10Res?.top_customers && Array.isArray(rewardTop10Res.top_customers)) {
@@ -160,6 +155,29 @@ export default function LoyaltyManagementPage() {
       loadData();
     }
   }, [isAppLoading, currentBranch?.branch_id, currentEmployee?.branch_id, authenticatedUser?.branch_id]);
+
+  // Recalculate Tiers procedure handler
+  const handleRecalculateTiers = async () => {
+    setRecalculating(true);
+    try {
+      const res = await fetch("/api/marketing/actions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "recalculate_tiers" }),
+      });
+      const result = await res.json();
+      if (res.ok && result.success) {
+        showToast(result.message || "Customer tiers recalculated successfully via recalculate_tiers()!", "success");
+        await loadData();
+      } else {
+        showToast(result.error || "Failed to recalculate tiers", "error");
+      }
+    } catch {
+      showToast("Error executing recalculate_tiers procedure", "error");
+    } finally {
+      setRecalculating(false);
+    }
+  };
 
   // Open Award Modal (with optional pre-selected customer)
   const openAwardModal = (customerId?: number) => {
@@ -293,6 +311,27 @@ export default function LoyaltyManagementPage() {
             <span>Loyalty Points Management</span>
           </h1>
         </div>
+
+        {/* Action Buttons: Recalculate & Report */}
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <Link
+            href="/marketing/reports/top-loyalty-customers"
+            className="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 hover:text-amber-300 text-xs font-bold flex items-center gap-2 border border-slate-700 shadow-md transition-all"
+          >
+            <Trophy className="w-3.5 h-3.5 text-amber-400" />
+            <span>Top 10 Customers Report</span>
+          </Link>
+
+          <button
+            onClick={handleRecalculateTiers}
+            disabled={recalculating}
+            className="px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white text-xs font-semibold flex items-center gap-2 shadow-lg shadow-amber-950/40 border border-amber-500/30 transition-all disabled:opacity-50"
+            title="Executes stored procedure recalculate_tiers()"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${recalculating ? "animate-spin" : ""}`} />
+            <span>{recalculating ? "Recalculating..." : "Recalculate Tiers (recalculate_tiers)"}</span>
+          </button>
+        </div>
       </div>
 
       {/* Tier Cards with Clickable Filter */}
@@ -362,7 +401,7 @@ export default function LoyaltyManagementPage() {
                 }`}
             >
               <Trophy className="w-3.5 h-3.5" />
-              <span>Top 10 Customers</span>
+              <span>Top 3 Customers</span>
             </button>
 
           </div>
@@ -489,7 +528,7 @@ export default function LoyaltyManagementPage() {
 
 
         {/* ========================================================================= */}
-        {/* TAB 2: Top 10 Customers by Points Earned (top_customers_vw) */}
+        {/* TAB 3: Top 3 Customers by Highest Points Earned (top_customers_vw) */}
         {/* ========================================================================= */}
         {activeTab === "top" && (
           <div className="space-y-4">

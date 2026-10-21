@@ -168,12 +168,23 @@ export async function POST(req: Request) {
       throw new Error(`Payment amount (Rs. ${totalPaid.toFixed(2)}) is less than total due (Rs. ${total_amount.toFixed(2)})`);
     }
 
+    const amountTenderedInput = (body as any).amount_tendered ?? (body as any).amountTendered;
+    const cashPay = payments.find((p) => p.method === "CASH");
+    const cashLineAmount = cashPay ? Number(cashPay.amount) : 0;
+    const effectiveTendered = amountTenderedInput !== undefined && amountTenderedInput !== null
+      ? Number(amountTenderedInput)
+      : totalPaid;
+    const changeDue = cashPay && effectiveTendered > cashLineAmount
+      ? Number((effectiveTendered - cashLineAmount).toFixed(2))
+      : 0;
+
     // 4. Create Sale Record
     const [saleRes]: any = await connection.query(
       `INSERT INTO sales (
         branch_id, cashier_id, customer_id, promo_id, coupon_id,
-        sale_date, status, subtotal, discount_total, tax_total, total_amount
-      ) VALUES (?, ?, ?, ?, ?, NOW(), 'COMPLETED', ?, ?, ?, ?)`,
+        sale_date, status, subtotal, discount_total, tax_total, total_amount,
+        tendered_cash, change_amount
+      ) VALUES (?, ?, ?, ?, ?, NOW(), 'COMPLETED', ?, ?, ?, ?, ?, ?)`,
       [
         branch_id,
         cashier_id,
@@ -184,6 +195,8 @@ export async function POST(req: Request) {
         discount_total.toFixed(2),
         tax_total.toFixed(2),
         total_amount.toFixed(2),
+        effectiveTendered.toFixed(2),
+        changeDue.toFixed(2),
       ]
     );
 
@@ -251,38 +264,107 @@ export async function POST(req: Request) {
       );
     }
 
-    // 8. Handle Customer Loyalty Points
+    // 8. Handle Customer Loyalty Points (Spend & Earn)
     let earnedPoints = 0;
+    let pointsRedeemed = 0;
+    let newPointsBalance = 0;
+    let customerTier = "BRONZE";
+
     if (customer_id) {
-      // 1 point for every 100 Rs/currency spent
-      earnedPoints = Math.floor(total_amount / 100);
-      if (earnedPoints > 0) {
-        await connection.query(
-          "UPDATE customers SET points_balance = points_balance + ? WHERE customer_id = ?",
-          [earnedPoints, customer_id]
-        );
+      const [custRows]: any = await connection.query(
+        "SELECT customer_id, card_no, full_name, tier, points_balance, is_active FROM customers WHERE customer_id = ? FOR UPDATE",
+        [customer_id]
+      );
 
-        await connection.query(
-          `INSERT INTO loyalty_transactions (customer_id, branch_id, sale_id, points, type, note, created_at)
-           VALUES (?, ?, ?, ?, 'EARN', CONCAT('Points earned from sale #SALE-', ?), NOW())`,
-          [customer_id, branch_id, sale_id, earnedPoints, sale_id]
-        );
-      }
+      if (custRows.length > 0 && custRows[0].is_active === 1) {
+        const cust = custRows[0];
+        customerTier = cust.tier;
+        let currentPoints = Number(cust.points_balance || 0);
 
-      // Check if points were used as payment
-      const pointsPayment = payments.find((p) => p.method === "POINTS");
-      if (pointsPayment && Number(pointsPayment.amount) > 0) {
-        const pointsDeducted = Math.floor(Number(pointsPayment.amount));
-        await connection.query(
-          "UPDATE customers SET points_balance = points_balance - ? WHERE customer_id = ?",
-          [pointsDeducted, customer_id]
-        );
+        // A. Points Spent / Redeemed as payment
+        const pointsPayment = payments.find((p) => p.method === "POINTS");
+        if (pointsPayment && Number(pointsPayment.amount) > 0) {
+          pointsRedeemed = Math.floor(Number(pointsPayment.amount));
+          if (currentPoints < pointsRedeemed) {
+            throw new Error(
+              `Insufficient loyalty points. Customer has ${currentPoints} points available, cannot redeem ${pointsRedeemed} points.`
+            );
+          }
+          if (pointsRedeemed > Math.floor(total_amount)) {
+            throw new Error(
+              `Cannot redeem more points (${pointsRedeemed}) than the total bill amount (Rs. ${total_amount.toFixed(2)}).`
+            );
+          }
+          currentPoints -= pointsRedeemed;
 
+          await connection.query(
+            `INSERT INTO loyalty_transactions (
+              customer_id, branch_id, sale_id, points, type, note, created_at
+            ) VALUES (?, ?, ?, ?, 'REDEEM', 'Points spent at checkout for purchase', NOW())`,
+            [customer_id, branch_id, sale_id, -pointsRedeemed]
+          );
+        }
+
+        // B. Points Earned on this purchase:
+        // Business Rule: If customer pays partially or fully with loyalty points, that transaction does NOT earn any loyalty points.
+        if (pointsRedeemed === 0) {
+          let multiplier = 1.0;
+          if (cust.tier === "SILVER") multiplier = 1.1;
+          else if (cust.tier === "GOLD") multiplier = 1.25;
+          else if (cust.tier === "PLATINUM") multiplier = 1.5;
+
+          earnedPoints = Math.floor((total_amount / 100) * multiplier);
+          if (earnedPoints > 0) {
+            currentPoints += earnedPoints;
+
+            await connection.query(
+              `INSERT INTO loyalty_transactions (
+                customer_id, branch_id, sale_id, points, type, note, created_at
+              ) VALUES (?, ?, ?, ?, 'EARN', ?, NOW())`,
+              [
+                customer_id,
+                branch_id,
+                sale_id,
+                earnedPoints,
+                `Points earned from purchase (${cust.tier} tier: ${multiplier}x)`,
+              ]
+            );
+          }
+        } else {
+          earnedPoints = 0;
+        }
+
+        // C. Update final points balance
         await connection.query(
-          `INSERT INTO loyalty_transactions (customer_id, branch_id, sale_id, points, type, note, created_at)
-           VALUES (?, ?, ?, ?, 'REDEEM', CONCAT('Points redeemed on sale #SALE-', ?), NOW())`,
-          [customer_id, branch_id, sale_id, -pointsDeducted, sale_id]
+          "UPDATE customers SET points_balance = ? WHERE customer_id = ?",
+          [currentPoints, customer_id]
         );
+        newPointsBalance = currentPoints;
+
+        // D. Automatic tier progression check
+        const [spendRow]: any = await connection.query(
+          `SELECT COALESCE(SUM(total_amount), 0) AS total_spent FROM sales WHERE customer_id = ? AND status = 'COMPLETED'`,
+          [customer_id]
+        );
+        const totalSpent = Number(spendRow[0]?.total_spent || 0) + total_amount;
+        let targetTier = "BRONZE";
+        if (totalSpent >= 100000) targetTier = "PLATINUM";
+        else if (totalSpent >= 50000) targetTier = "GOLD";
+        else if (totalSpent >= 20000) targetTier = "SILVER";
+
+        if (targetTier !== cust.tier) {
+          await connection.query(`UPDATE customers SET tier = ? WHERE customer_id = ?`, [targetTier, customer_id]);
+          try {
+            await connection.query(
+              `INSERT INTO customer_tier_history (customer_id, old_tier, new_tier, reason, changed_at)
+               VALUES (?, ?, ?, 'Automatic tier progression upon purchase milestone', NOW())`,
+              [customer_id, cust.tier, targetTier]
+            );
+          } catch (thErr) {
+            console.warn("Tier history error:", thErr);
+          }
+          customerTier = targetTier;
+        }
       }
     }
 
@@ -299,12 +381,14 @@ export async function POST(req: Request) {
           total_amount,
           items_count: items.length,
           payment_methods: payments.map((p) => p.method),
+          points_redeemed: pointsRedeemed,
+          points_earned: earnedPoints,
         }),
         `cashier_${cashier_id}`,
       ]
     );
 
-    // Commit transaction!
+    // Commit Transaction
     await connection.commit();
 
     return NextResponse.json({
@@ -325,6 +409,9 @@ export async function POST(req: Request) {
         change: Math.max(0, totalPaid - total_amount).toFixed(2),
         payments,
         earned_points: earnedPoints,
+        points_redeemed: pointsRedeemed,
+        new_points_balance: newPointsBalance,
+        customer_tier: customerTier,
       },
     });
   } catch (err: any) {

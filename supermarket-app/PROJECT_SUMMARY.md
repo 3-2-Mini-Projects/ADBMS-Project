@@ -187,7 +187,6 @@ supermarket-app/
 │       ├── context.tsx         # Global client-side application context
 │       ├── permissions.ts      # RBAC permission matrix and access guards
 │       └── types.ts            # TypeScript data models and interfaces
-├── scripts/                    # Schema inspection and database verification utilities
 ├── package.json                # Project dependencies and script runner
 └── tsconfig.json               # TypeScript configuration
 ```

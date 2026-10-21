@@ -38,6 +38,7 @@ import {
   Ticket,
   KeyRound,
   ArrowLeftRight,
+  Trophy,
 } from "lucide-react";
 
 interface NavItem {
@@ -118,6 +119,7 @@ const NAV_GROUPS: NavGroup[] = [
     group: "MARKETING & LOYALTY",
     items: [
       { title: "Customers & Loyalty", href: "/customers", icon: Users },
+      { title: "Top 10 Loyalty Report", href: "/marketing/reports/top-loyalty-customers", icon: Trophy, badge: "Report" },
       { title: "Promotions & Coupons", href: "/promotions", icon: Tag, permission: "manage_promotions" },
     ],
   },
@@ -169,6 +171,7 @@ const MARKETING_NAV_GROUPS: NavGroup[] = [
       { title: "Dashboard", href: "/marketing/dashboard", icon: LayoutDashboard },
       { title: "Customer Management", href: "/marketing/customers", icon: Users },
       { title: "Loyalty Management", href: "/marketing/loyalty", icon: Award },
+      { title: "Top 10 Loyalty Report", href: "/marketing/reports/top-loyalty-customers", icon: Trophy, badge: "Report" },
       { title: "Promotion Management", href: "/marketing/promotions", icon: Tag },
       { title: "Coupon Management", href: "/marketing/coupons", icon: Ticket },
       { title: "Marketing Reports", href: "/marketing/reports", icon: BarChart3 },

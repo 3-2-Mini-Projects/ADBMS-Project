@@ -111,17 +111,21 @@ export default function TransactionHistoryPage() {
           },
           customer: sale.customer_name
             ? {
-                full_name: sale.customer_name,
-                card_no: sale.customer_card,
-                tier: sale.customer_tier,
-                points_balance: sale.customer_points,
-              }
+              full_name: sale.customer_name,
+              card_no: sale.customer_card,
+              tier: sale.customer_tier,
+              points_balance: sale.customer_points,
+            }
             : null,
           items: sale.items || [],
           subtotal: sale.subtotal,
           discountTotal: sale.discount_total,
           taxTotal: sale.tax_total,
           totalAmount: sale.total_amount,
+          tendered_cash: sale.tendered_cash ?? sale.amountTendered,
+          amountTendered: sale.tendered_cash ?? sale.amountTendered,
+          change_amount: sale.change_amount ?? sale.changeDue,
+          changeDue: sale.change_amount ?? sale.changeDue,
           payments: sale.payments || [],
         });
       }
@@ -134,7 +138,7 @@ export default function TransactionHistoryPage() {
     `Rs. ${Number(n || 0).toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 20, paddingBottom: 40 }}>
       {/* Header & Title */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
         <div>
@@ -166,7 +170,7 @@ export default function TransactionHistoryPage() {
                 setPage(1);
               }}
             >
-              My Cashier Sales ({cashier?.full_name?.split(" ")[0]})
+              My Sales ({cashier?.full_name?.split(" ")[0]})
             </button>
             <button
               className={`btn ${scopeAllCashiers ? "btn-primary" : "btn-ghost"}`}
@@ -176,7 +180,7 @@ export default function TransactionHistoryPage() {
                 setPage(1);
               }}
             >
-              All Branch Sales
+              All Sales
             </button>
           </div>
         </div>
@@ -343,8 +347,8 @@ export default function TransactionHistoryPage() {
                         s.status === "COMPLETED"
                           ? "badge badge-completed"
                           : s.status === "OPEN"
-                          ? "badge badge-open"
-                          : "badge badge-cancelled"
+                            ? "badge badge-open"
+                            : "badge badge-cancelled"
                       }
                     >
                       {s.status}

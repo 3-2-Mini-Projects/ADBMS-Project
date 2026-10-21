@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useCashier, ManagerUser } from "@/lib/cashierContext";
 import ManagerAuthModal from "@/components/ManagerAuthModal";
@@ -43,6 +43,7 @@ interface ProcessedReturnRecord {
 }
 
 function ReturnsContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const preSaleId = searchParams.get("saleId");
   const preItemId = searchParams.get("itemId");
@@ -178,15 +179,72 @@ function ReturnsContent() {
     `Rs. ${Number(n || 0).toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 20, paddingBottom: 40 }}>
       {/* Header */}
-      <div>
-        <h1 style={{ fontSize: 22, fontWeight: 800, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 8 }}>
-          ↩️ Returns & Customer Refunds
-        </h1>
-        <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
-          Audit-trailed return terminal with manager authorization and conditional inventory restock
-        </p>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
+        <div>
+          {/* Back Navigation Button */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+            <button
+              type="button"
+              onClick={() => {
+                if (preSaleId || sale?.sale_id) {
+                  router.push(`/cashier/history/${preSaleId || sale?.sale_id}`);
+                } else if (typeof window !== "undefined" && window.history.length > 1) {
+                  router.back();
+                } else {
+                  router.push("/cashier/history");
+                }
+              }}
+              className="btn btn-ghost"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "5px 12px",
+                fontSize: 12,
+                fontWeight: 700,
+                color: "var(--accent-blue)",
+                background: "rgba(56, 189, 248, 0.08)",
+                border: "1px solid rgba(56, 189, 248, 0.25)",
+                borderRadius: 8,
+                cursor: "pointer",
+              }}
+              title="Return to the previous page"
+            >
+              ← Back to {preSaleId || sale?.sale_id ? `Sale #${preSaleId || sale?.sale_id}` : "Previous Page"}
+            </button>
+            <span style={{ fontSize: 12, color: "var(--text-muted)" }}>/</span>
+            <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>Returns & Customer Refunds</span>
+          </div>
+
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 8 }}>
+            ↩️ Returns & Customer Refunds
+          </h1>
+          <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
+            Audit-trailed return terminal with manager authorization and conditional inventory restock
+          </p>
+        </div>
+
+        {/* Quick Action Navigation */}
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          {(preSaleId || sale?.sale_id) && (
+            <Link
+              href={`/cashier/history/${preSaleId || sale?.sale_id}`}
+              className="btn btn-secondary"
+              style={{ padding: "6px 14px", fontSize: 12 }}
+            >
+              🧾 Sale #{preSaleId || sale?.sale_id} Details
+            </Link>
+          )}
+          <Link
+            href="/cashier/history"
+            className="btn btn-ghost"
+            style={{ padding: "6px 14px", fontSize: 12 }}
+          >
+            📋 All Transactions
+          </Link>
+        </div>
       </div>
 
       {/* Step 1: Search Sale */}

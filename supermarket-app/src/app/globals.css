@@ -95,44 +95,56 @@ body {
 
 /* ===== Cashier Portal Layout & Components ===== */
 .app-layout {
-  display: flex;
-  height: 100vh;
-  width: 100%;
-  overflow: hidden;
+  display: flex !important;
+  flex-direction: row !important;
+  height: 100vh !important;
+  width: 100% !important;
+  overflow: hidden !important;
   background: var(--bg-base);
   color: var(--text-primary);
 }
 
 .sidebar,
 .app-layout .sidebar {
-  width: var(--sidebar-width);
-  min-width: var(--sidebar-width);
+  width: var(--sidebar-width, 240px) !important;
+  min-width: var(--sidebar-width, 240px) !important;
+  max-width: var(--sidebar-width, 240px) !important;
+  height: 100vh !important;
+  flex-shrink: 0 !important;
   background: var(--bg-surface);
   border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
 }
 
-.main-area {
-  flex: 1;
-  overflow: auto;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
+.main-area,
+.app-layout .main-area {
+  flex: 1 !important;
+  height: 100vh !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
 }
 
 .page-content {
   flex: 1;
-  padding: 24px 28px;
-  max-width: 1400px;
+  padding: 16px 20px;
+  max-width: 100%;
   width: 100%;
   margin: 0 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .topbar {
   height: 56px;
   min-height: 56px;
+  max-height: 56px;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -520,7 +532,28 @@ table.data-table td.mono {
     transform: translate(-50%, -50%);
   }
 
-  /* 3. When printing Operational Reports */
+  /* 3. When printing Daily Sales Summary */
+  body:has(#printable-daily-summary) * {
+    visibility: hidden;
+  }
+  body:has(#printable-daily-summary) #printable-daily-summary,
+  body:has(#printable-daily-summary) #printable-daily-summary * {
+    visibility: visible;
+  }
+  #printable-daily-summary {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100% !important;
+    max-width: 100% !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    padding: 24px !important;
+    margin: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* 4. When printing Operational Reports */
   #printable-report {
     display: block !important;
     width: 100% !important;

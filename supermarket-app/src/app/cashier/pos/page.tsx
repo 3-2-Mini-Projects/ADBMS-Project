@@ -7,6 +7,7 @@ import ManagerAuthModal from "@/components/ManagerAuthModal";
 import CameraBarcodeScannerModal from "@/components/CameraBarcodeScannerModal";
 import BarcodeGeneratorModal from "@/components/BarcodeGeneratorModal";
 import QuantityEntryModal, { QuantityModalProduct } from "@/components/QuantityEntryModal";
+import RegisterCustomerModal from "@/components/RegisterCustomerModal";
 
 interface Product {
   product_id: number;
@@ -69,6 +70,7 @@ export default function POSBillingPage() {
   // Checkout modal
   const [showCheckout, setShowCheckout] = useState(false);
   const [paymentLines, setPaymentLines] = useState<PaymentLine[]>([{ method: "CASH", amount: 0 }]);
+  const [customPointsInput, setCustomPointsInput] = useState<string>("");
   const [cashTendered, setCashTendered] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -88,6 +90,9 @@ export default function POSBillingPage() {
   const [selectedProductForQty, setSelectedProductForQty] = useState<QuantityModalProduct | null>(null);
   const [qtyModalMode, setQtyModalMode] = useState<"add" | "set">("add");
   const [initialModalQty, setInitialModalQty] = useState<number>(1);
+
+  // Register Customer Modal
+  const [showRegisterCustomerModal, setShowRegisterCustomerModal] = useState(false);
 
   const barcodeInputRef = useRef<HTMLInputElement>(null);
   const lastBarcodeSubmitRef = useRef<{ code: string; time: number }>({ code: "", time: 0 });
@@ -405,32 +410,47 @@ export default function POSBillingPage() {
       return;
     }
     setPaymentLines([{ method: "CASH", amount: finalTotal }]);
+    setCustomPointsInput("");
     setCashTendered(String(finalTotal));
     setShowCheckout(true);
   };
 
-  // Split payment helper
-  const addSplitPayment = () => {
-    const currentSum = paymentLines.reduce((acc, p) => acc + Number(p.amount || 0), 0);
-    const remaining = Math.max(0, Number((finalTotal - currentSum).toFixed(2)));
-    setPaymentLines((prev) => [...prev, { method: "CARD", amount: remaining }]);
-  };
+  const applyPointsRedemption = (pts: number) => {
+    const maxPts = Math.min(Number(customer?.points_balance || 0), Math.floor(finalTotal));
+    const validPts = Math.max(0, Math.min(Math.floor(pts || 0), maxPts));
+    const remaining = Math.max(0, Number((finalTotal - validPts).toFixed(2)));
+    setCustomPointsInput(validPts > 0 ? String(validPts) : "");
 
-  const removeSplitPayment = (index: number) => {
-    setPaymentLines((prev) => prev.filter((_, idx) => idx !== index));
+    if (validPts > 0) {
+      setPaymentLines([
+        { method: "POINTS", amount: validPts, reference: `PTS-REDEEM-${customer?.card_no || "CUST"}` },
+        ...(remaining > 0 ? [{ method: "CASH" as const, amount: remaining }] : []),
+      ]);
+    } else {
+      setPaymentLines([{ method: "CASH", amount: finalTotal }]);
+    }
+    setCashTendered(remaining > 0 ? remaining.toFixed(2) : "0");
   };
 
   const updatePaymentLine = (index: number, field: keyof PaymentLine, val: any) => {
+    // If it's a POINTS line, do not allow changing method or amount
+    if (paymentLines[index]?.method === "POINTS" && (field === "method" || field === "amount")) {
+      return;
+    }
     setPaymentLines((prev) =>
       prev.map((line, idx) => (idx === index ? { ...line, [field]: val } : line))
     );
   };
 
-  // Calculate Change
+  // Calculate Payments & Change Breakdown
   const totalPaidSum = paymentLines.reduce((acc, p) => acc + Number(p.amount || 0), 0);
   const hasCash = paymentLines.some((p) => p.method === "CASH");
-  const effectiveCashTendered = hasCash && cashTendered ? Number(cashTendered) : totalPaidSum;
-  const changeDue = Math.max(0, Number((effectiveCashTendered - finalTotal).toFixed(2)));
+  const cashLine = paymentLines.find((p) => p.method === "CASH");
+  const cashAmount = cashLine ? Number(cashLine.amount || 0) : 0;
+  const effectiveCashTendered = hasCash && cashTendered ? Number(cashTendered) : cashAmount;
+  const changeDue = hasCash && effectiveCashTendered > cashAmount
+    ? Number((effectiveCashTendered - cashAmount).toFixed(2))
+    : 0;
 
   // Complete Sale Submission
   const handleCompleteSale = async () => {
@@ -490,7 +510,7 @@ export default function POSBillingPage() {
     `Rs. ${Number(n || 0).toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 100px)", gap: 14 }}>
+    <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, height: "100%", gap: 12, overflow: "hidden" }}>
       {/* Top Search & Category Bar */}
       <div
         style={{
@@ -607,24 +627,41 @@ export default function POSBillingPage() {
                 fontSize: 12,
               }}
             >
-              <span>⭐ {customer.full_name}</span>
+              <span>⭐ <strong>{customer.full_name}</strong> ({customer.card_no})</span>
               <span className="badge badge-open" style={{ fontSize: 9.5 }}>{customer.tier}</span>
+              <span style={{ fontSize: 11, color: "var(--accent-emerald)", fontWeight: 700 }}>
+                {customer.points_balance || 0} pts
+              </span>
               <button
                 className="btn btn-ghost"
                 style={{ padding: "1px 4px", fontSize: 10 }}
                 onClick={() => setCustomer(null)}
+                title="Detach customer"
               >
                 ✕
               </button>
             </div>
           ) : (
-            <button
-              className="btn btn-ghost"
-              style={{ fontSize: 12, padding: "6px 12px" }}
-              onClick={() => setShowCustSearch(!showCustSearch)}
-            >
-              👤 Attach Customer
-            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                style={{ fontSize: 12, padding: "6px 12px" }}
+                onClick={() => setShowCustSearch(!showCustSearch)}
+              >
+                👤 Attach Customer
+              </button>
+              <button
+                type="button"
+                className="btn btn-emerald"
+                style={{ fontSize: 12, padding: "6px 12px", gap: 4 }}
+                onClick={() => setShowRegisterCustomerModal(true)}
+                title="Enroll walk-in customer into loyalty rewards program"
+              >
+                <span>⭐</span>
+                <span>+ Register Member</span>
+              </button>
+            </div>
           )}
 
           {/* Customer Dropdown search */}
@@ -1035,6 +1072,61 @@ export default function POSBillingPage() {
               <span>TOTAL DUE:</span>
               <span>{fmt(finalTotal)}</span>
             </div>
+
+            {/* Loyalty Points Earning Live Preview Banner */}
+            {customer ? (
+              <div
+                style={{
+                  marginTop: 10,
+                  padding: "10px 12px",
+                  borderRadius: 10,
+                  background: "linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(59, 130, 246, 0.08))",
+                  border: "1px solid rgba(16, 185, 129, 0.25)",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
+                    <span style={{ fontSize: 14 }}>⭐</span>
+                    <strong style={{ color: "var(--text-primary)" }}>{customer.full_name}</strong>
+                    <span className="badge badge-open" style={{ fontSize: 9.5 }}>{customer.tier}</span>
+                  </div>
+                  <span style={{ fontSize: 11, color: "var(--accent-emerald)", fontWeight: 800 }}>
+                    Bal: {customer.points_balance || 0} pts
+                  </span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11 }}>
+                  <span style={{ color: "var(--text-secondary)" }}>Earning on this purchase:</span>
+                  <span style={{ color: "var(--accent-emerald)", fontWeight: 900, fontSize: 12 }}>
+                    🪙 +{Math.floor((finalTotal / 100) * (customer.tier === 'SILVER' ? 1.1 : customer.tier === 'GOLD' ? 1.25 : customer.tier === 'PLATINUM' ? 1.5 : 1.0))} Points
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div
+                style={{
+                  marginTop: 10,
+                  padding: "8px 12px",
+                  borderRadius: 8,
+                  background: "rgba(255, 255, 255, 0.03)",
+                  border: "1px dashed var(--border)",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  fontSize: 11,
+                  color: "var(--text-muted)",
+                }}
+              >
+                <span>No loyalty member attached</span>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  style={{ padding: "2px 8px", fontSize: 11, color: "var(--accent-emerald)", fontWeight: 700 }}
+                  onClick={() => setShowRegisterCustomerModal(true)}
+                >
+                  ⭐ + Register Member
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Checkout Action Button */}
@@ -1054,11 +1146,31 @@ export default function POSBillingPage() {
       {/* Checkout & Split Payment Modal */}
       {showCheckout && (
         <div className="modal-overlay">
-          <div className="modal-box" style={{ maxWidth: 520, width: "100%", padding: 24 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <div
+            className="modal-box"
+            style={{
+              maxWidth: 520,
+              width: "100%",
+              maxHeight: "92vh",
+              display: "flex",
+              flexDirection: "column",
+              padding: 0,
+              overflow: "hidden",
+            }}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: "16px 20px",
+                borderBottom: "1px solid var(--border)",
+              }}
+            >
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ fontSize: 20 }}>💳</span>
-                <h3 style={{ fontSize: 17, fontWeight: 800, color: "var(--text-primary)" }}>
+                <h3 style={{ fontSize: 17, fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
                   Payment & Final Checkout
                 </h3>
               </div>
@@ -1067,137 +1179,372 @@ export default function POSBillingPage() {
               </button>
             </div>
 
-            {/* Total Due Banner */}
-            <div
-              style={{
-                background: "rgba(16, 185, 129, 0.12)",
-                border: "1px solid rgba(16, 185, 129, 0.25)",
-                padding: "12px 16px",
-                borderRadius: 10,
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: 16,
-              }}
-            >
-              <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>Grand Total Due</span>
-              <span style={{ fontSize: 22, fontWeight: 900, color: "var(--accent-emerald)" }}>
-                {fmt(finalTotal)}
-              </span>
-            </div>
+            {/* Scrollable Modal Content */}
+            <div style={{ padding: "16px 20px", overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 14 }}>
 
-            {/* Split Payment Lines */}
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                <label style={{ fontSize: 12, fontWeight: 700, color: "var(--text-secondary)" }}>
-                  Payment Methods (Split payments supported)
-                </label>
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  style={{ fontSize: 11, padding: "3px 8px" }}
-                  onClick={addSplitPayment}
+            {/* Bill & Discount Summary Banner */}
+            {(() => {
+              const activePoints = paymentLines.find((p) => p.method === "POINTS");
+              const redeemedPts = activePoints ? Number(activePoints.amount || 0) : 0;
+              const remainingPurchaseVal = Math.max(0, Number((finalTotal - redeemedPts).toFixed(2)));
+
+              return (
+                <div
+                  style={{
+                    background: "rgba(16, 185, 129, 0.08)",
+                    border: "1px solid rgba(16, 185, 129, 0.25)",
+                    padding: "12px 16px",
+                    borderRadius: 10,
+                    marginBottom: 16,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 6,
+                  }}
                 >
-                  + Add Split Method
-                </button>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--text-secondary)" }}>
+                    <span>Gross Purchase Value</span>
+                    <span style={{ fontFamily: "monospace", color: "var(--text-primary)", fontWeight: 600 }}>{fmt(finalTotal)}</span>
+                  </div>
+                  {redeemedPts > 0 && (
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        fontSize: 12,
+                        color: "#c084fc",
+                        fontWeight: 700,
+                        background: "rgba(147, 51, 234, 0.12)",
+                        padding: "4px 8px",
+                        borderRadius: 6,
+                        border: "1px solid rgba(147, 51, 234, 0.3)",
+                      }}
+                    >
+                      <span>⭐ Loyalty Point Discount ({redeemedPts} pts):</span>
+                      <span style={{ fontFamily: "monospace" }}>-{fmt(redeemedPts)}</span>
+                    </div>
+                  )}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 6, borderTop: "1px solid rgba(255, 255, 255, 0.08)" }}>
+                    <div>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>
+                        {redeemedPts > 0 ? "Remaining Purchase Value" : "Grand Total Due"}
+                      </span>
+                      {redeemedPts > 0 && (
+                        <div style={{ fontSize: 10.5, color: "var(--text-muted)" }}>Payable amount after loyalty point discount</div>
+                      )}
+                    </div>
+                    <span style={{ fontSize: 22, fontWeight: 900, color: redeemedPts > 0 ? "#a855f7" : "var(--accent-emerald)" }}>
+                      {fmt(remainingPurchaseVal)}
+                    </span>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Customer Loyalty Banner in Checkout */}
+            {customer && (() => {
+              const currentPoints = Number(customer.points_balance || 0);
+              const maxRedeemable = Math.min(currentPoints, Math.floor(finalTotal));
+              const activePointsPayment = paymentLines.find((p) => p.method === "POINTS");
+              const currentRedeemedPoints = activePointsPayment ? Number(activePointsPayment.amount) : 0;
+              const remainingDue = Math.max(0, Number((finalTotal - currentRedeemedPoints).toFixed(2)));
+
+              return (
+                <div
+                  style={{
+                    background: "rgba(147, 51, 234, 0.08)",
+                    border: "1px solid rgba(147, 51, 234, 0.3)",
+                    padding: "12px 14px",
+                    borderRadius: 10,
+                    marginBottom: 14,
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12.5 }}>
+                    <span>⭐ <strong>{customer.full_name}</strong> ({customer.card_no})</span>
+                    <span className="badge badge-open" style={{ borderColor: "#a855f7", color: "#c084fc" }}>
+                      {customer.tier} MEMBER
+                    </span>
+                  </div>
+
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11.5, marginTop: 4 }}>
+                    <span style={{ color: "var(--text-secondary)" }}>
+                      Available Balance: <strong>{currentPoints} pts</strong> (Value: Rs. {currentPoints.toFixed(2)})
+                    </span>
+                    {currentRedeemedPoints === 0 ? (
+                      <span style={{ color: "var(--accent-emerald)", fontWeight: 700 }}>
+                        🪙 +{Math.floor((finalTotal / 100) * (customer.tier === 'SILVER' ? 1.1 : customer.tier === 'GOLD' ? 1.25 : customer.tier === 'PLATINUM' ? 1.5 : 1.0))} pts will be earned
+                      </span>
+                    ) : (
+                      <span style={{ color: "var(--accent-amber)", fontWeight: 700 }}>
+                        ⚠️ 0 pts earned (points redeemed)
+                      </span>
+                    )}
+                  </div>
+
+                  {currentPoints > 0 ? (
+                    <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px dashed rgba(147, 51, 234, 0.3)" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                        <span style={{ fontSize: 11.5, fontWeight: 700, color: "#d8b4fe" }}>
+                          Redeem Loyalty Points (Max {maxRedeemable} pts):
+                        </span>
+                        {currentRedeemedPoints > 0 && (
+                          <span style={{ fontSize: 11, fontWeight: 800, color: "#34d399" }}>
+                            ✓ {currentRedeemedPoints} pts applied (-Rs. {currentRedeemedPoints.toFixed(2)})
+                          </span>
+                        )}
+                      </div>
+
+                      {/* If points exceed/cover bill: option to buy product with points */}
+                      {currentPoints >= Math.floor(finalTotal) && (
+                        <div style={{ marginBottom: 10 }}>
+                          <button
+                            type="button"
+                            className="btn btn-emerald"
+                            style={{
+                              width: "100%",
+                              justifyContent: "center",
+                              fontSize: 12,
+                              fontWeight: 800,
+                              padding: "8px 12px",
+                              background: currentRedeemedPoints === Math.floor(finalTotal) ? "#059669" : "rgba(16, 185, 129, 0.15)",
+                              border: "1px solid #10b981",
+                              color: currentRedeemedPoints === Math.floor(finalTotal) ? "#ffffff" : "#a7f3d0",
+                            }}
+                            onClick={() => {
+                              if (currentRedeemedPoints === Math.floor(finalTotal)) {
+                                setCustomPointsInput("");
+                                applyPointsRedemption(0);
+                              } else {
+                                setCustomPointsInput(String(Math.floor(finalTotal)));
+                                applyPointsRedemption(Math.floor(finalTotal));
+                              }
+                            }}
+                          >
+                            🛍️ {currentRedeemedPoints === Math.floor(finalTotal) ? "✓ Bought with Points (Customer pays Rs. 0)" : `Buy Product with Points (${Math.floor(finalTotal)} pts = Pay Rs. 0)`}
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Redeem any valid amount of points */}
+                      <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                        <div style={{ position: "relative", flex: "1 1 180px" }}>
+                          <input
+                            type="number"
+                            className="input"
+                            min="0"
+                            max={maxRedeemable}
+                            style={{ width: "100%", padding: "6px 10px", fontSize: 12 }}
+                            placeholder={`Enter points to redeem (1 - ${maxRedeemable})...`}
+                            value={customPointsInput}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val === "") {
+                                setCustomPointsInput("");
+                                return;
+                              }
+                              const num = parseInt(val, 10);
+                              if (isNaN(num)) return;
+                              // Clamp so points can never make the bill negative or exceed customer balance
+                              const clamped = Math.max(0, Math.min(num, maxRedeemable));
+                              setCustomPointsInput(String(clamped));
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                applyPointsRedemption(Number(customPointsInput || 0));
+                              }
+                            }}
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          style={{ padding: "6px 14px", fontSize: 11.5, fontWeight: 700 }}
+                          onClick={() => applyPointsRedemption(Number(customPointsInput || 0))}
+                        >
+                          Apply Points
+                        </button>
+                        {currentRedeemedPoints > 0 && (
+                          <button
+                            type="button"
+                            className="btn btn-ghost"
+                            style={{ padding: "6px 10px", fontSize: 11, color: "var(--accent-rose)" }}
+                            onClick={() => {
+                              setCustomPointsInput("");
+                              applyPointsRedemption(0);
+                            }}
+                          >
+                            ✕ Clear
+                          </button>
+                        )}
+                      </div>
+
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--text-muted)", marginTop: 8 }}>
+                        <span>
+                          Customer pays: <strong style={{ color: "var(--text-primary)" }}>Rs. {Math.max(0, finalTotal - currentRedeemedPoints).toFixed(2)}</strong>
+                        </span>
+                        <span>
+                          Points remaining: <strong style={{ color: "#c084fc" }}>{currentPoints - currentRedeemedPoints} pts</strong>
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 6, fontStyle: "italic" }}>
+                      Customer has 0 points available. Points will be automatically earned from this purchase.
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Payment Method Section */}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ marginBottom: 8 }}>
+                <label style={{ fontSize: 12, fontWeight: 700, color: "var(--text-secondary)" }}>
+                  {paymentLines.some((p) => p.method === "POINTS")
+                    ? "Payment Settlement"
+                    : "Payment Method"}
+                </label>
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {paymentLines.map((line, idx) => (
-                  <div
-                    key={idx}
-                    style={{
-                      display: "flex",
-                      gap: 8,
-                      alignItems: "center",
-                      background: "var(--bg-surface)",
-                      padding: 8,
-                      borderRadius: 8,
-                      border: "1px solid var(--border)",
-                    }}
-                  >
-                    <select
-                      className="input"
-                      style={{ width: 110, padding: "6px 8px" }}
-                      value={line.method}
-                      onChange={(e) => updatePaymentLine(idx, "method", e.target.value)}
+                {paymentLines.map((line, idx) => {
+                  const isPoints = line.method === "POINTS";
+
+                  return (
+                    <div
+                      key={idx}
+                      style={{
+                        display: "flex",
+                        gap: 8,
+                        alignItems: "center",
+                        background: isPoints ? "rgba(147, 51, 234, 0.08)" : "var(--bg-surface)",
+                        padding: 8,
+                        borderRadius: 8,
+                        border: isPoints ? "1px solid rgba(147, 51, 234, 0.3)" : "1px solid var(--border)",
+                      }}
                     >
-                      <option value="CASH">CASH</option>
-                      <option value="CARD">CARD</option>
-                      <option value="MOBILE">MOBILE</option>
-                      <option value="POINTS">POINTS</option>
-                    </select>
+                      {isPoints ? (
+                        <div
+                          style={{
+                            width: 110,
+                            padding: "6px 8px",
+                            background: "rgba(147, 51, 234, 0.2)",
+                            color: "#d8b4fe",
+                            fontWeight: 700,
+                            fontSize: 12,
+                            borderRadius: 6,
+                            textAlign: "center",
+                            border: "1px solid rgba(147, 51, 234, 0.4)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: 4,
+                          }}
+                        >
+                          ⭐ POINTS
+                        </div>
+                      ) : (
+                        <select
+                          className="input"
+                          style={{ width: 110, padding: "6px 8px" }}
+                          value={line.method}
+                          onChange={(e) => updatePaymentLine(idx, "method", e.target.value)}
+                        >
+                          <option value="CASH">CASH</option>
+                          <option value="CARD">CARD</option>
+                          <option value="MOBILE">MOBILE</option>
+                        </select>
+                      )}
 
-                    <input
-                      type="number"
-                      className="input"
-                      style={{ width: 120, padding: "6px 8px" }}
-                      placeholder="Amount"
-                      value={line.amount || ""}
-                      onChange={(e) => updatePaymentLine(idx, "amount", Number(e.target.value))}
-                    />
+                      <input
+                        type="number"
+                        className="input"
+                        style={{
+                          width: 120,
+                          padding: "6px 8px",
+                          ...(isPoints ? { background: "rgba(255,255,255,0.05)", cursor: "not-allowed", color: "#c084fc", fontWeight: 700 } : {}),
+                        }}
+                        placeholder="Amount"
+                        value={line.amount || ""}
+                        disabled={isPoints}
+                        onChange={(e) => updatePaymentLine(idx, "amount", Number(e.target.value))}
+                      />
 
-                    <input
-                      type="text"
-                      className="input"
-                      style={{ flex: 1, padding: "6px 8px" }}
-                      placeholder={line.method === "CASH" ? "Cash notes..." : "Approval code / Ref #"}
-                      value={line.reference || ""}
-                      onChange={(e) => updatePaymentLine(idx, "reference", e.target.value)}
-                    />
-
-                    {paymentLines.length > 1 && (
-                      <button
-                        type="button"
-                        className="btn btn-ghost"
-                        style={{ padding: "4px 8px", color: "var(--accent-rose)" }}
-                        onClick={() => removeSplitPayment(idx)}
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
-                ))}
+                      <input
+                        type="text"
+                        className="input"
+                        style={{
+                          flex: 1,
+                          padding: "6px 8px",
+                          ...(isPoints ? { background: "rgba(255,255,255,0.05)", cursor: "not-allowed", color: "var(--text-muted)" } : {}),
+                        }}
+                        placeholder={
+                          isPoints
+                            ? "Loyalty Points Redemption"
+                            : line.method === "CASH"
+                            ? "Cash notes..."
+                            : "Approval code / Ref #"
+                        }
+                        value={line.reference || ""}
+                        disabled={isPoints}
+                        onChange={(e) => updatePaymentLine(idx, "reference", e.target.value)}
+                      />
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Cash Tendered Input & Change Due */}
+            {/* Cash Tendered Input & Remaining Purchase Value Reduction */}
             {hasCash && (
-              <div style={{ marginBottom: 16 }}>
+              <div style={{ marginBottom: 16, background: "rgba(255, 255, 255, 0.02)", padding: "12px", borderRadius: 10, border: "1px solid var(--border)" }}>
                 <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
                   <div style={{ flex: 1 }}>
                     <label style={{ fontSize: 11, color: "var(--text-muted)", display: "block", marginBottom: 4 }}>
-                      Cash Tendered from Customer (Rs.)
+                      Customer Tendered Cash (Rs.)
                     </label>
                     <input
                       type="number"
                       className="input"
                       value={cashTendered}
                       onChange={(e) => setCashTendered(e.target.value)}
-                      placeholder="e.g. 5000"
+                      placeholder={`e.g. ${cashAmount.toFixed(2)}`}
                     />
                   </div>
 
                   <div
                     style={{
                       flex: 1,
-                      background: "rgba(255, 255, 255, 0.03)",
+                      background: "rgba(16, 185, 129, 0.08)",
                       padding: "8px 12px",
                       borderRadius: 8,
-                      border: "1px solid var(--border)",
+                      border: "1px solid rgba(16, 185, 129, 0.25)",
                     }}
                   >
-                    <div style={{ fontSize: 11, color: "var(--text-muted)" }}>Change Due</div>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: "var(--accent-emerald)" }}>
+                    <div style={{ fontSize: 10.5, color: "var(--text-muted)" }}>Change to Return</div>
+                    <div style={{ fontSize: 18, fontWeight: 900, color: "var(--accent-emerald)" }}>
                       {fmt(changeDue)}
                     </div>
                   </div>
                 </div>
+
               </div>
             )}
 
-            {/* Complete Sale Button */}
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 16 }}>
+            {/* Complete Sale Button - Inside Sticky Footer */}
+            </div>
+
+            {/* Sticky Action Footer */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 10,
+                padding: "12px 20px",
+                borderTop: "1px solid var(--border)",
+                background: "var(--bg-surface)",
+              }}
+            >
               <button
                 type="button"
                 className="btn btn-ghost"
@@ -1282,6 +1629,17 @@ export default function POSBillingPage() {
           setTimeout(() => {
             barcodeInputRef.current?.focus();
           }, 50);
+        }}
+      />
+
+      {/* New Loyalty Customer Registration Modal */}
+      <RegisterCustomerModal
+        isOpen={showRegisterCustomerModal}
+        onClose={() => setShowRegisterCustomerModal(false)}
+        defaultCity={cashier?.city || "Galle"}
+        onSuccess={(newCustomer) => {
+          setCustomer(newCustomer);
+          setErrorMsg("");
         }}
       />
     </div>
