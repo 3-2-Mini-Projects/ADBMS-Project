@@ -532,7 +532,28 @@ table.data-table td.mono {
     transform: translate(-50%, -50%);
   }
 
-  /* 3. When printing Operational Reports */
+  /* 3. When printing Daily Sales Summary */
+  body:has(#printable-daily-summary) * {
+    visibility: hidden;
+  }
+  body:has(#printable-daily-summary) #printable-daily-summary,
+  body:has(#printable-daily-summary) #printable-daily-summary * {
+    visibility: visible;
+  }
+  #printable-daily-summary {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100% !important;
+    max-width: 100% !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    padding: 24px !important;
+    margin: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* 4. When printing Operational Reports */
   #printable-report {
     display: block !important;
     width: 100% !important;

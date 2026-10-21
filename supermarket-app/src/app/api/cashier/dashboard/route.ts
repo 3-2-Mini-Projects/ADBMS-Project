@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
 
+export const dynamic = "force-dynamic";
+
 // GET /api/cashier/dashboard?cashierId=2&branchId=1
 export async function GET(req: Request) {
   try {
@@ -43,10 +45,15 @@ export async function GET(req: Request) {
         AND DATE(sale_date) = CURRENT_DATE()
     `, [branchId]);
 
-    // 3. Latest 50 transactions of that day
-    const recentSales = await query<any>(`
+    // 3. Latest 50 transactions for the relevant branch
+    const rawSales = await query<any>(`
       SELECT 
         s.sale_id,
+        s.branch_id,
+        b.branch_code,
+        b.name AS branch_name,
+        s.cashier_id,
+        e.full_name AS cashier_name,
         s.sale_date,
         s.status,
         s.subtotal,
@@ -56,13 +63,21 @@ export async function GET(req: Request) {
         COALESCE(c.full_name, 'Walk-in Customer') AS customer_name,
         c.card_no AS customer_card,
         (SELECT GROUP_CONCAT(DISTINCT method SEPARATOR ', ') FROM payments WHERE sale_id = s.sale_id) AS payment_methods,
+        (SELECT GROUP_CONCAT(DISTINCT reference SEPARATOR ', ') FROM payments WHERE sale_id = s.sale_id AND reference IS NOT NULL AND reference != '') AS payment_references,
         (SELECT COUNT(*) FROM sale_items WHERE sale_id = s.sale_id) AS items_count
       FROM sales s
+      JOIN branches b ON s.branch_id = b.branch_id
+      LEFT JOIN employees e ON s.cashier_id = e.employee_id
       LEFT JOIN customers c ON s.customer_id = c.customer_id
       WHERE s.branch_id = ?
-      ORDER BY (DATE(s.sale_date) = CURRENT_DATE()) DESC, s.sale_date DESC
+      ORDER BY s.sale_date DESC, s.sale_id DESC
       LIMIT 50
     `, [branchId]);
+
+    const recentSales = (rawSales || []).map((s: any) => ({
+      ...s,
+      receipt_number: `REC-${s.branch_code || "BR"}-${String(s.sale_id).padStart(6, "0")}`,
+    }));
 
     // 4. Latest 10 return details of that day
     const todayReturns = await query<any>(`
