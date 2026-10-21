@@ -113,12 +113,20 @@ export default function CashierDailySummaryPage() {
           date: selectedDate,
         }),
       });
-      const result = await res.json();
+
+      let result: any = null;
+      try {
+        result = await res.json();
+      } catch {
+        const text = await res.text().catch(() => "");
+        throw new Error(text || `Server returned HTTP ${res.status}`);
+      }
+
       if (res.ok && result.success) {
         setSyncMessage(`✓ Daily sales summary synchronized into database for ${selectedDate}`);
         fetchSummary();
       } else {
-        setSyncMessage(`⚠️ Sync notice: ${result.message || "Failed to sync"}`);
+        setSyncMessage(`⚠️ Sync notice: ${result?.message || result?.error || "Failed to sync"}`);
       }
     } catch (err: any) {
       setSyncMessage(`⚠️ Error syncing summary: ${err.message}`);
