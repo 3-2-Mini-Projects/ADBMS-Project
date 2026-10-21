@@ -8,7 +8,6 @@ import {
   Award,
   Tag,
   Ticket,
-  TrendingUp,
   Sparkles,
   ArrowUpRight,
   Gift,
@@ -30,6 +29,13 @@ import {
 } from "lucide-react";
 
 interface DashboardData {
+  branch?: {
+    branch_id: number;
+    branch_code: string;
+    name: string;
+    city: string;
+    region?: string;
+  } | null;
   summary: {
     total_customers: number;
     total_points_balance: number;
@@ -106,7 +112,7 @@ interface DashboardData {
 }
 
 export function MarketingDashboardVeiw() {
-  const { currentBranch } = useApp();
+  const { currentBranch, currentEmployee } = useApp();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedTier, setSelectedTier] = useState<string | null>(null);
@@ -115,8 +121,9 @@ export function MarketingDashboardVeiw() {
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
+      const targetBranchId = currentBranch?.branch_id || currentEmployee?.branch_id;
       const params = new URLSearchParams();
-      if (currentBranch) params.append("branchId", String(currentBranch.branch_id));
+      if (targetBranchId) params.append("branchId", String(targetBranchId));
       const res = await fetch(`/api/marketing/dashboard?${params.toString()}`);
       if (res.ok) {
         const json = await res.json();
@@ -131,7 +138,7 @@ export function MarketingDashboardVeiw() {
 
   useEffect(() => {
     fetchDashboardData();
-  }, [currentBranch]);
+  }, [currentBranch?.branch_id, currentEmployee?.branch_id]);
 
   const summary = data?.summary;
   const tiers = data?.tierBreakdown ?? [];
@@ -145,8 +152,7 @@ export function MarketingDashboardVeiw() {
       {/* Top Banner Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-2 border-b border-slate-800">
         <div>
-
-          <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight mt-1">
+          <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight">
             Marketing & Loyalty Dashboard
           </h1>
         </div>
@@ -268,40 +274,6 @@ export function MarketingDashboardVeiw() {
         </div>
       </div>
 
-      {/* Member Revenue Contribution Banner */}
-      <div className="p-5 rounded-2xl bg-gradient-to-r from-blue-950/40 via-indigo-950/30 to-purple-950/40 border border-indigo-800/40 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-xl">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 text-xs font-semibold text-blue-400 uppercase tracking-wider">
-            <TrendingUp className="w-4 h-4" />
-            <span>Member Sales Impact</span>
-          </div>
-          <h2 className="text-lg font-bold text-white">
-            Loyalty Customers Drive {summary?.member_revenue_percent ?? 0}% of Total Revenue
-          </h2>
-          <p className="text-xs text-slate-400">
-            Total discounts given to customers:{" "}
-            <strong className="text-rose-400 font-mono">
-              Rs. {Number(summary?.total_discounts_given ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
-            </strong>
-          </p>
-        </div>
-
-        <div className="flex items-center gap-6">
-          <div className="text-right">
-            <div className="text-xs text-slate-400">Member Avg Basket</div>
-            <div className="text-base font-bold text-emerald-400 font-mono">
-              Rs. {Number(summary?.avg_member_basket ?? 0).toFixed(2)}
-            </div>
-          </div>
-          <div className="w-px h-8 bg-slate-800" />
-          <div className="text-right">
-            <div className="text-xs text-slate-400">Regular Avg Basket</div>
-            <div className="text-base font-bold text-slate-300 font-mono">
-              Rs. {Number(summary?.avg_non_member_basket ?? 0).toFixed(2)}
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Membership Tier Breakdown Cards */}
       <div className="space-y-3">

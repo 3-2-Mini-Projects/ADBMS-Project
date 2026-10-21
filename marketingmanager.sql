@@ -21,6 +21,8 @@ DROP PROCEDURE IF EXISTS add_ltpoints;
 DROP PROCEDURE IF EXISTS create_promotion;
 DROP PROCEDURE IF EXISTS recalculate_tiers;
 DROP PROCEDURE IF EXISTS proc_apply_coupon;
+DROP PROCEDURE IF EXISTS get_active_promotions;
+DROP PROCEDURE IF EXISTS get_deactive_promotions;
 
 DROP FUNCTION IF EXISTS lt_points_earned;
 DROP FUNCTION IF EXISTS get_discount;
@@ -28,10 +30,12 @@ DROP FUNCTION IF EXISTS modify_customer_tier;
 DROP FUNCTION IF EXISTS promo_isactive;
 
 DROP TRIGGER IF EXISTS before_promotions_insert;
+DROP TRIGGER IF EXISTS before_promotion_insert;
 DROP TRIGGER IF EXISTS before_insert_customers;
 DROP TRIGGER IF EXISTS trg_sales_au_award_points;
 
 DROP EVENT IF EXISTS evt_daily_expire_promotions;
+DROP EVENT IF EXISTS update_promotion_status;
 
 
 -- ============================================================
@@ -74,30 +78,36 @@ WHERE p.is_active = 1
   AND CURDATE() BETWEEN p.start_date AND p.end_date;
 
 -- ------------------------------------------------------------
--- VIEW 3: Top Customers Leaderboard by Sales & Orders
+-- VIEW 3: Top Customers Leaderboard by Points Earned (Month-wise)
 -- ------------------------------------------------------------
-CREATE VIEW top_customers_vw AS
-SELECT 
+CREATE OR REPLACE VIEW top_customers_vw AS
+SELECT
     c.customer_id,
     c.card_no,
     c.full_name,
     c.tier,
-    COALESCE(SUM(CASE
-        WHEN s.status = 'COMPLETED' THEN s.total_amount
-        ELSE 0
-    END), 0) AS total_spent,
-    COUNT(CASE
-        WHEN s.status = 'COMPLETED' THEN s.sale_id
-    END) AS total_orders,
-    c.points_balance
+    c.points_balance,
+    DATE_FORMAT(lt.created_at, '%Y-%m') AS transaction_month,
+    COALESCE(SUM(
+        CASE
+            WHEN lt.transaction_type = 'EARNED' OR lt.transaction_type = 'EARN'
+            THEN COALESCE(lt.points_change, 0)
+            ELSE 0
+        END
+    ), 0) AS total_points_earned
 FROM customers c
-LEFT JOIN sales s ON c.customer_id = s.customer_id 
+LEFT JOIN loyalty_transactions lt
+    ON c.customer_id = lt.customer_id
+WHERE c.is_active = 1
+  AND c.points_balance > 0
 GROUP BY
     c.customer_id,
     c.card_no,
     c.full_name,
     c.tier,
-    c.points_balance;
+    c.points_balance,
+    DATE_FORMAT(lt.created_at, '%Y-%m');
+
 
 -- ------------------------------------------------------------
 -- VIEW 4: Comprehensive Customer Marketing & Points Summary
@@ -359,15 +369,17 @@ DELIMITER ;
 -- PROCEDURE 5: Recalculate Membership Tiers & Audit in History
 -- ------------------------------------------------------------
 DELIMITER //
+
 CREATE PROCEDURE recalculate_tiers()
 BEGIN
     DECLARE done INT DEFAULT 0;
     DECLARE customerId INT;
     DECLARE old_tier VARCHAR(10);
     DECLARE new_tier VARCHAR(10);
+    DECLARE customer_points INT;
 
     DECLARE cur CURSOR FOR
-        SELECT customer_id, tier
+        SELECT customer_id, tier, points_balance
         FROM customers
         WHERE is_active = 1;
 
@@ -377,31 +389,51 @@ BEGIN
     OPEN cur;
 
     tier_loop: LOOP
-        FETCH cur INTO customerId, old_tier;
+
+        FETCH cur INTO customerId, old_tier, customer_points;
 
         IF done = 1 THEN
             LEAVE tier_loop;
         END IF;
 
-        SET new_tier = modify_customer_tier(customerId);
+        -- Calculate tier using points balance
+        IF customer_points >= 3000 THEN
+            SET new_tier = 'PLATINUM';
+        ELSEIF customer_points >= 1500 THEN
+            SET new_tier = 'GOLD';
+        ELSEIF customer_points >= 500 THEN
+            SET new_tier = 'SILVER';
+        ELSE
+            SET new_tier = 'BRONZE';
+        END IF;
 
+        -- Update only when the tier changes
         IF old_tier <> new_tier THEN
+
             INSERT INTO customer_tier_history (
-                customer_id, old_tier, new_tier, reason
+                customer_id,
+                old_tier,
+                new_tier,
+                reason
             )
             VALUES (
-                customerId, old_tier, new_tier,
-                'Tier recalculated from completed sales'
+                customerId,
+                old_tier,
+                new_tier,
+                'Tier recalculated from points balance'
             );
 
             UPDATE customers
             SET tier = new_tier
-            WHERE customers.customer_id = customerId;
+            WHERE customer_id = customerId;
+
         END IF;
+
     END LOOP;
 
     CLOSE cur;
 END //
+
 DELIMITER ;
 
 -- ------------------------------------------------------------
@@ -522,6 +554,42 @@ BEGIN
 END //
 DELIMITER ;
 
+-- ------------------------------------------------------------
+-- PROCEDURE 7: Get Active Promotions
+-- ------------------------------------------------------------
+DELIMITER //
+
+CREATE PROCEDURE get_active_promotions()
+BEGIN
+    SELECT *
+    FROM promotions
+    WHERE is_active = 1
+      AND CURDATE() BETWEEN start_date AND end_date;
+END //
+
+DELIMITER ;
+
+-- ------------------------------------------------------------
+-- PROCEDURE 8: Get Deactive Promotions
+-- ------------------------------------------------------------
+DELIMITER //
+
+CREATE PROCEDURE get_deactive_promotions()
+BEGIN
+    SELECT *,
+        CASE
+            WHEN is_active = 0 THEN 'DEACTIVATED'
+            WHEN CURDATE() < start_date THEN 'SCHEDULED'
+            WHEN CURDATE() > end_date THEN 'EXPIRED'
+        END AS promotion_status
+    FROM promotions
+    WHERE is_active = 0
+       OR CURDATE() < start_date
+       OR CURDATE() > end_date;
+END //
+
+DELIMITER ;
+
 
 -- ============================================================
 -- 5. TRIGGERS
@@ -613,20 +681,42 @@ DELIMITER ;
 -- Ensure event scheduler is active
 SET GLOBAL event_scheduler = ON;
 
--- ------------------------------------------------------------
--- EVENT 1: Daily Expire Promotions
--- ------------------------------------------------------------
 DELIMITER //
-CREATE EVENT IF NOT EXISTS evt_daily_expire_promotions
+
+CREATE TRIGGER before_promotion_insert
+BEFORE INSERT ON promotions
+FOR EACH ROW
+BEGIN
+    IF CURDATE() < NEW.start_date
+       OR CURDATE() > NEW.end_date THEN
+        SET NEW.is_active = 0;
+    ELSE
+        SET NEW.is_active = 1;
+    END IF;
+END //
+
+DELIMITER ;
+
+DROP EVENT IF EXISTS update_promotion_status;
+
+
+
+DELIMITER //
+
+CREATE EVENT update_promotion_status
 ON SCHEDULE EVERY 1 DAY
-STARTS CURRENT_TIMESTAMP + INTERVAL 1 DAY
+STARTS CURRENT_TIMESTAMP
 DO
 BEGIN
     UPDATE promotions
-    SET is_active = 0
-    WHERE end_date < CURDATE()
-      AND is_active = 1;
+    SET is_active = CASE
+        WHEN CURDATE() >= start_date
+         AND CURDATE() <= end_date THEN 1
+        ELSE 0
+    END
+    WHERE promo_id > 0;
 END //
+
 DELIMITER ;
 
 
@@ -634,10 +724,26 @@ DELIMITER ;
 -- 7. VERIFICATION AND TEST QUERIES
 -- ============================================================
 
+-- Verification queries for views:
 -- SELECT * FROM customer_etl_vw LIMIT 5;
 -- SELECT * FROM active_promotions_vw LIMIT 5;
--- SELECT * FROM top_customers_vw LIMIT 5;
 -- SELECT * FROM customer_summary_vw LIMIT 5;
+
+-- Top 10 customers by points earned (Month-wise) from top_customers_vw:
+-- Example 1: Top 10 customers with points_balance > 0
+SELECT *
+FROM top_customers_vw
+WHERE points_balance > 0
+ORDER BY total_points_earned DESC, points_balance DESC
+LIMIT 10;
+
+-- Example 2: Top 10 customers for a specific month (e.g. October 2026):
+-- SELECT *
+-- FROM top_customers_vw
+-- WHERE transaction_month = '2026-10'
+--   AND points_balance > 0
+-- ORDER BY total_points_earned DESC, points_balance DESC
+-- LIMIT 10;
 
 -- SELECT lt_points_earned(500);
 -- SELECT get_discount(500, 1);
@@ -645,3 +751,5 @@ DELIMITER ;
 -- SELECT promo_isactive(1);
 
 -- CALL recalculate_tiers();
+-- CALL get_active_promotions();
+-- CALL get_deactive_promotions();

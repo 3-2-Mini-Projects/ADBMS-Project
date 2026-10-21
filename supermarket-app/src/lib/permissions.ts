@@ -106,18 +106,19 @@ export function canAccess(role: UserRole, permission: PermissionKey): boolean {
 export function getRoleDefaultPath(role?: UserRole | null): string {
   switch (role) {
     case "ADMIN":
+      return "/admin";
     case "MANAGER":
       return "/dashboard";
     case "CASHIER":
-      return "/pos";
+      return "/cashier/dashboard";
     case "STOCK_CLERK":
       return "/inventory";
     case "CATALOG_MANAGER":
       return "/products";
     case "MARKETING":
-      return "/promotions";
+      return "/marketing/dashboard";
     case "HR":
-      return "/employees";
+      return "/admin/employees";
     default:
       return "/dashboard";
   }

@@ -146,7 +146,7 @@ export async function POST(req: Request) {
     // 3. Validate Payments
     const totalPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
     if (totalPaid < total_amount - 0.01) {
-      throw new Error(`Payment amount ($${totalPaid.toFixed(2)}) is less than total due ($${total_amount.toFixed(2)})`);
+      throw new Error(`Payment amount (Rs. ${totalPaid.toFixed(2)}) is less than total due (Rs. ${total_amount.toFixed(2)})`);
     }
 
     // 4. Create Sale Record
