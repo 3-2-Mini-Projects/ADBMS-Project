@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import type { Html5Qrcode } from "html5-qrcode";
 import { useApp } from "@/lib/context";
 import { Shift } from "@/lib/types";
 import {
@@ -14,6 +15,13 @@ import {
   Sparkles,
   X,
   Store,
+  Scan,
+  QrCode,
+  Camera,
+  CameraOff,
+  Zap,
+  Check,
+  AlertTriangle,
 } from "lucide-react";
 
 export default function ShiftsPage() {
@@ -36,6 +44,143 @@ export default function ShiftsPage() {
       shift_date: new Date().toISOString().split("T")[0],
     }));
   }, []);
+  // Attendance Kiosk State
+  const [kioskOpen, setKioskOpen] = useState(false);
+  const [manualCode, setManualCode] = useState("");
+  const [isScanning, setIsScanning] = useState(false);
+  const [cameraActive, setCameraActive] = useState(false);
+  const [liveTime, setLiveTime] = useState("");
+  const [scanResult, setScanResult] = useState<{
+    success: boolean;
+    action?: "CLOCK_IN" | "CLOCK_OUT";
+    employee_name?: string;
+    role?: string;
+    time?: string;
+    hours_worked?: number | string;
+    message: string;
+  } | null>(null);
+
+  // Live digital clock in kiosk
+  useEffect(() => {
+    const updateClock = () => {
+      setLiveTime(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
+    };
+    updateClock();
+    const interval = setInterval(updateClock, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Synthesized audio feedback
+  const playChime = (type: "success" | "error") => {
+    try {
+      if (typeof window === "undefined" || !window.AudioContext) return;
+      const ctx = new window.AudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      if (type === "success") {
+        osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+        osc.frequency.setValueAtTime(880, ctx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.35);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.35);
+      } else {
+        osc.frequency.setValueAtTime(220, ctx.currentTime);
+        osc.frequency.setValueAtTime(196, ctx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.35);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.35);
+      }
+    } catch {
+      // AudioContext muted/unsupported
+    }
+  };
+
+  const processAttendanceScan = async (code: string) => {
+    if (!code || isScanning) return;
+    setIsScanning(true);
+    setScanResult(null);
+
+    try {
+      const res = await fetch("/api/shifts/scan-attendance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          scan_data: code.trim(),
+          branch_id: currentBranch?.branch_id,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        playChime("success");
+        setScanResult({
+          success: true,
+          action: data.action,
+          employee_name: data.employee_name,
+          role: data.role,
+          time: data.time,
+          hours_worked: data.hours_worked,
+          message: data.message,
+        });
+        showToast(data.message, "success");
+        fetchShifts();
+      } else {
+        playChime("error");
+        setScanResult({
+          success: false,
+          employee_name: data.employee_name,
+          message: data.error || "Attendance scan failed.",
+        });
+        showToast(data.error || "Attendance scan failed.", "error");
+      }
+    } catch {
+      playChime("error");
+      setScanResult({
+        success: false,
+        message: "Network error occurred while processing scan.",
+      });
+    } finally {
+      setIsScanning(false);
+      setManualCode("");
+      setTimeout(() => {
+        setScanResult(null);
+      }, 3500);
+    }
+  };
+
+  // Camera scanning hook using dynamic import of html5-qrcode
+  useEffect(() => {
+    let scannerInstance: Html5Qrcode | null = null;
+    if (kioskOpen && cameraActive) {
+      import("html5-qrcode").then(({ Html5Qrcode }) => {
+        scannerInstance = new Html5Qrcode("kiosk-camera-viewport");
+        scannerInstance
+          .start(
+            { facingMode: "environment" },
+            { fps: 10, qrbox: { width: 240, height: 240 } },
+            (decodedText: string) => {
+              processAttendanceScan(decodedText);
+            },
+            () => {}
+          )
+          .catch((err: unknown) => {
+            console.error("Camera scanner error:", err);
+            setCameraActive(false);
+            showToast("Camera access failed or permission denied.", "warning");
+          });
+      });
+    }
+    return () => {
+      if (scannerInstance) {
+        scannerInstance.stop().then(() => scannerInstance?.clear()).catch(() => {});
+      }
+    };
+  }, [kioskOpen, cameraActive]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchShifts = async () => {
@@ -118,15 +263,23 @@ export default function ShiftsPage() {
           </p>
         </div>
 
-        <button
-          onClick={() => setAddModalOpen(true)}
-          className="px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs shadow-lg shadow-sky-950/40 flex items-center gap-2 transition-all shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Schedule New Shift</span>
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setKioskOpen(true)}
+            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-lg shadow-emerald-950/40 flex items-center gap-2 transition-all shrink-0 hover:scale-[1.02] active:scale-[0.98]"
+          >
+            <Scan className="w-4 h-4" />
+            <span>Launch Attendance Kiosk</span>
+          </button>
+          <button
+            onClick={() => setAddModalOpen(true)}
+            className="px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs shadow-lg shadow-sky-950/40 flex items-center gap-2 transition-all shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Schedule New Shift</span>
+          </button>
+        </div>
       </div>
-
       {/* Shifts Table */}
       <div className="glass-card rounded-2xl border border-slate-800 overflow-hidden shadow-2xl">
         <div className="overflow-x-auto">
@@ -165,7 +318,7 @@ export default function ShiftsPage() {
                       <User className="w-3.5 h-3.5 text-slate-400" />
                       <span>{s.employee_name}</span>
                     </td>
-                    <td className="py-3 px-4 font-mono text-[10px] text-slate-400">{(s as any).role || "STAFF"}</td>
+                    <td className="py-3 px-4 font-mono text-[10px] text-slate-400">{s.role || "STAFF"}</td>
                     <td className="py-3 px-4 text-slate-300">{s.branch_name}</td>
                     <td className="py-3 px-4 font-mono text-slate-300">
                       {new Date(s.shift_date).toLocaleDateString()}
@@ -309,6 +462,197 @@ export default function ShiftsPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Kiosk Mode Modal: Store Attendance Terminal */}
+      {kioskOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-xl flex flex-col justify-between p-6 animate-in fade-in zoom-in-95 duration-200">
+          {/* Kiosk Top Bar */}
+          <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-950/50">
+                <Scan className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="text-sm font-black text-white tracking-wide uppercase flex items-center gap-2">
+                  <span>Supermarket Attendance Terminal</span>
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                </div>
+                <div className="text-xs text-slate-400 font-medium">
+                  {currentBranch?.name ?? "Branch Station"} • Store Entrance Station
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <div className="px-4 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-center font-mono text-sm font-bold text-sky-400 shadow-inner">
+                {liveTime}
+              </div>
+              <button
+                onClick={() => {
+                  setKioskOpen(false);
+                  setCameraActive(false);
+                  setScanResult(null);
+                }}
+                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
+                title="Exit Kiosk"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Kiosk Interactive Area */}
+          <div className="max-w-xl w-full mx-auto my-auto text-center space-y-6">
+            {/* Result Display State */}
+            {scanResult ? (
+              <div
+                className={`p-8 rounded-3xl border text-center space-y-4 shadow-2xl animate-in zoom-in-95 duration-200 ${
+                  scanResult.success
+                    ? scanResult.action === "CLOCK_IN"
+                      ? "bg-emerald-950/40 border-emerald-600/60 ring-2 ring-emerald-500/20"
+                      : "bg-amber-950/40 border-amber-600/60 ring-2 ring-amber-500/20"
+                    : "bg-rose-950/40 border-rose-600/60 ring-2 ring-rose-500/20"
+                }`}
+              >
+                <div
+                  className={`w-16 h-16 rounded-2xl mx-auto flex items-center justify-center text-white shadow-lg ${
+                    scanResult.success
+                      ? scanResult.action === "CLOCK_IN"
+                        ? "bg-emerald-600"
+                        : "bg-amber-600"
+                      : "bg-rose-600"
+                  }`}
+                >
+                  {scanResult.success ? <Check className="w-8 h-8" /> : <AlertTriangle className="w-8 h-8" />}
+                </div>
+
+                <div>
+                  <div
+                    className={`text-xs font-mono font-black uppercase tracking-widest ${
+                      scanResult.success
+                        ? scanResult.action === "CLOCK_IN"
+                          ? "text-emerald-400"
+                          : "text-amber-400"
+                        : "text-rose-400"
+                    }`}
+                  >
+                    {scanResult.success
+                      ? scanResult.action === "CLOCK_IN"
+                        ? "Check-In Recorded"
+                        : "Check-Out Recorded"
+                      : "Scan Unsuccessful"}
+                  </div>
+                  <h2 className="text-2xl font-bold text-white mt-1">
+                    {scanResult.employee_name || "Staff Member"}
+                  </h2>
+                  {scanResult.role && (
+                    <span className="inline-block mt-1 text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 font-bold uppercase">
+                      {scanResult.role}
+                    </span>
+                  )}
+                </div>
+
+                <div className="text-sm text-slate-300 font-medium">
+                  {scanResult.message}
+                </div>
+
+                {scanResult.time && (
+                  <div className="text-xs font-mono text-slate-400">
+                    Timestamp: <strong className="text-white font-bold">{scanResult.time}</strong>
+                    {scanResult.hours_worked !== undefined && (
+                      <span> • Total Shift: <strong className="text-amber-300 font-bold">{scanResult.hours_worked} hrs</strong></span>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Ready Scan State */
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-950/60 border border-emerald-800/60 text-xs font-semibold text-emerald-400">
+                    <Zap className="w-3.5 h-3.5" />
+                    <span>Ready for Staff Attendance</span>
+                  </div>
+                  <h2 className="text-2xl font-bold text-white tracking-tight">
+                    Hold Badge Under Scanner
+                  </h2>
+                  <p className="text-xs text-slate-400 max-w-md mx-auto">
+                    Point your physical ID card QR code or barcode under the register laser scanner, or toggle device camera below.
+                  </p>
+                </div>
+
+                {/* Camera Viewport (when active) */}
+                {cameraActive ? (
+                  <div className="space-y-3">
+                    <div
+                      id="kiosk-camera-viewport"
+                      className="w-72 h-72 mx-auto rounded-3xl overflow-hidden border-2 border-emerald-500/60 bg-black shadow-2xl relative"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setCameraActive(false)}
+                      className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-2 mx-auto transition-colors"
+                    >
+                      <CameraOff className="w-3.5 h-3.5" />
+                      <span>Stop Camera View</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="p-8 rounded-3xl bg-slate-900/60 border border-slate-800/80 shadow-2xl space-y-4">
+                    <div className="w-20 h-20 rounded-3xl bg-slate-950 border border-slate-800 flex items-center justify-center text-slate-400 mx-auto">
+                      <QrCode className="w-10 h-10 text-emerald-400 animate-pulse" />
+                    </div>
+                    <div className="text-xs text-slate-400 font-mono">
+                      Laser / USB Barcode Scanner Active
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setCameraActive(true)}
+                      className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-all inline-flex items-center gap-2"
+                    >
+                      <Camera className="w-4 h-4 text-sky-400" />
+                      <span>Turn On Tablet / Device Camera</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Hardware Barcode / Manual Input Form */}
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    processAttendanceScan(manualCode);
+                  }}
+                  className="max-w-md mx-auto"
+                >
+                  <div className="relative">
+                    <input
+                      type="text"
+                      autoFocus
+                      disabled={isScanning}
+                      value={manualCode}
+                      onChange={(e) => setManualCode(e.target.value)}
+                      placeholder="Scan badge or enter ID (e.g. EMP-0002)..."
+                      className="w-full pl-4 pr-24 py-3 rounded-2xl bg-slate-900 border border-slate-700 font-mono text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-inner"
+                    />
+                    <button
+                      type="submit"
+                      disabled={isScanning || !manualCode.trim()}
+                      className="absolute right-1.5 top-1.5 bottom-1.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-all disabled:opacity-40"
+                    >
+                      Scan
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+          </div>
+
+          {/* Kiosk Footer Note */}
+          <div className="text-center pt-4 border-t border-slate-800 text-[11px] text-slate-500 font-mono">
+            Supermarket ADBMS Automated Attendance Subsystem • Multi-Branch Station
           </div>
         </div>
       )}

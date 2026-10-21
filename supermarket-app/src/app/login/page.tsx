@@ -18,6 +18,7 @@ import {
   CheckCircle2,
   KeyRound,
   ChevronLeft,
+  X,
 } from "lucide-react";
 
 type LoginStage = "EMAIL" | "LOGIN_PASSWORD" | "SETUP_PASSWORD";
@@ -43,6 +44,7 @@ export default function LoginPage() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [forgotModalOpen, setForgotModalOpen] = useState(false);
 
   // If already authenticated, redirect to role page
   useEffect(() => {
@@ -352,12 +354,21 @@ export default function LoginPage() {
           {stage === "LOGIN_PASSWORD" && (
             <form onSubmit={handleLoginSubmit} className="space-y-4" noValidate>
               <div>
-                <label
-                  htmlFor="password"
-                  className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2"
-                >
-                  Password
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label
+                    htmlFor="password"
+                    className="block text-xs font-semibold text-slate-300 uppercase tracking-wider"
+                  >
+                    Password
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setForgotModalOpen(true)}
+                    className="text-xs text-blue-400 hover:text-blue-300 font-medium transition-colors"
+                  >
+                    Forgot Password?
+                  </button>
+                </div>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                     <Lock className="w-4 h-4" />
@@ -526,6 +537,49 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
+
+      {/* Modal: Forgot Password Guidance */}
+      {forgotModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-md shadow-2xl space-y-5 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2 text-white font-bold text-sm">
+                <KeyRound className="w-5 h-5 text-blue-400" />
+                <span>Forgot Your Password?</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setForgotModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-blue-950/30 border border-blue-800/40 space-y-2.5">
+              <div className="text-xs font-semibold text-blue-300">
+                Contact Your Store Manager or Administrator
+              </div>
+              <p className="text-[11px] text-slate-300 leading-relaxed">
+                To protect store security and customer billing records, employee password resets are authorized by your Store Manager or Administrator.
+              </p>
+              <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 text-[11px] text-slate-300 leading-relaxed">
+                Once your manager resets your account in the Admin Console, enter your email (<strong className="text-white font-mono">{email}</strong>) on this login screen to create and confirm your new password.
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-1">
+              <button
+                type="button"
+                onClick={() => setForgotModalOpen(false)}
+                className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-lg shadow-blue-900/40"
+              >
+                Understood
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

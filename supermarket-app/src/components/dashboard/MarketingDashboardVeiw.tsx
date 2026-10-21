@@ -29,6 +29,13 @@ import {
 } from "lucide-react";
 
 interface DashboardData {
+  branch?: {
+    branch_id: number;
+    branch_code: string;
+    name: string;
+    city: string;
+    region?: string;
+  } | null;
   summary: {
     total_customers: number;
     total_points_balance: number;
@@ -105,7 +112,7 @@ interface DashboardData {
 }
 
 export function MarketingDashboardVeiw() {
-  const { currentBranch } = useApp();
+  const { currentBranch, currentEmployee } = useApp();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedTier, setSelectedTier] = useState<string | null>(null);
@@ -114,8 +121,9 @@ export function MarketingDashboardVeiw() {
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
+      const targetBranchId = currentBranch?.branch_id || currentEmployee?.branch_id;
       const params = new URLSearchParams();
-      if (currentBranch) params.append("branchId", String(currentBranch.branch_id));
+      if (targetBranchId) params.append("branchId", String(targetBranchId));
       const res = await fetch(`/api/marketing/dashboard?${params.toString()}`);
       if (res.ok) {
         const json = await res.json();
@@ -130,7 +138,7 @@ export function MarketingDashboardVeiw() {
 
   useEffect(() => {
     fetchDashboardData();
-  }, [currentBranch]);
+  }, [currentBranch?.branch_id, currentEmployee?.branch_id]);
 
   const summary = data?.summary;
   const tiers = data?.tierBreakdown ?? [];
@@ -144,8 +152,7 @@ export function MarketingDashboardVeiw() {
       {/* Top Banner Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-2 border-b border-slate-800">
         <div>
-
-          <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight mt-1">
+          <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight">
             Marketing & Loyalty Dashboard
           </h1>
         </div>

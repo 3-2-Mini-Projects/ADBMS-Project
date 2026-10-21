@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useApp } from "@/lib/context";
+import { canAccess } from "@/lib/permissions";
 import {
   UserCheck,
   ShoppingCart,
@@ -23,15 +24,17 @@ export function Header() {
     currentEmployee,
   } = useApp();
   const pathname = usePathname();
+  const [branchDropdownOpen, setBranchDropdownOpen] = useState(false);
+  const [employeeDropdownOpen, setEmployeeDropdownOpen] = useState(false);
 
   if (pathname === "/login" || pathname === "/activate-account") {
     return null;
   }
 
-  const [branchDropdownOpen, setBranchDropdownOpen] = useState(false);
-  const [employeeDropdownOpen, setEmployeeDropdownOpen] = useState(false);
-
   const isAdmin = currentEmployee?.role === "ADMIN";
+  const canLaunchPOS = currentEmployee
+    ? canAccess(currentEmployee.role, "create_pos_sales")
+    : false;
 
   return (
     <header className="sticky top-0 z-30 h-16 bg-slate-900/80 backdrop-blur-md border-b border-slate-800 flex items-center justify-between px-6 select-none">
@@ -104,13 +107,13 @@ export function Header() {
         {/* Fast Action Button: Audit Logs for Admin, POS for others */}
         {isAdmin ? (
           <Link
-            href="/audit"
+            href="/admin/audit"
             className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-600 hover:to-indigo-600 text-white font-medium text-xs shadow-lg shadow-purple-900/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
             <ShieldAlert className="w-3.5 h-3.5 text-amber-300" />
             <span>Audit Logs</span>
           </Link>
-        ) : (
+        ) : canLaunchPOS ? (
           <Link
             href="/pos"
             className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-medium text-xs shadow-lg shadow-emerald-900/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
@@ -118,7 +121,7 @@ export function Header() {
             <ShoppingCart className="w-3.5 h-3.5" />
             <span>Launch POS</span>
           </Link>
-        )}
+        ) : null}
 
         {/* Real-Time Stock Alert Bell */}
         <StockAlertBell />
