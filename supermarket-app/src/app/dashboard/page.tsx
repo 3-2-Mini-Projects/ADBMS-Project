@@ -1,5 +1,6 @@
 "use client";
 
+import { redirect } from "next/navigation";
 import { useApp } from "@/lib/context";
 import { DashboardView } from "@/components/dashboard/DashboardView";
 import { AdminDashboardView } from "@/components/dashboard/AdminDashboardView";
@@ -8,6 +9,10 @@ import { MarketingDashboardVeiw } from "@/components/dashboard/MarketingDashboar
 
 export default function DashboardPage() {
   const { currentEmployee } = useApp();
+
+  if (currentEmployee?.role === "CASHIER") {
+    redirect("/cashier/dashboard");
+  }
 
   if (currentEmployee?.role === "ADMIN") {
     return <AdminDashboardView />;

@@ -182,7 +182,7 @@ const MARKETING_NAV_GROUPS: NavGroup[] = [
     group: "ACCOUNT",
     items: [
       { title: "My Profile", href: "/profile", icon: UserCircle },
-      { title: "Change Password", href: "/change-password", icon: KeyRound },
+      { title: "Settings", href: "/settings", icon: Settings },
       { title: "Logout", href: "/logout", icon: LogOut },
     ],
   },
