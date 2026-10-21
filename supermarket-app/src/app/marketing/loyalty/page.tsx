@@ -18,10 +18,7 @@ import {
   CreditCard,
   Phone,
   Sparkles,
-  Ticket,
   Gift,
-  Copy,
-  Check,
 } from "lucide-react";
 
 interface CustomerSummaryRow {
@@ -47,14 +44,6 @@ interface TopCustomerRow {
   points_balance: number;
   total_points_earned: number;
   transaction_month?: string;
-  active_coupon_code?: string | null;
-  active_coupon_expiry?: string | null;
-}
-
-interface RewardPromo {
-  promo_id: number;
-  name: string;
-  discount_percent: number | string;
 }
 
 export default function LoyaltyManagementPage() {
@@ -83,7 +72,6 @@ export default function LoyaltyManagementPage() {
   const [pointsInput, setPointsInput] = useState<string>("");
   const [noteInput, setNoteInput] = useState<string>("");
 
-  const [copiedCouponId, setCopiedCouponId] = useState<string | null>(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -92,38 +80,16 @@ export default function LoyaltyManagementPage() {
       const branchParam = targetBranchId ? `&branchId=${targetBranchId}` : "";
       const queryParam = targetBranchId ? `?branchId=${targetBranchId}` : "";
 
-      const [dashRes, summaryRes, topRes, custRes, rewardTop10Res] = await Promise.all([
+      const [dashRes, summaryRes, topRes, custRes] = await Promise.all([
         fetch(`/api/marketing/dashboard${queryParam}`).then((r) => r.json()),
         fetch(`/api/marketing/actions?view=customer_summary${branchParam}`).then((r) => r.json()),
         fetch(`/api/marketing/actions?view=top_customers${branchParam}`).then((r) => r.json()),
         fetch(`/api/customers${queryParam}`).then((r) => r.json()),
-        fetch("/api/marketing/coupons/reward-top10").then((r) => r.json()).catch(() => null),
       ]);
 
       if (dashRes && !dashRes.error) setData(dashRes);
       if (Array.isArray(summaryRes)) setCustomerSummaries(summaryRes);
-      // Map active coupon codes for top customers
-      const couponMap = new Map<number, { code: string; expiry: string }>();
-      if (rewardTop10Res?.top_customers && Array.isArray(rewardTop10Res.top_customers)) {
-        for (const tc of rewardTop10Res.top_customers) {
-          if (tc.active_coupon_code) {
-            couponMap.set(tc.customer_id, { code: tc.active_coupon_code, expiry: tc.active_coupon_expiry });
-          }
-        }
-      }
 
-      const attachCouponInfo = (list: TopCustomerRow[]): TopCustomerRow[] => {
-        return list.map((c) => {
-          const activeInfo = couponMap.get(c.customer_id);
-          return {
-            ...c,
-            active_coupon_code: activeInfo?.code ?? c.active_coupon_code ?? null,
-            active_coupon_expiry: activeInfo?.expiry ?? c.active_coupon_expiry ?? null,
-          };
-        });
-      };
-
-      // Handle topRes format: either { customers: [...], months: [...] } or array
       const custArray: TopCustomerRow[] = Array.isArray(topRes)
         ? topRes
         : Array.isArray(topRes?.customers)
@@ -131,13 +97,13 @@ export default function LoyaltyManagementPage() {
           : [];
 
       if (custArray.length > 0) {
-        setTopCustomers(attachCouponInfo(custArray.slice(0, 10)));
+        setTopCustomers(custArray.slice(0, 10));
       } else if (Array.isArray(summaryRes) && summaryRes.length > 0) {
         const top10 = [...summaryRes]
           .filter((c) => Number(c.points_balance || 0) > 0)
           .sort((a, b) => Number(b.total_points_earned || 0) - Number(a.total_points_earned || 0))
           .slice(0, 10);
-        setTopCustomers(attachCouponInfo(top10));
+        setTopCustomers(top10);
       } else {
         setTopCustomers([]);
       }
@@ -170,15 +136,6 @@ export default function LoyaltyManagementPage() {
     setRedeemModalOpen(true);
   };
 
-  // Copy coupon code to clipboard
-  const copyCouponCode = (code: string) => {
-    if (navigator?.clipboard?.writeText) {
-      navigator.clipboard.writeText(code);
-    }
-    setCopiedCouponId(code);
-    showToast(`Copied VIP coupon "${code}" to clipboard!`, "info");
-    setTimeout(() => setCopiedCouponId(null), 2500);
-  };
 
   // Submit Award Points (add_ltpoints)
   const handleAwardSubmit = async (e: React.FormEvent) => {
@@ -497,20 +454,19 @@ export default function LoyaltyManagementPage() {
                     <th className="py-3 px-4">Tier</th>
                     <th className="py-3 px-4 text-right">Points Earned (Highest)</th>
                     <th className="py-3 px-4 text-right">Points Balance</th>
-                    <th className="py-3 px-4 text-center">Exclusive Coupon</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60 font-mono">
                   {loading ? (
                     <tr>
-                      <td colSpan={7} className="py-12 text-center text-slate-500 font-sans">
+                      <td colSpan={6} className="py-12 text-center text-slate-500 font-sans">
                         <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-amber-500" />
                         Loading top 10 customers...
                       </td>
                     </tr>
                   ) : topCustomers.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="py-12 text-center text-slate-500 font-sans">
+                      <td colSpan={6} className="py-12 text-center text-slate-500 font-sans">
                         No customers found for this period.
                       </td>
                     </tr>
@@ -557,33 +513,6 @@ export default function LoyaltyManagementPage() {
                         </td>
                         <td className="py-3 px-4 text-right text-amber-300 font-bold">
                           {Number(c.points_balance || 0).toLocaleString()} pts
-                        </td>
-                        <td className="py-3 px-4 text-center font-sans">
-                          {c.active_coupon_code ? (
-                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 font-mono font-bold text-[11px]">
-                              <Ticket className="w-3 h-3 text-emerald-400" />
-                              <span>{c.active_coupon_code}</span>
-                              <button
-                                onClick={() => copyCouponCode(c.active_coupon_code!)}
-                                className="text-slate-400 hover:text-white p-0.5 ml-1 transition-colors"
-                                title="Copy coupon code"
-                              >
-                                {copiedCouponId === c.active_coupon_code ? (
-                                  <Check className="w-3 h-3 text-emerald-400" />
-                                ) : (
-                                  <Copy className="w-3 h-3" />
-                                )}
-                              </button>
-                            </div>
-                          ) : (
-                            <Link
-                              href="/marketing/coupons"
-                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gradient-to-r from-amber-600/90 to-orange-600/90 hover:from-amber-500 hover:to-orange-500 text-white font-bold text-[10px] shadow-sm transition-all"
-                            >
-                              <Ticket className="w-3 h-3" />
-                              <span>Issue VIP Coupon</span>
-                            </Link>
-                          )}
                         </td>
                       </tr>
                     ))

@@ -170,7 +170,6 @@ const MARKETING_NAV_GROUPS: NavGroup[] = [
       { title: "Customer Management", href: "/marketing/customers", icon: Users },
       { title: "Loyalty Management", href: "/marketing/loyalty", icon: Award },
       { title: "Promotion Management", href: "/marketing/promotions", icon: Tag },
-      { title: "Coupon Management", href: "/marketing/coupons", icon: Ticket },
       { title: "Marketing Reports", href: "/marketing/reports", icon: BarChart3 },
     ],
   },

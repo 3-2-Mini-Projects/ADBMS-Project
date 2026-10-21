@@ -8,7 +8,6 @@ import {
   Download,
   TrendingUp,
   Percent,
-  Ticket,
   Building2,
   RefreshCw,
   Sparkles,
@@ -36,7 +35,7 @@ export default function MarketingReportsPage() {
   const [data, setData] = useState<MarketingReportData | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"analytics" | "campaigns" | "coupons" | "branch" | "daily">("analytics");
+  const [activeTab, setActiveTab] = useState<"analytics" | "campaigns" | "branch" | "daily">("analytics");
 
   const userBranchId = currentBranch?.branch_id || currentEmployee?.branch_id || authenticatedUser?.branch_id;
 
@@ -178,7 +177,6 @@ export default function MarketingReportsPage() {
         {[
           { key: "analytics", label: "Predictive Analytics & Growth", icon: Sparkles },
           { key: "campaigns", label: `Active Promotions (${promotions.length})`, icon: Percent },
-          { key: "coupons", label: `Coupon Utilization Ledger (${summary?.total_coupons || 0})`, icon: Ticket },
           { key: "branch", label: "Store Branch Performance", icon: Building2 },
           { key: "daily", label: "Daily Discount Trend", icon: Calendar },
         ].map((t) => {
@@ -237,15 +235,13 @@ export default function MarketingReportsPage() {
                   <th className="py-3 px-4 text-center">Discount %</th>
                   <th className="py-3 px-4 font-mono">Start Date</th>
                   <th className="py-3 px-4 font-mono">End Date</th>
-                  <th className="py-3 px-4 text-center">Linked Coupons</th>
-                  <th className="py-3 px-4 text-center">Redeemed</th>
                   <th className="py-3 px-4 text-center">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60 font-mono print:divide-gray-200 print:text-black">
                 {promotions.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-8 text-center text-slate-500 font-sans">
+                    <td colSpan={6} className="py-8 text-center text-slate-500 font-sans">
                       No promotion records found.
                     </td>
                   </tr>
@@ -261,8 +257,6 @@ export default function MarketingReportsPage() {
                       <td className="py-3 px-4 text-slate-400 print:text-black">
                         {p.end_date ? new Date(p.end_date).toLocaleDateString() : "—"}
                       </td>
-                      <td className="py-3 px-4 text-center text-amber-400 font-bold print:text-black">{p.associated_coupons || 0}</td>
-                      <td className="py-3 px-4 text-center text-emerald-400 font-bold print:text-black">{p.redeemed_coupons || 0}</td>
                       <td className="py-3 px-4 text-center">
                         <span
                           className={`text-[10px] px-2 py-0.5 rounded font-bold ${
@@ -285,47 +279,6 @@ export default function MarketingReportsPage() {
         </div>
       </div>
 
-      {/* ========================================================================= */}
-      {/* SECTION 2: COUPON & VOUCHER UTILIZATION LEDGER */}
-      {/* ========================================================================= */}
-      <div className={activeTab === "coupons" ? "block" : "hidden print:block"}>
-        <div className="space-y-4">
-          {/* Inventory Funnel Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 font-mono print:grid-cols-3">
-            <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 print:bg-white print:border-gray-300">
-              <div className="text-xs text-slate-400 font-sans">Total Issued</div>
-              <div className="text-xl font-bold text-white mt-1 print:text-black">{summary?.total_coupons || 0}</div>
-              <div className="text-[10px] text-slate-500 mt-0.5">All vouchers</div>
-            </div>
-            <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 print:bg-white print:border-gray-300">
-              <div className="text-xs text-slate-400 font-sans">Active & Ready</div>
-              <div className="text-xl font-bold text-amber-400 mt-1 print:text-black">{summary?.available_coupons || 0}</div>
-              <div className="text-[10px] text-slate-500 mt-0.5">Within validity</div>
-            </div>
-            <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 print:bg-white print:border-gray-300">
-              <div className="text-xs text-slate-400 font-sans">Redeemed at POS</div>
-              <div className="text-xl font-bold text-emerald-400 mt-1 print:text-black">{summary?.redeemed_coupons || 0}</div>
-              <div className="text-[10px] text-slate-500 mt-0.5">Successfully applied</div>
-            </div>
-            <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 print:bg-white print:border-gray-300">
-              <div className="text-xs text-slate-400 font-sans">Expired Unused</div>
-              <div className="text-xl font-bold text-rose-400 mt-1 print:text-black">{summary?.expired_coupons || 0}</div>
-              <div className="text-[10px] text-slate-500 mt-0.5">Past deadline</div>
-            </div>
-            <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 print:bg-white print:border-gray-300">
-              <div className="text-xs text-slate-400 font-sans">VIP Targeted</div>
-              <div className="text-xl font-bold text-purple-400 mt-1 print:text-black">{summary?.vip_coupons || 0}</div>
-              <div className="text-[10px] text-slate-500 mt-0.5">Customer-bound</div>
-            </div>
-            <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 print:bg-white print:border-gray-300">
-              <div className="text-xs text-slate-400 font-sans">Public Vouchers</div>
-              <div className="text-xl font-bold text-blue-400 mt-1 print:text-black">{summary?.public_coupons || 0}</div>
-              <div className="text-[10px] text-slate-500 mt-0.5">Open redemption</div>
-            </div>
-          </div>
-
-        </div>
-      </div>
 
       {/* ========================================================================= */}
       {/* SECTION 3: STORE BRANCH PERFORMANCE (branch_sales_vw) */}

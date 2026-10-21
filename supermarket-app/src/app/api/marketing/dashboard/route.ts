@@ -127,16 +127,6 @@ export async function GET(req: Request) {
       FROM promotions
     `);
 
-    // 4. Coupons Overview
-    const [couponSummary]: any = await query(`
-      SELECT 
-        COUNT(*) AS total_coupons,
-        COALESCE(SUM(CASE WHEN is_used = 1 THEN 1 ELSE 0 END), 0) AS redeemed_coupons,
-        COALESCE(SUM(CASE WHEN is_used = 0 AND expiry_date >= CURRENT_DATE THEN 1 ELSE 0 END), 0) AS available_coupons,
-        COALESCE(SUM(CASE WHEN is_used = 0 AND expiry_date < CURRENT_DATE THEN 1 ELSE 0 END), 0) AS expired_coupons
-      FROM coupons
-    `);
-
     // 5. Loyalty vs Regular Sales Impact (from sales table for branch)
     const [salesImpact]: any = await query(`
       SELECT 
@@ -393,13 +383,6 @@ export async function GET(req: Request) {
         new_customers_30d: custSummary?.new_customers_30d ?? 0,
         active_promotions: promoSummary?.active_promotions ?? 0,
         total_promotions: promoSummary?.total_promotions ?? 0,
-        total_coupons: couponSummary?.total_coupons ?? 0,
-        redeemed_coupons: couponSummary?.redeemed_coupons ?? 0,
-        available_coupons: couponSummary?.available_coupons ?? 0,
-        redemption_rate:
-          Number(couponSummary?.total_coupons) > 0
-            ? Math.round((Number(couponSummary.redeemed_coupons) / Number(couponSummary.total_coupons)) * 100)
-            : 0,
         total_discounts_given: Number(salesImpact?.total_discounts_given ?? 0),
         member_revenue: Number(salesImpact?.member_revenue ?? 0),
         total_revenue: Number(salesImpact?.total_revenue ?? 0),

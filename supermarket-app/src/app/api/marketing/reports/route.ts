@@ -22,13 +22,6 @@ export interface MarketingSummaryRow {
   active_promotions: number;
   scheduled_promotions: number;
   expired_promotions: number;
-  total_coupons: number;
-  available_coupons: number;
-  redeemed_coupons: number;
-  expired_coupons: number;
-  vip_coupons: number;
-  public_coupons: number;
-  coupon_redemption_rate: number;
 }
 
 export interface PromoReportRow {
@@ -39,8 +32,6 @@ export interface PromoReportRow {
   end_date: string;
   is_active: number;
   status: "ACTIVE" | "SCHEDULED" | "EXPIRED";
-  associated_coupons: number;
-  redeemed_coupons: number;
 }
 
 export interface BranchReportRow {
@@ -86,7 +77,6 @@ export async function GET(req: Request) {
     const [
       salesImpactRows,
       customerMetricRows,
-      couponMetricRows,
       promoMetricRows,
       pointsPaymentRows,
       promoRows,
@@ -132,24 +122,6 @@ export async function GET(req: Request) {
         WHERE is_active = 1
       `),
 
-      // 3. Coupon metrics
-      query<RowDataPacket & {
-        total_coupons: number;
-        redeemed_coupons: number;
-        available_coupons: number;
-        expired_coupons: number;
-        vip_coupons: number;
-        public_coupons: number;
-      }>(`
-        SELECT 
-          COUNT(*) AS total_coupons,
-          COALESCE(SUM(CASE WHEN is_used = 1 THEN 1 ELSE 0 END), 0) AS redeemed_coupons,
-          COALESCE(SUM(CASE WHEN is_used = 0 AND expiry_date >= CURRENT_DATE THEN 1 ELSE 0 END), 0) AS available_coupons,
-          COALESCE(SUM(CASE WHEN is_used = 0 AND expiry_date < CURRENT_DATE THEN 1 ELSE 0 END), 0) AS expired_coupons,
-          COALESCE(SUM(CASE WHEN customer_id IS NOT NULL THEN 1 ELSE 0 END), 0) AS vip_coupons,
-          COALESCE(SUM(CASE WHEN customer_id IS NULL THEN 1 ELSE 0 END), 0) AS public_coupons
-        FROM coupons
-      `),
 
       // 4. Promotions Overview metrics
       query<RowDataPacket & {
@@ -175,7 +147,7 @@ export async function GET(req: Request) {
         ${branchId ? "JOIN sales s ON p.sale_id = s.sale_id WHERE p.method = 'POINTS' AND s.branch_id = ?" : "WHERE p.method = 'POINTS'"}
       `, branchParams),
 
-      // 6. Active Promotions Detail List with linked coupon stats
+      // 5. Active Promotions Detail List
       query<PromoReportRow & RowDataPacket>(`
         SELECT 
           p.promo_id,
@@ -184,9 +156,7 @@ export async function GET(req: Request) {
           p.start_date,
           p.end_date,
           p.is_active,
-          'ACTIVE' AS status,
-          (SELECT COUNT(*) FROM coupons cp WHERE cp.promo_id = p.promo_id) AS associated_coupons,
-          (SELECT COUNT(*) FROM coupons cp WHERE cp.promo_id = p.promo_id AND cp.is_used = 1) AS redeemed_coupons
+          'ACTIVE' AS status
         FROM promotions p
         WHERE p.is_active = 1 AND CURDATE() BETWEEN p.start_date AND p.end_date
         ORDER BY p.start_date DESC, p.promo_id DESC
@@ -250,7 +220,6 @@ export async function GET(req: Request) {
 
     const sImpact = salesImpactRows[0];
     const cMetrics = customerMetricRows[0];
-    const cpMetrics = couponMetricRows[0];
     const pMetrics = promoMetricRows[0];
     const ptMetrics = pointsPaymentRows[0];
 
@@ -265,9 +234,6 @@ export async function GET(req: Request) {
       ? Math.round(((avgMemberBasket - avgNonMemberBasket) / avgNonMemberBasket) * 100)
       : 0;
 
-    const totalCoupons = Number(cpMetrics?.total_coupons || 0);
-    const redeemedCoupons = Number(cpMetrics?.redeemed_coupons || 0);
-    const redemptionRate = totalCoupons > 0 ? Math.round((redeemedCoupons / totalCoupons) * 100) : 0;
 
     const summary: MarketingSummaryRow = {
       total_revenue: totalRev,
@@ -289,13 +255,6 @@ export async function GET(req: Request) {
       active_promotions: Number(pMetrics?.active_promotions || 0),
       scheduled_promotions: Number(pMetrics?.scheduled_promotions || 0),
       expired_promotions: Number(pMetrics?.expired_promotions || 0),
-      total_coupons: totalCoupons,
-      available_coupons: Number(cpMetrics?.available_coupons || 0),
-      redeemed_coupons: redeemedCoupons,
-      expired_coupons: Number(cpMetrics?.expired_coupons || 0),
-      vip_coupons: Number(cpMetrics?.vip_coupons || 0),
-      public_coupons: Number(cpMetrics?.public_coupons || 0),
-      coupon_redemption_rate: redemptionRate,
     };
 
     return NextResponse.json({
