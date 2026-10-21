@@ -265,6 +265,58 @@ export function Sidebar() {
               ? CASHIER_NAV_GROUPS
               : NAV_GROUPS;
 
+  const cleanPath = pathname?.replace(/\/$/, "") || "/";
+
+  // Resolve exactly one active navigation item so multiple buttons don't light up simultaneously
+  const resolveActiveHref = (): string | null => {
+    // Role-specific aliases & landing pages
+    if (role === "STOCK_CLERK" && (cleanPath === "/dashboard" || cleanPath === "/inventory/clerk")) {
+      return "/inventory/dashboard";
+    }
+
+    if (role === "MARKETING") {
+      if (cleanPath === "/marketing" || cleanPath === "/dashboard") {
+        return "/marketing/dashboard";
+      }
+      if (cleanPath === "/customers" || cleanPath.startsWith("/customers/")) {
+        return "/marketing/customers";
+      }
+      if (cleanPath === "/promotions" || cleanPath.startsWith("/promotions/")) {
+        return "/marketing/promotions";
+      }
+      if (cleanPath === "/reports" || cleanPath.startsWith("/reports/")) {
+        return "/marketing/reports";
+      }
+    }
+
+    const allItems = navGroups.flatMap((g) => g.items);
+
+    // 1. Direct exact match (highest priority)
+    const exactMatch = allItems.find((item) => item.href === cleanPath);
+    if (exactMatch) {
+      return exactMatch.href;
+    }
+
+    // 2. Best prefix match (longest matching item.href)
+    // Ensures sub-routes like /purchases/[id] map to /purchases,
+    // while preventing parent routes (e.g. /inventory) from overriding specific routes (e.g. /inventory/transfers)
+    const prefixMatches = allItems.filter((item) => {
+      if (item.href === "/" || item.href === "/dashboard" || item.href === "/marketing/dashboard") {
+        return false;
+      }
+      return cleanPath.startsWith(`${item.href}/`);
+    });
+
+    if (prefixMatches.length > 0) {
+      prefixMatches.sort((a, b) => b.href.length - a.href.length);
+      return prefixMatches[0].href;
+    }
+
+    return null;
+  };
+
+  const activeHref = resolveActiveHref();
+
   return (
     <aside
       className={`relative z-40 bg-slate-950 border-r border-slate-800 transition-all duration-300 flex flex-col justify-between select-none ${collapsed ? "w-20" : "w-64"
@@ -346,18 +398,7 @@ export function Sidebar() {
                 )}
                 {group.items.map((item) => {
                   const allowed = !item.permission || canAccess(role, item.permission);
-                  const active =
-                    pathname === item.href ||
-                    (item.href !== "/dashboard" &&
-                      item.href !== "/marketing/dashboard" &&
-                      pathname.startsWith(item.href)) ||
-                    (item.href === "/marketing/dashboard" &&
-                      (pathname === "/marketing/dashboard" ||
-                        pathname === "/marketing" ||
-                        (pathname === "/dashboard" && role === "MARKETING"))) ||
-                    (item.href === "/marketing/customers" && pathname.startsWith("/customers")) ||
-                    (item.href === "/marketing/promotions" && pathname.startsWith("/promotions")) ||
-                    (item.href === "/marketing/reports" && pathname.startsWith("/reports"));
+                  const active = item.href === activeHref;
 
                   if (!allowed && role === "CASHIER" && item.permission) {
                     // Filter restricted items for cashier

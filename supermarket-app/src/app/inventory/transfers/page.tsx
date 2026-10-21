@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useApp } from "@/lib/context";
 import {
@@ -16,7 +16,8 @@ import {
   Sparkles,
   ArrowRight,
   ShieldCheck,
-  ChevronRight,
+  Search,
+  Package,
 } from "lucide-react";
 
 interface ProductStock {
@@ -32,17 +33,22 @@ interface TransferLog {
   action: string;
   changed_by: string;
   changed_at: string;
+  product_name?: string | null;
+  barcode?: string | null;
+  operator_name?: string | null;
   details: {
     event?: string;
     from_branch_id?: number;
     to_branch_id?: number;
     product_id?: number;
     quantity?: number;
+    product_name?: string;
   };
 }
 
 export default function StockTransfersPage() {
   const { currentEmployee, currentBranch, branches, showToast } = useApp();
+  const isClerk = currentEmployee?.role === "STOCK_CLERK";
 
   const [fromBranchId, setFromBranchId] = useState<number>(currentBranch?.branch_id || 1);
   const [toBranchId, setToBranchId] = useState<number>(2);
@@ -50,6 +56,8 @@ export default function StockTransfersPage() {
   const [selectedProductId, setSelectedProductId] = useState<number | "">("");
   const [transferQty, setTransferQty] = useState<number | "">("");
   const [transferLogs, setTransferLogs] = useState<TransferLog[]>([]);
+  const [logSearch, setLogSearch] = useState("");
+  const [productSearch, setProductSearch] = useState("");
 
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [loadingLogs, setLoadingLogs] = useState(false);
@@ -104,6 +112,36 @@ export default function StockTransfersPage() {
 
   const selectedProduct = products.find((p) => p.product_id === Number(selectedProductId));
 
+  const availableProducts = useMemo(() => {
+    return products.filter((p) => p.quantity_on_hand > 0);
+  }, [products]);
+
+  const filteredProducts = useMemo(() => {
+    if (!productSearch.trim()) return availableProducts;
+    const term = productSearch.toLowerCase();
+    return availableProducts.filter(
+      (p) =>
+        p.product_name.toLowerCase().includes(term) ||
+        p.barcode.toLowerCase().includes(term) ||
+        (p.category_name && p.category_name.toLowerCase().includes(term))
+    );
+  }, [availableProducts, productSearch]);
+
+  const filteredLogs = useMemo(() => {
+    if (!logSearch.trim()) return transferLogs;
+    const term = logSearch.toLowerCase();
+    return transferLogs.filter((log) => {
+      const pName = log.product_name || `Product #${log.details?.product_id}`;
+      const op = log.operator_name || log.changed_by;
+      const bcode = log.barcode || "";
+      return (
+        pName.toLowerCase().includes(term) ||
+        op.toLowerCase().includes(term) ||
+        bcode.toLowerCase().includes(term)
+      );
+    });
+  }, [transferLogs, logSearch]);
+
   const handleTransfer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!fromBranchId || !toBranchId || !selectedProductId || !transferQty) {
@@ -139,9 +177,10 @@ export default function StockTransfersPage() {
 
       const data = await res.json();
       if (res.ok) {
-        showToast(data.message || "Stock transferred successfully via sp_transfer_stock!", "success");
+        showToast(data.message || "Stock transferred successfully!", "success");
         setTransferQty("");
         setSelectedProductId("");
+        setProductSearch("");
         fetchSourceInventory();
         fetchTransferLogs();
       } else {
@@ -154,92 +193,132 @@ export default function StockTransfersPage() {
     }
   };
 
-  const getBranchName = (bId?: number) => {
-    if (!bId) return "—";
-    const found = branches.find((b) => b.branch_id === bId);
-    return found ? found.name : `Branch #${bId}`;
+  const getBranch = (bId?: number) => {
+    if (!bId) return null;
+    return branches.find((b) => b.branch_id === bId) || null;
   };
 
-  const isClerk = currentEmployee?.role === "STOCK_CLERK";
+  const fromBranch = getBranch(fromBranchId);
+  const toBranch = getBranch(toBranchId);
 
+  // Quick preset helper
+  const applyPreset = (amount: number | "max") => {
+    if (!selectedProduct) return;
+    if (amount === "max") {
+      setTransferQty(selectedProduct.quantity_on_hand);
+    } else {
+      const clamped = Math.min(amount, selectedProduct.quantity_on_hand);
+      setTransferQty(clamped);
+    }
+  };
+
+  const isQtyInvalid = selectedProduct
+    ? Number(transferQty) <= 0 || Number(transferQty) > selectedProduct.quantity_on_hand
+    : false;
+
+  // Theme configuration: supports light theme for Stock Clerk while keeping dark theme for Admin
   const theme = {
     wrapper: isClerk
-      ? "space-y-6 max-w-7xl mx-auto pb-12 animate-in fade-in duration-300 bg-slate-50/90 -m-6 p-6 sm:p-8 min-h-[calc(100vh-4rem)] text-slate-800"
-      : "space-y-6 max-w-7xl mx-auto pb-12 animate-in fade-in duration-300 text-slate-100",
-    headerBorder: isClerk ? "border-slate-200" : "border-slate-800",
+      ? "space-y-6 max-w-7xl mx-auto pb-14 animate-in fade-in duration-300 bg-slate-50/90 -m-6 p-6 sm:p-8 min-h-[calc(100vh-4rem)] text-slate-800"
+      : "space-y-6 max-w-7xl mx-auto pb-14 animate-in fade-in duration-300 text-slate-100",
+    headerBorder: isClerk ? "border-slate-200" : "border-slate-800/80",
     title: isClerk
-      ? "text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-3"
-      : "text-2xl font-bold tracking-tight text-white flex items-center gap-3",
-    subtitle: isClerk ? "text-xs text-slate-500 mt-1" : "text-xs text-slate-400 mt-1",
-    moduleBadge: isClerk ? "text-teal-700 font-semibold" : "text-teal-400 font-semibold",
+      ? "text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 flex items-center gap-3"
+      : "text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-3",
+    subtitle: isClerk ? "text-xs sm:text-sm text-slate-500 mt-1 max-w-2xl font-medium" : "text-xs sm:text-sm text-slate-400 mt-1 max-w-2xl",
     navLink: isClerk
-      ? "px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-sm"
-      : "px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold transition-colors flex items-center gap-1.5",
+      ? "px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold transition-all flex items-center gap-2 shadow-sm"
+      : "px-3.5 py-2 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-xs font-semibold transition-all flex items-center gap-2 shadow-sm hover:border-slate-700",
+    alertLink: isClerk
+      ? "px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 text-amber-700 border border-amber-200 text-xs font-semibold transition-all flex items-center gap-2 shadow-sm"
+      : "px-3.5 py-2 rounded-xl bg-amber-950/40 hover:bg-amber-900/50 text-amber-300 border border-amber-800/40 text-xs font-semibold transition-all flex items-center gap-2 shadow-sm hover:border-amber-700/60",
     card: isClerk
       ? "bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-5"
-      : "bg-slate-900/60 border border-slate-800 rounded-2xl p-6 shadow-sm space-y-5",
-    cardTitle: isClerk
-      ? "text-sm font-bold text-slate-900 flex items-center gap-2"
-      : "text-sm font-bold text-white flex items-center gap-2",
-    label: isClerk ? "text-xs font-semibold text-slate-700 block mb-1" : "text-xs font-medium text-slate-300 block mb-1",
+      : "bg-slate-900/70 border border-slate-800 rounded-2xl p-6 backdrop-blur-md shadow-lg space-y-5",
+    kpiCard: isClerk
+      ? "bg-white border border-slate-200 rounded-2xl p-4.5 shadow-sm hover:border-slate-300 transition-colors"
+      : "bg-slate-900/60 border border-slate-800 rounded-2xl p-4.5 backdrop-blur-md shadow-sm hover:border-slate-700 transition-colors",
+    cardHeaderBorder: isClerk ? "border-slate-100" : "border-slate-800/80",
+    cardTitle: isClerk ? "text-sm font-bold text-slate-900" : "text-sm font-bold text-white",
+    cardSubtext: isClerk ? "text-[11px] text-slate-500" : "text-[11px] text-slate-400",
+    corridorBox: isClerk
+      ? "grid grid-cols-2 gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200"
+      : "grid grid-cols-2 gap-3 p-3 rounded-xl bg-slate-950/70 border border-slate-800/80",
     select: isClerk
-      ? "w-full px-3 py-2 rounded-xl bg-white border border-slate-300 text-xs text-slate-900 focus:outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-100 font-medium disabled:opacity-60 shadow-sm"
-      : "w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus:outline-none focus:border-teal-500 font-medium disabled:opacity-60",
+      ? "w-full px-2.5 py-2 rounded-lg bg-white border border-slate-300 text-xs text-slate-900 font-medium focus:outline-none focus:border-teal-600 disabled:opacity-75 disabled:cursor-not-allowed shadow-sm"
+      : "w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700/80 text-xs text-white font-medium focus:outline-none focus:border-teal-500 disabled:opacity-75 disabled:cursor-not-allowed",
+    prodSelect: isClerk
+      ? "w-full px-3 py-2.5 rounded-xl bg-white border border-slate-300 text-xs text-slate-900 focus:outline-none focus:border-teal-600 font-medium shadow-sm"
+      : "w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700/80 text-xs text-white focus:outline-none focus:border-teal-500 font-medium",
+    searchInput: isClerk
+      ? "w-full pl-8 pr-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-teal-600 shadow-sm"
+      : "w-full pl-8 pr-3 py-1.5 rounded-lg bg-slate-950/70 border border-slate-800 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-teal-500",
+    snapshotBox: isClerk
+      ? "p-4 rounded-xl bg-teal-50/60 border border-teal-200 space-y-3.5 animate-in fade-in duration-200"
+      : "p-4 rounded-xl bg-slate-950/90 border border-teal-500/30 space-y-3.5 animate-in fade-in duration-200",
+    presetBtn: isClerk
+      ? "flex-1 py-1 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-white text-[11px] font-mono font-bold text-slate-700 hover:text-slate-900 transition-colors shadow-sm"
+      : "flex-1 py-1 rounded-lg bg-slate-900 border border-slate-700/80 hover:bg-slate-800 disabled:opacity-40 disabled:hover:bg-slate-900 text-[11px] font-mono font-bold text-slate-200 hover:text-white transition-colors",
+    presetMaxBtn: isClerk
+      ? "px-2.5 py-1 rounded-lg bg-teal-600 hover:bg-teal-700 text-[11px] font-mono font-bold text-white transition-colors shadow-sm"
+      : "px-2.5 py-1 rounded-lg bg-teal-500/20 border border-teal-500/40 hover:bg-teal-500/30 text-[11px] font-mono font-bold text-teal-300 transition-colors",
+    calcBox: isClerk
+      ? "p-2.5 rounded-lg bg-white border border-teal-100 text-[11px] space-y-1 shadow-xs"
+      : "p-2.5 rounded-lg bg-slate-900/90 border border-slate-800 text-[11px] space-y-1",
     input: isClerk
-      ? "w-full px-3 py-2 rounded-xl bg-white border border-slate-300 text-xs font-mono text-slate-900 focus:outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-100 shadow-sm"
-      : "w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs font-mono text-white focus:outline-none focus:border-teal-500",
-    previewBox: isClerk
-      ? "bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs space-y-1 shadow-xs"
-      : "bg-slate-950 p-3.5 rounded-xl border border-slate-800 text-xs space-y-1",
-    previewLabel: isClerk ? "text-slate-500" : "text-slate-400",
-    previewVal: isClerk ? "font-semibold text-slate-900" : "font-semibold text-white",
-    footerBox: isClerk
-      ? "pt-2 border-t border-slate-100 text-[11px] text-slate-600 flex items-start gap-2"
-      : "pt-2 border-t border-slate-800/80 text-[11px] text-slate-400 flex items-start gap-2",
+      ? "w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-300 text-xs font-mono text-slate-900 placeholder-slate-400 focus:outline-none focus:border-teal-600 shadow-sm"
+      : "w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700/80 text-xs font-mono text-white placeholder-slate-600 focus:outline-none focus:border-teal-500",
+    acidBox: isClerk
+      ? "pt-3 border-t border-slate-100 text-[11px] text-slate-600 flex items-start gap-2.5 bg-slate-50 p-3 rounded-xl border border-slate-200/80"
+      : "pt-3 border-t border-slate-800/80 text-[11px] text-slate-400 flex items-start gap-2.5 bg-slate-950/40 p-3 rounded-xl",
     historyCard: isClerk
       ? "lg:col-span-7 bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm flex flex-col"
-      : "lg:col-span-7 bg-slate-900/60 border border-slate-800 rounded-2xl overflow-hidden shadow-sm flex flex-col",
-    historyHeader: isClerk
-      ? "p-4 border-b border-slate-200 flex items-center justify-between"
-      : "p-4 border-b border-slate-800 flex items-center justify-between",
-    historyTitle: isClerk ? "text-sm font-bold text-slate-900" : "text-sm font-bold text-white",
+      : "lg:col-span-7 bg-slate-900/70 border border-slate-800 rounded-2xl overflow-hidden backdrop-blur-md shadow-lg flex flex-col",
+    historyHeaderBg: isClerk ? "p-4 sm:p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/60" : "p-4 sm:p-5 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900/40",
+    historySearchInput: isClerk
+      ? "pl-7 pr-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-teal-600 w-36 sm:w-44 shadow-sm"
+      : "pl-7 pr-2.5 py-1.5 rounded-lg bg-slate-950/80 border border-slate-800 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-teal-500 w-36 sm:w-44",
     historyRefreshBtn: isClerk
-      ? "p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors text-xs flex items-center gap-1 border border-slate-200 shadow-xs"
-      : "p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors text-xs flex items-center gap-1",
+      ? "p-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 transition-all text-xs flex items-center gap-1.5 shadow-sm"
+      : "p-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/80 transition-all text-xs flex items-center gap-1.5 shadow-sm",
     thead: isClerk
-      ? "border-b border-slate-200 bg-slate-50 text-slate-600 font-semibold"
-      : "border-b border-slate-800 bg-slate-950/40 text-slate-400 font-semibold",
+      ? "border-b border-slate-200 bg-slate-50 text-slate-600 font-semibold uppercase text-[10px] tracking-wider"
+      : "border-b border-slate-800 bg-slate-950/60 text-slate-400 font-semibold uppercase text-[10px] tracking-wider",
     tbodyDivide: isClerk ? "divide-y divide-slate-100" : "divide-y divide-slate-800/60",
     rowHover: isClerk ? "hover:bg-slate-50 transition-colors" : "hover:bg-slate-800/30 transition-colors",
-    logTimestamp: isClerk ? "py-3 px-4 font-mono text-[11px] text-slate-600" : "py-3 px-4 font-mono text-[11px] text-slate-400",
-    logBranchText: isClerk ? "flex items-center gap-1.5 font-medium text-slate-900" : "flex items-center gap-1.5 font-medium text-slate-200",
-    logProduct: isClerk ? "py-3 px-4 font-mono text-slate-700" : "py-3 px-4 font-mono text-slate-300",
-    logQtyBadge: isClerk
-      ? "px-2 py-0.5 rounded bg-teal-50 text-teal-800 border border-teal-200 font-bold"
-      : "px-2 py-0.5 rounded bg-teal-500/15 text-teal-400 border border-teal-500/30 font-bold",
-    logOperator: isClerk ? "py-3 px-4 text-right font-mono text-slate-600 text-[11px]" : "py-3 px-4 text-right font-mono text-slate-400 text-[11px]",
+    itemText: isClerk ? "font-semibold text-slate-900 truncate max-w-[170px]" : "font-semibold text-white truncate max-w-[170px]",
+    operatorPill: isClerk
+      ? "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-[11px] font-mono text-slate-700 font-medium"
+      : "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-800 border border-slate-700/80 text-[11px] font-mono text-slate-300",
+    qtyBadge: isClerk
+      ? "inline-flex items-center px-2 py-0.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200 font-mono font-bold text-xs"
+      : "inline-flex items-center px-2 py-0.5 rounded-full bg-teal-500/15 text-teal-400 border border-teal-500/30 font-mono font-bold text-xs",
   };
 
   return (
     <div className={theme.wrapper}>
-      {/* Header */}
-      <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b ${theme.headerBorder} pb-5`}>
+      {/* Top Header */}
+      <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b ${theme.headerBorder} pb-6`}>
         <div>
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-teal-600 mb-1">
-            <Boxes className="w-4 h-4" />
-            <span className={theme.moduleBadge}>ADBMS Stock Clerk Module</span>
-            <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-            <span className={isClerk ? "text-slate-600" : "text-slate-300"}>sp_transfer_stock</span>
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-teal-600 dark:text-teal-400 mb-1.5">
+            <span className="flex h-2 w-2 relative">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-teal-500"></span>
+            </span>
+            <span className="text-teal-700 dark:text-teal-400 font-bold">Direct Branch Transfer</span>
+            <span className="text-slate-400 dark:text-slate-600">·</span>
+            <span className={isClerk ? "text-slate-600 font-medium" : "text-slate-400 font-medium"}>Atomic Stock Sync</span>
           </div>
           <h1 className={theme.title}>
-            Inter-Branch Stock Transfers
+            <ArrowLeftRight className="w-7 h-7 text-teal-600 dark:text-teal-400" />
+            <span>Inter-Branch Stock Transfers</span>
           </h1>
           <p className={theme.subtitle}>
-            Execute safe transactional stock relocation between supermarket branches using database row-locks.
+            Execute ACID-compliant inventory relocations between branches. Deducts source inventory and credits target branch atomically.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5 shrink-0">
           <Link
             href="/inventory"
             className={theme.navLink}
@@ -249,136 +328,325 @@ export default function StockTransfersPage() {
           </Link>
           <Link
             href="/inventory/stock-alerts"
-            className={isClerk ? "px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 text-amber-700 border border-slate-200 text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-sm" : "px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 text-xs font-semibold transition-colors flex items-center gap-1.5"}
+            className={theme.alertLink}
           >
-            <AlertTriangle className="w-4 h-4" />
+            <AlertTriangle className="w-4 h-4 text-amber-500" />
             <span>Stock Alerts</span>
           </Link>
         </div>
       </div>
 
+      {/* KPI Overview Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Origin Branch */}
+        <div className={theme.kpiCard}>
+          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 font-medium">
+            <span>Origin Branch</span>
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+              isClerk ? "bg-teal-50 border border-teal-200 text-teal-700" : "bg-teal-500/10 border border-teal-500/20 text-teal-400"
+            }`}>
+              <Store className="w-4 h-4" />
+            </div>
+          </div>
+          <div className={`mt-2 text-base font-bold truncate ${isClerk ? "text-slate-900" : "text-white"}`}>
+            {fromBranch?.name ?? "Select Branch"}
+          </div>
+          <div className="text-[11px] font-mono text-teal-600 dark:text-teal-400 mt-0.5 flex items-center gap-1.5 font-semibold">
+            <span>Code: {fromBranch?.branch_code ?? "—"}</span>
+            <span className="text-slate-400">·</span>
+            <span className="text-slate-500 dark:text-slate-400">{fromBranch?.city ?? "Local"}</span>
+          </div>
+        </div>
+
+        {/* Transferable SKUs */}
+        <div className={theme.kpiCard}>
+          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 font-medium">
+            <span>Transferable SKUs</span>
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+              isClerk ? "bg-indigo-50 border border-indigo-200 text-indigo-700" : "bg-indigo-500/10 border border-indigo-500/20 text-indigo-400"
+            }`}>
+              <Package className="w-4 h-4" />
+            </div>
+          </div>
+          <div className={`mt-2 text-xl font-bold font-mono ${isClerk ? "text-slate-900" : "text-white"}`}>
+            {loadingProducts ? "—" : availableProducts.length}
+          </div>
+          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+            Products with available stock at origin
+          </div>
+        </div>
+
+        {/* Target Branch */}
+        <div className={theme.kpiCard}>
+          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 font-medium">
+            <span>Target Destination</span>
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+              isClerk ? "bg-blue-50 border border-blue-200 text-blue-700" : "bg-blue-500/10 border border-blue-500/20 text-blue-400"
+            }`}>
+              <Building2 className="w-4 h-4" />
+            </div>
+          </div>
+          <div className={`mt-2 text-base font-bold truncate ${isClerk ? "text-slate-900" : "text-white"}`}>
+            {toBranch?.name ?? "Select Target"}
+          </div>
+          <div className="text-[11px] font-mono text-blue-600 dark:text-blue-400 mt-0.5 flex items-center gap-1.5 font-semibold">
+            <span>Code: {toBranch?.branch_code ?? "—"}</span>
+            <span className="text-slate-400">·</span>
+            <span className="text-slate-500 dark:text-slate-400">{toBranch?.city ?? "Target"}</span>
+          </div>
+        </div>
+
+        {/* Total Relocations Logged */}
+        <div className={theme.kpiCard}>
+          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 font-medium">
+            <span>Transfer Audit Entries</span>
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+              isClerk ? "bg-emerald-50 border border-emerald-200 text-emerald-700" : "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400"
+            }`}>
+              <History className="w-4 h-4" />
+            </div>
+          </div>
+          <div className={`mt-2 text-xl font-bold font-mono ${isClerk ? "text-slate-900" : "text-white"}`}>
+            {loadingLogs ? "—" : transferLogs.length}
+          </div>
+          <div className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-0.5 font-medium">
+            Verified atomic transactions logged
+          </div>
+        </div>
+      </div>
+
       {/* Main Grid: Transfer Form + History */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Transfer Action Card */}
         <div className={`lg:col-span-5 ${theme.card}`}>
-          <div className="flex items-center justify-between">
-            <h2 className={theme.cardTitle}>
-              <ArrowLeftRight className="w-4 h-4 text-teal-600" />
-              <span>New Stock Relocation</span>
-            </h2>
-            <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-teal-500/10 text-teal-600 border border-teal-500/20 font-bold">
-              ACID Safe
+          <div className={`flex items-center justify-between border-b ${theme.cardHeaderBorder} pb-4`}>
+            <div className="flex items-center gap-2.5">
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                isClerk ? "bg-teal-50 border border-teal-200 text-teal-700" : "bg-teal-500/15 border border-teal-500/30 text-teal-400"
+              }`}>
+                <Send className="w-4 h-4" />
+              </div>
+              <div>
+                <h2 className={theme.cardTitle}>New Stock Relocation</h2>
+                <div className={theme.cardSubtext}>Dispatch stock between registered branches</div>
+              </div>
+            </div>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20 font-bold flex items-center gap-1">
+              <ShieldCheck className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+              <span>ACID Safe</span>
             </span>
           </div>
 
-          <form onSubmit={handleTransfer} className="space-y-4">
-            {/* From -> To Branches */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className={theme.label}>
-                  Source Branch
-                </label>
-                <select
-                  value={fromBranchId}
-                  onChange={(e) => setFromBranchId(Number(e.target.value))}
-                  disabled={currentEmployee?.role !== "ADMIN"}
-                  className={theme.select}
-                >
-                  {branches.map((b) => (
-                    <option key={b.branch_id} value={b.branch_id}>
-                      {b.name}
-                    </option>
-                  ))}
-                </select>
+          <form onSubmit={handleTransfer} className="space-y-4.5">
+            {/* Visual Corridor: From & To */}
+            <div className="space-y-2">
+              <div className={`flex items-center justify-between text-xs font-semibold ${isClerk ? "text-slate-700" : "text-slate-300"}`}>
+                <span>Transfer Corridor</span>
+                <span className="text-[10px] text-slate-500 font-mono">Real-time DB Route</span>
               </div>
-
-              <div>
-                <label className={theme.label}>
-                  Destination Branch
-                </label>
-                <select
-                  value={toBranchId}
-                  onChange={(e) => setToBranchId(Number(e.target.value))}
-                  className={theme.select}
-                >
-                  {branches
-                    .filter((b) => b.branch_id !== fromBranchId)
-                    .map((b) => (
+              <div className={theme.corridorBox}>
+                {/* Source Branch */}
+                <div>
+                  <label className="text-[10px] font-semibold text-teal-700 dark:text-teal-400 uppercase tracking-wider block mb-1">
+                    Origin Branch
+                  </label>
+                  <select
+                    value={fromBranchId}
+                    onChange={(e) => {
+                      setFromBranchId(Number(e.target.value));
+                      setSelectedProductId("");
+                      setTransferQty("");
+                    }}
+                    disabled={currentEmployee?.role !== "ADMIN"}
+                    className={theme.select}
+                  >
+                    {branches.map((b) => (
                       <option key={b.branch_id} value={b.branch_id}>
-                        {b.name}
+                        {b.name} ({b.branch_code})
                       </option>
                     ))}
-                </select>
+                  </select>
+                </div>
+
+                {/* Destination Branch */}
+                <div>
+                  <label className="text-[10px] font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wider block mb-1">
+                    Destination Branch
+                  </label>
+                  <select
+                    value={toBranchId}
+                    onChange={(e) => setToBranchId(Number(e.target.value))}
+                    className={theme.select}
+                  >
+                    {branches
+                      .filter((b) => b.branch_id !== fromBranchId)
+                      .map((b) => (
+                        <option key={b.branch_id} value={b.branch_id}>
+                          {b.name} ({b.branch_code})
+                        </option>
+                      ))}
+                  </select>
+                </div>
               </div>
             </div>
 
             {/* Product Picker */}
-            <div>
-              <label className={theme.label}>
-                Select Product to Relocate
-              </label>
+            <div className="space-y-1.5">
+              <div className={`flex items-center justify-between text-xs font-semibold ${isClerk ? "text-slate-700" : "text-slate-300"}`}>
+                <label htmlFor="product-select">Select Product</label>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                  {filteredProducts.length} available
+                </span>
+              </div>
+
+              {/* Optional Search filter if there are many products */}
+              {availableProducts.length > 5 && (
+                <div className="relative mb-2">
+                  <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
+                  <input
+                    type="text"
+                    value={productSearch}
+                    onChange={(e) => setProductSearch(e.target.value)}
+                    placeholder="Search product by name or barcode..."
+                    className={theme.searchInput}
+                  />
+                </div>
+              )}
+
               <select
+                id="product-select"
                 value={selectedProductId}
-                onChange={(e) => setSelectedProductId(e.target.value ? Number(e.target.value) : "")}
-                className={theme.select}
+                onChange={(e) => {
+                  setSelectedProductId(e.target.value ? Number(e.target.value) : "");
+                  setTransferQty("");
+                }}
+                className={theme.prodSelect}
               >
-                <option value="">-- Choose product with available stock --</option>
-                {products
-                  .filter((p) => p.quantity_on_hand > 0)
-                  .map((p) => (
-                    <option key={p.product_id} value={p.product_id}>
-                      {p.product_name} ({p.quantity_on_hand} in stock)
-                    </option>
-                  ))}
+                <option value="">-- Choose product from source inventory --</option>
+                {filteredProducts.map((p) => (
+                  <option key={p.product_id} value={p.product_id}>
+                    {p.product_name} — [{p.quantity_on_hand} available] ({p.barcode})
+                  </option>
+                ))}
               </select>
             </div>
 
-            {/* Stock Details preview */}
+            {/* Interactive Selected Product Snapshot & Presets */}
             {selectedProduct && (
-              <div className={theme.previewBox}>
-                <div className="flex justify-between">
-                  <span className={theme.previewLabel}>Product:</span>
-                  <span className={theme.previewVal}>{selectedProduct.product_name}</span>
+              <div className={theme.snapshotBox}>
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className={`text-xs font-bold flex items-center gap-1.5 ${isClerk ? "text-slate-900" : "text-white"}`}>
+                      <span>{selectedProduct.product_name}</span>
+                    </div>
+                    <div className="text-[10px] font-mono text-slate-500 mt-0.5">
+                      Barcode: <span className={isClerk ? "text-slate-800 font-semibold" : "text-slate-300"}>{selectedProduct.barcode}</span>
+                      {selectedProduct.category_name && (
+                        <> · <span className="text-teal-600 dark:text-teal-400 font-semibold">{selectedProduct.category_name}</span></>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className="text-[10px] uppercase font-bold text-slate-500 block">Available</span>
+                    <span className="text-base font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
+                      {selectedProduct.quantity_on_hand}
+                    </span>
+                    <span className="text-[10px] text-slate-500 ml-1">units</span>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className={theme.previewLabel}>Barcode:</span>
-                  <span className={`font-mono ${isClerk ? "text-slate-600" : "text-slate-300"}`}>{selectedProduct.barcode}</span>
+
+                {/* Quick Presets */}
+                <div>
+                  <div className="text-[10px] font-semibold text-slate-500 mb-1.5 flex items-center justify-between">
+                    <span>Quick Fill Quantity:</span>
+                    {selectedProduct.quantity_on_hand > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => applyPreset("max")}
+                        className="text-[10px] text-teal-600 dark:text-teal-400 hover:underline font-mono font-bold"
+                      >
+                        Transfer Max ({selectedProduct.quantity_on_hand})
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {[5, 10, 25, 50].map((preset) => (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => applyPreset(preset)}
+                        disabled={selectedProduct.quantity_on_hand < preset}
+                        className={theme.presetBtn}
+                      >
+                        +{preset}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => applyPreset("max")}
+                      className={theme.presetMaxBtn}
+                    >
+                      MAX
+                    </button>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className={theme.previewLabel}>Source Stock Available:</span>
-                  <span className="font-bold text-emerald-600 font-mono">
-                    {selectedProduct.quantity_on_hand} units
-                  </span>
-                </div>
+
+                {/* Real-time After Balance Preview */}
+                {Number(transferQty) > 0 && (
+                  <div className={theme.calcBox}>
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-500">Source Remaining:</span>
+                      <span className={`font-mono font-bold ${
+                        selectedProduct.quantity_on_hand - Number(transferQty) < 0
+                          ? "text-rose-600 font-black"
+                          : isClerk ? "text-slate-800" : "text-slate-200"
+                      }`}>
+                        {selectedProduct.quantity_on_hand - Number(transferQty)} units
+                      </span>
+                    </div>
+                    {selectedProduct.quantity_on_hand - Number(transferQty) < 0 && (
+                      <div className="text-[10px] text-rose-600 flex items-center gap-1 font-semibold pt-1">
+                        <AlertTriangle className="w-3 h-3 text-rose-600 shrink-0" />
+                        <span>Cannot transfer more than available stock!</span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
-            {/* Quantity */}
-            <div>
-              <label className={theme.label}>
-                Quantity to Transfer
+            {/* Quantity Input */}
+            <div className="space-y-1.5">
+              <label htmlFor="transfer-qty-input" className={`text-xs font-semibold block ${isClerk ? "text-slate-700" : "text-slate-300"}`}>
+                Quantity to Relocate
               </label>
-              <input
-                type="number"
-                min={1}
-                max={selectedProduct ? selectedProduct.quantity_on_hand : 9999}
-                value={transferQty}
-                onChange={(e) => setTransferQty(e.target.value ? Number(e.target.value) : "")}
-                placeholder="e.g. 20"
-                className={theme.input}
-              />
+              <div className="relative">
+                <input
+                  id="transfer-qty-input"
+                  type="number"
+                  min={1}
+                  max={selectedProduct ? selectedProduct.quantity_on_hand : 9999}
+                  value={transferQty}
+                  onChange={(e) => setTransferQty(e.target.value ? Number(e.target.value) : "")}
+                  placeholder="Enter unit quantity..."
+                  className={theme.input}
+                />
+                <span className="absolute right-3.5 top-2.5 text-xs font-mono text-slate-400 pointer-events-none">
+                  Units
+                </span>
+              </div>
             </div>
 
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={submitting || !selectedProductId || !transferQty}
-              className="w-full py-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-white text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-sm"
+              disabled={submitting || !selectedProductId || !transferQty || isQtyInvalid}
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-teal-600 via-teal-500 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-teal-900/20 active:scale-[0.99]"
             >
               {submitting ? (
                 <>
                   <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>Executing sp_transfer_stock...</span>
+                  <span>Processing Transfer...</span>
                 </>
               ) : (
                 <>
@@ -389,38 +657,62 @@ export default function StockTransfersPage() {
             </button>
           </form>
 
-          {/* ADBMS Technical Badge */}
-          <div className={theme.footerBox}>
-            <ShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+          {/* ADBMS Technical Info Footer */}
+          <div className={theme.acidBox}>
+            <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
             <div>
-              <strong className={isClerk ? "text-slate-800" : "text-slate-200"}>Database Transaction:</strong> Uses row-level locks (<code>FOR UPDATE</code>) to guarantee atomic balance deduction from Source Branch and credit to Target Branch without race conditions.
+              <strong className={isClerk ? "text-slate-900 font-bold" : "text-slate-200"}>ACID Transaction Guarantee:</strong> Uses row-level locks (<code className="text-teal-700 dark:text-teal-300 font-bold">FOR UPDATE</code>) to guarantee atomic balance deduction from Source Branch and credit to Destination Branch without race conditions.
             </div>
           </div>
         </div>
 
         {/* Transfer History Table */}
         <div className={theme.historyCard}>
-          <div className={theme.historyHeader}>
-            <div className="flex items-center gap-2">
-              <History className="w-4 h-4 text-teal-600" />
-              <h2 className={theme.historyTitle}>Transfer Audit Log</h2>
+          {/* Header & Search */}
+          <div className={theme.historyHeaderBg}>
+            <div className="flex items-center gap-2.5">
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                isClerk ? "bg-teal-50 border border-teal-200 text-teal-700" : "bg-teal-500/15 border border-teal-500/30 text-teal-400"
+              }`}>
+                <History className="w-4 h-4" />
+              </div>
+              <div>
+                <h2 className={theme.cardTitle}>Transfer Audit Log</h2>
+                <div className={theme.cardSubtext}>Immutable record of branch transfers</div>
+              </div>
             </div>
-            <button
-              onClick={fetchTransferLogs}
-              className={theme.historyRefreshBtn}
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>Refresh</span>
-            </button>
+
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Search className="w-3 h-3 absolute left-2.5 top-2.5 text-slate-400" />
+                <input
+                  type="text"
+                  value={logSearch}
+                  onChange={(e) => setLogSearch(e.target.value)}
+                  placeholder="Filter audit log..."
+                  className={theme.historySearchInput}
+                />
+              </div>
+              <button
+                onClick={fetchTransferLogs}
+                disabled={loadingLogs}
+                className={theme.historyRefreshBtn}
+                title="Refresh audit log"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingLogs ? "animate-spin text-teal-600" : ""}`} />
+                <span className="hidden sm:inline">Refresh</span>
+              </button>
+            </div>
           </div>
 
+          {/* Table Container */}
           <div className="overflow-x-auto flex-1">
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className={theme.thead}>
                   <th className="py-3 px-4">Timestamp</th>
-                  <th className="py-3 px-4">From $\rightarrow$ To</th>
-                  <th className="py-3 px-4">Product</th>
+                  <th className="py-3 px-4">Route (From $\rightarrow$ To)</th>
+                  <th className="py-3 px-4">Product Details</th>
                   <th className="py-3 px-4 text-right">Quantity</th>
                   <th className="py-3 px-4 text-right">Operator</th>
                 </tr>
@@ -428,44 +720,66 @@ export default function StockTransfersPage() {
               <tbody className={theme.tbodyDivide}>
                 {loadingLogs ? (
                   <tr>
-                    <td colSpan={5} className="py-12 text-center text-slate-500">
-                      <RefreshCw className="w-4 h-4 animate-spin mx-auto mb-2 text-teal-600" />
+                    <td colSpan={5} className="py-14 text-center text-slate-500">
+                      <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-teal-600 dark:text-teal-400" />
                       Loading transfer history...
                     </td>
                   </tr>
-                ) : transferLogs.length === 0 ? (
+                ) : filteredLogs.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="py-12 text-center text-slate-500">
-                      No stock transfers recorded yet for this branch.
+                    <td colSpan={5} className="py-14 text-center text-slate-500">
+                      <div className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 mx-auto mb-2.5">
+                        <ArrowLeftRight className="w-5 h-5" />
+                      </div>
+                      <div className="font-semibold text-slate-600 dark:text-slate-400">No transfer records found</div>
+                      <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
+                        {logSearch ? "Try clearing your search filter" : "Execute a stock relocation above to create the first record"}
+                      </div>
                     </td>
                   </tr>
                 ) : (
-                  transferLogs.map((log) => {
-                    const fromName = getBranchName(log.details?.from_branch_id);
-                    const toName = getBranchName(log.details?.to_branch_id);
+                  filteredLogs.map((log) => {
+                    const fromName = getBranch(log.details?.from_branch_id)?.name || `Branch #${log.details?.from_branch_id}`;
+                    const toName = getBranch(log.details?.to_branch_id)?.name || `Branch #${log.details?.to_branch_id}`;
+                    const displayProduct = log.product_name || `Product #${log.details?.product_id}`;
+                    const displayOperator = log.operator_name || log.changed_by;
 
                     return (
                       <tr key={log.log_id} className={theme.rowHover}>
-                        <td className={theme.logTimestamp}>
-                          {new Date(log.changed_at).toLocaleString()}
+                        <td className="py-3 px-4 font-mono text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                          {new Date(log.changed_at).toLocaleString([], {
+                            month: "short",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
                         </td>
-                        <td className="py-3 px-4">
-                          <div className={theme.logBranchText}>
-                            <span>{fromName}</span>
-                            <ArrowRight className="w-3 h-3 text-teal-600" />
-                            <span className={isClerk ? "text-teal-700 font-bold" : "text-teal-300 font-bold"}>{toName}</span>
+                        <td className="py-3 px-4 whitespace-nowrap">
+                          <div className="flex items-center gap-1.5 font-medium text-xs">
+                            <span className={isClerk ? "text-slate-800 font-semibold" : "text-slate-300 font-semibold"}>{fromName}</span>
+                            <ArrowRight className="w-3 h-3 text-teal-600 dark:text-teal-400 shrink-0" />
+                            <span className="text-teal-700 dark:text-teal-300 font-bold">{toName}</span>
                           </div>
                         </td>
-                        <td className={theme.logProduct}>
-                          Product #{log.details?.product_id}
+                        <td className="py-3 px-4">
+                          <div className={theme.itemText} title={displayProduct}>
+                            {displayProduct}
+                          </div>
+                          {log.barcode ? (
+                            <div className="text-[10px] font-mono text-slate-400">{log.barcode}</div>
+                          ) : (
+                            <div className="text-[10px] font-mono text-slate-400">ID #{log.details?.product_id}</div>
+                          )}
                         </td>
-                        <td className="py-3 px-4 text-right font-mono">
-                          <span className={theme.logQtyBadge}>
+                        <td className="py-3 px-4 text-right whitespace-nowrap">
+                          <span className={theme.qtyBadge}>
                             {log.details?.quantity} units
                           </span>
                         </td>
-                        <td className={theme.logOperator}>
-                          {log.changed_by}
+                        <td className="py-3 px-4 text-right whitespace-nowrap">
+                          <span className={theme.operatorPill}>
+                            {displayOperator}
+                          </span>
                         </td>
                       </tr>
                     );

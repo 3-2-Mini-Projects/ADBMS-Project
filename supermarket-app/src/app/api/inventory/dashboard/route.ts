@@ -12,6 +12,13 @@ export async function GET(req: Request) {
     const batchBranchFilter = branchId ? "AND pb.branch_id = ?" : "";
     const params = branchId ? [branchId] : [];
 
+    // Ensure any expired batches past 12:00 AM are automatically recorded in disposal history
+    try {
+      await query("CALL sp_auto_dispose_expired_batches()");
+    } catch (err: any) {
+      console.warn("sp_auto_dispose_expired_batches error in dashboard GET:", err.message);
+    }
+
     // 1. Overall inventory metrics
     const [summary]: any = await query(
       `SELECT

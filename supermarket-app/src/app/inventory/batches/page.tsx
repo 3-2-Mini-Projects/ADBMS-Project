@@ -51,7 +51,7 @@ function StatusBadge({
   daysToExpiry?: number;
   isClerk?: boolean;
 }) {
-  if (status === "EXPIRED") {
+  if (status === "EXPIRED" || (daysToExpiry !== undefined && daysToExpiry < 0)) {
     return (
       <span
         className={`inline-flex items-center gap-1 text-[10px] font-mono px-2.5 py-1 rounded-full font-bold ${
@@ -65,13 +65,31 @@ function StatusBadge({
       </span>
     );
   }
-  if (status === "NEAR_EXPIRY" || status === "EXPIRING_SOON") {
+  if (daysToExpiry === 0) {
+    return (
+      <span
+        className={`inline-flex items-center gap-1 text-[10px] font-mono px-2.5 py-1 rounded-full font-bold ${
+          isClerk
+            ? "bg-amber-100 text-amber-800 border border-amber-300"
+            : "bg-amber-900/70 text-amber-300 border border-amber-700/60 animate-pulse"
+        }`}
+      >
+        <AlertTriangle className="w-2.5 h-2.5" />
+        EXPIRING TODAY
+      </span>
+    );
+  }
+  if (
+    status === "NEAR_EXPIRY" ||
+    status === "EXPIRING_SOON" ||
+    (daysToExpiry !== undefined && daysToExpiry <= 30)
+  ) {
     return (
       <span
         className={`inline-flex items-center gap-1 text-[10px] font-mono px-2.5 py-1 rounded-full font-bold ${
           isClerk
             ? "bg-amber-50 text-amber-700 border border-amber-200"
-            : "bg-amber-950/70 text-amber-400 border border-amber-800/60 animate-pulse"
+            : "bg-amber-950/70 text-amber-400 border border-amber-800/60"
         }`}
       >
         <AlertTriangle className="w-2.5 h-2.5" />
@@ -207,11 +225,13 @@ export default function InventoryBatchesPage() {
   const handleOpenDisposal = (batch: ProductBatch) => {
     setSelectedDisposalBatch(batch);
     setDisposalQty(batch.quantity);
-    const isExpired =
-      batch.expiry_status === "EXPIRED" ||
-      batch.status === "EXPIRED" ||
-      (batch.days_to_expiry !== undefined && Number(batch.days_to_expiry) < 0);
-    setDisposalReason(isExpired ? "EXPIRED" : "DAMAGED");
+    const daysLeft =
+      batch.days_to_expiry !== undefined ? Number(batch.days_to_expiry) : null;
+    const isExpiredOrToday =
+      daysLeft !== null
+        ? daysLeft <= 0
+        : (batch.expiry_status === "EXPIRED" || batch.status === "EXPIRED");
+    setDisposalReason(isExpiredOrToday ? "EXPIRED" : "DAMAGED");
     setDisposalModalOpen(true);
   };
 
@@ -231,7 +251,7 @@ export default function InventoryBatchesPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        showToast(data.message || "Stock disposed successfully via sp_record_stock_disposal!", "success");
+        showToast(data.message || "Stock disposed successfully!", "success");
         setDisposalModalOpen(false);
         fetchSummary();
         fetchBatches();
@@ -559,14 +579,18 @@ export default function InventoryBatchesPage() {
                   const daysLeft =
                     b.days_to_expiry !== undefined ? Number(b.days_to_expiry) : null;
                   const isExpired =
-                    b.status === "EXPIRED" ||
-                    b.expiry_status === "EXPIRED" ||
-                    (daysLeft !== null && daysLeft < 0);
+                    daysLeft !== null
+                      ? daysLeft < 0
+                      : (b.status === "EXPIRED" || b.expiry_status === "EXPIRED");
+                  const isExpiringToday = daysLeft === 0;
                   const isNearExpiry =
-                    b.status === "NEAR_EXPIRY" ||
-                    b.expiry_status === "NEAR_EXPIRY" ||
-                    b.expiry_status === "EXPIRING_SOON" ||
-                    (daysLeft !== null && daysLeft >= 0 && daysLeft <= 14);
+                    !isExpired &&
+                    (isExpiringToday ||
+                      (daysLeft !== null
+                        ? daysLeft <= 30
+                        : (b.status === "NEAR_EXPIRY" ||
+                           b.expiry_status === "NEAR_EXPIRY" ||
+                           b.expiry_status === "EXPIRING_SOON")));
                   const batchStatus = isExpired ? "EXPIRED" : isNearExpiry ? "NEAR_EXPIRY" : "GOOD";
 
                   return (
@@ -618,12 +642,14 @@ export default function InventoryBatchesPage() {
                             {Math.abs(daysLeft)}d ago
                           </span>
                         ) : daysLeft === 0 ? (
-                          <span className="text-rose-500 font-bold">Today</span>
+                          <span className="text-amber-600 dark:text-amber-400 font-black">Today</span>
                         ) : (
                           <span
                             className={
-                              daysLeft <= 14
-                                ? "text-amber-500 font-bold"
+                              daysLeft <= 30
+                                ? "text-amber-600 dark:text-amber-400 font-bold"
+                                : isClerk
+                                ? "text-slate-600"
                                 : "opacity-80"
                             }
                           >
@@ -637,9 +663,7 @@ export default function InventoryBatchesPage() {
                         <StatusBadge
                           status={batchStatus}
                           isClerk={isClerk}
-                          daysToExpiry={
-                            daysLeft !== null && daysLeft >= 0 ? daysLeft : undefined
-                          }
+                          daysToExpiry={daysLeft !== null ? daysLeft : undefined}
                         />
                       </td>
 
@@ -650,10 +674,14 @@ export default function InventoryBatchesPage() {
                           disabled={b.quantity <= 0}
                           className={`p-1.5 rounded-lg border text-xs font-semibold transition-all inline-flex items-center gap-1 shadow-sm disabled:opacity-40 ${
                             batchStatus === "EXPIRED"
-                              ? "bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border-rose-500/30"
+                              ? isClerk
+                                ? "bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200"
+                                : "bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border-rose-500/30"
+                              : isClerk
+                              ? "bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200"
                               : "bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700"
                           }`}
-                          title="Dispose / Write-off stock via sp_record_stock_disposal"
+                          title="Dispose / Write-off stock"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                           <span className="hidden md:inline">Write Off</span>
@@ -675,7 +703,7 @@ export default function InventoryBatchesPage() {
             </span>
             <span className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-amber-500 inline-block" />
-              Expiring &lt;= 14 days
+              Expiring &le; 30 days
             </span>
             <span className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-rose-500 inline-block" />
@@ -690,44 +718,52 @@ export default function InventoryBatchesPage() {
 
       {/* MODAL: Stock Disposal / Write-Off */}
       {disposalModalOpen && selectedDisposalBatch && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4 text-white">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in duration-200 ${
+          isClerk ? "bg-slate-900/60 backdrop-blur-sm" : "bg-black/75 backdrop-blur-sm"
+        }`}>
+          <div className={`rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4 border ${
+            isClerk ? "bg-white border-slate-200 text-slate-900" : "bg-slate-900 border-slate-700 text-white"
+          }`}>
+            <div className={`flex items-center justify-between pb-3 border-b ${isClerk ? "border-slate-100" : "border-slate-800"}`}>
               <div className="flex items-center gap-2">
-                <Trash2 className="w-4 h-4 text-rose-400" />
-                <h3 className="font-bold text-sm text-white">
+                <Trash2 className="w-4 h-4 text-rose-500" />
+                <h3 className={`font-bold text-sm ${isClerk ? "text-slate-900" : "text-white"}`}>
                   Stock Disposal / Write-Off
                 </h3>
               </div>
               <button
                 onClick={() => setDisposalModalOpen(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-white transition-colors"
+                className={`p-1 rounded-lg transition-colors ${
+                  isClerk ? "text-slate-400 hover:text-slate-700 hover:bg-slate-100" : "text-slate-400 hover:text-white"
+                }`}
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 text-xs space-y-1">
-              <div className="flex justify-between text-slate-400">
-                <span>Batch No:</span>
-                <span className="font-mono font-bold text-indigo-400">{selectedDisposalBatch.batch_no}</span>
+            <div className={`p-3.5 rounded-xl border text-xs space-y-1.5 ${
+              isClerk ? "bg-slate-50 border-slate-200" : "bg-slate-950 border-slate-800"
+            }`}>
+              <div className="flex justify-between">
+                <span className={isClerk ? "text-slate-500" : "text-slate-400"}>Batch No:</span>
+                <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">{selectedDisposalBatch.batch_no}</span>
               </div>
-              <div className="flex justify-between text-slate-400">
-                <span>Product:</span>
-                <span className="font-semibold text-white">{selectedDisposalBatch.product_name}</span>
+              <div className="flex justify-between">
+                <span className={isClerk ? "text-slate-500" : "text-slate-400"}>Product:</span>
+                <span className={`font-semibold ${isClerk ? "text-slate-900" : "text-white"}`}>{selectedDisposalBatch.product_name}</span>
               </div>
-              <div className="flex justify-between text-slate-400">
-                <span>Branch:</span>
-                <span className="text-slate-300">{selectedDisposalBatch.branch_name}</span>
+              <div className="flex justify-between">
+                <span className={isClerk ? "text-slate-500" : "text-slate-400"}>Branch:</span>
+                <span className={isClerk ? "text-slate-700 font-medium" : "text-slate-300"}>{selectedDisposalBatch.branch_name}</span>
               </div>
-              <div className="flex justify-between text-slate-400">
-                <span>Current Batch Stock:</span>
-                <span className="font-bold text-emerald-400 font-mono">{selectedDisposalBatch.quantity} units</span>
+              <div className="flex justify-between">
+                <span className={isClerk ? "text-slate-500" : "text-slate-400"}>Current Batch Stock:</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono">{selectedDisposalBatch.quantity} units</span>
               </div>
               {selectedDisposalBatch.expiry_date && (
-                <div className="flex justify-between text-slate-400">
-                  <span>Expiry Date:</span>
-                  <span className={`font-mono font-semibold ${(selectedDisposalBatch.expiry_status || selectedDisposalBatch.status) === "EXPIRED" ? "text-rose-400" : "text-amber-400"}`}>
+                <div className="flex justify-between">
+                  <span className={isClerk ? "text-slate-500" : "text-slate-400"}>Expiry Date:</span>
+                  <span className={`font-mono font-semibold ${(selectedDisposalBatch.expiry_status || selectedDisposalBatch.status) === "EXPIRED" ? "text-rose-600 dark:text-rose-400" : "text-amber-600 dark:text-amber-400"}`}>
                     {formatDate(selectedDisposalBatch.expiry_date)} ({selectedDisposalBatch.expiry_status || selectedDisposalBatch.status})
                   </span>
                 </div>
@@ -736,7 +772,7 @@ export default function InventoryBatchesPage() {
 
             <form onSubmit={handleDisposalSubmit} className="space-y-4">
               <div>
-                <label className="text-xs font-semibold text-slate-300 block mb-1">
+                <label className={`text-xs font-semibold block mb-1 ${isClerk ? "text-slate-700" : "text-slate-300"}`}>
                   Quantity to Write Off / Dispose
                 </label>
                 <input
@@ -746,18 +782,26 @@ export default function InventoryBatchesPage() {
                   required
                   value={disposalQty}
                   onChange={(e) => setDisposalQty(e.target.value ? Number(e.target.value) : "")}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs font-mono text-white focus:outline-none focus:border-rose-500"
+                  className={`w-full px-3 py-2 rounded-xl text-xs font-mono focus:outline-none focus:border-rose-500 transition-all ${
+                    isClerk
+                      ? "bg-white border border-slate-300 text-slate-900 focus:ring-2 focus:ring-rose-100"
+                      : "bg-slate-950 border border-slate-700 text-white"
+                  }`}
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-300 block mb-1">
+                <label className={`text-xs font-semibold block mb-1 ${isClerk ? "text-slate-700" : "text-slate-300"}`}>
                   Disposal Reason
                 </label>
                 <select
                   value={disposalReason}
                   onChange={(e) => setDisposalReason(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus:outline-none focus:border-rose-500 cursor-pointer"
+                  className={`w-full px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-rose-500 cursor-pointer transition-all ${
+                    isClerk
+                      ? "bg-white border border-slate-300 text-slate-900 focus:ring-2 focus:ring-rose-100"
+                      : "bg-slate-950 border border-slate-700 text-white"
+                  }`}
                 >
                   <option value="EXPIRED">EXPIRED (Passed Expiration Date)</option>
                   <option value="DAMAGED">DAMAGED (Crushed / Broken Packaging)</option>
@@ -767,15 +811,23 @@ export default function InventoryBatchesPage() {
                 </select>
               </div>
 
-              <div className="text-[11px] text-slate-400 bg-rose-500/10 border border-rose-500/20 p-2.5 rounded-xl">
-                ⚠️ Executing this will permanently deduct stock from <strong>product_batches</strong> and <strong>inventory</strong> via <code>sp_record_stock_disposal</code> and write an entry into <strong>audit_log</strong>.
+              <div className={`text-[11px] p-2.5 rounded-xl border ${
+                isClerk
+                  ? "bg-rose-50 text-rose-800 border-rose-200"
+                  : "text-slate-400 bg-rose-500/10 border-rose-500/20"
+              }`}>
+                ⚠️ Executing this will permanently deduct stock from batch and branch inventory and record an official write-off entry in the audit history.
               </div>
 
               <div className="flex items-center gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setDisposalModalOpen(false)}
-                  className="w-1/3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
+                  className={`w-1/3 py-2.5 rounded-xl text-xs font-semibold transition-colors ${
+                    isClerk
+                      ? "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
+                      : "bg-slate-800 hover:bg-slate-700 text-slate-300"
+                  }`}
                 >
                   Cancel
                 </button>
@@ -804,32 +856,42 @@ export default function InventoryBatchesPage() {
 
       {/* MODAL: Disposal History Log */}
       {historyModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl p-6 shadow-2xl space-y-4 text-white max-h-[85vh] flex flex-col">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in duration-200 ${
+          isClerk ? "bg-slate-900/60 backdrop-blur-sm" : "bg-black/75 backdrop-blur-sm"
+        }`}>
+          <div className={`rounded-2xl w-full max-w-2xl p-6 shadow-2xl space-y-4 max-h-[85vh] flex flex-col border ${
+            isClerk ? "bg-white border-slate-200 text-slate-900" : "bg-slate-900 border-slate-700 text-white"
+          }`}>
+            <div className={`flex items-center justify-between pb-3 border-b ${isClerk ? "border-slate-100" : "border-slate-800"}`}>
               <div className="flex items-center gap-2">
-                <History className="w-4 h-4 text-rose-400" />
+                <History className="w-4 h-4 text-rose-500" />
                 <div>
-                  <h3 className="font-bold text-sm text-white">
+                  <h3 className={`font-bold text-sm ${isClerk ? "text-slate-900" : "text-white"}`}>
                     Stock Disposal & Write-Off Audit Trail
                   </h3>
-                  <div className="text-[11px] text-slate-400 font-mono">
-                    vw_stock_movement_audit • table: product_batches
+                  <div className={`text-[11px] ${isClerk ? "text-slate-500 font-medium" : "text-slate-400"}`}>
+                    Verified inventory disposal records & audit history
                   </div>
                 </div>
               </div>
               <button
                 onClick={() => setHistoryModalOpen(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-white transition-colors"
+                className={`p-1 rounded-lg transition-colors ${
+                  isClerk ? "text-slate-400 hover:text-slate-700 hover:bg-slate-100" : "text-slate-400 hover:text-white"
+                }`}
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="overflow-x-auto flex-1 border border-slate-800 rounded-xl bg-slate-950/60">
+            <div className={`overflow-x-auto flex-1 border rounded-xl ${
+              isClerk ? "border-slate-200 bg-white" : "border-slate-800 bg-slate-950/60"
+            }`}>
               <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="border-b border-slate-800 bg-slate-950/80 text-slate-400 text-[11px] font-semibold">
+                  <tr className={`border-b text-[11px] font-semibold uppercase tracking-wider ${
+                    isClerk ? "border-slate-200 bg-slate-50 text-slate-600" : "border-slate-800 bg-slate-950/80 text-slate-400"
+                  }`}>
                     <th className="py-2.5 px-3 font-mono">Timestamp</th>
                     <th className="py-2.5 px-3">Batch ID</th>
                     <th className="py-2.5 px-3 text-right">Qty Written Off</th>
@@ -837,40 +899,52 @@ export default function InventoryBatchesPage() {
                     <th className="py-2.5 px-3 text-right">Authorized By</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/50">
+                <tbody className={isClerk ? "divide-y divide-slate-100" : "divide-y divide-slate-800/50"}>
                   {loadingHistory ? (
                     <tr>
                       <td colSpan={5} className="py-12 text-center text-slate-500">
-                        <RefreshCw className="w-4 h-4 animate-spin mx-auto text-rose-400 mb-2" />
+                        <RefreshCw className="w-4 h-4 animate-spin mx-auto text-rose-500 mb-2" />
                         Loading disposal audit trail...
                       </td>
                     </tr>
                   ) : disposalHistory.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="py-12 text-center text-slate-500">
-                        <CheckCircle2 className="w-5 h-5 mx-auto text-emerald-400 mb-1 opacity-70" />
+                        <CheckCircle2 className="w-5 h-5 mx-auto text-emerald-500 mb-1 opacity-70" />
                         No stock disposals recorded for this filter yet.
                       </td>
                     </tr>
                   ) : (
                     disposalHistory.map((item) => (
-                      <tr key={item.log_id} className="hover:bg-slate-800/40 transition-colors">
-                        <td className="py-2.5 px-3 font-mono text-[11px] text-slate-400">
+                      <tr key={item.log_id} className={isClerk ? "hover:bg-slate-50 transition-colors" : "hover:bg-slate-800/40 transition-colors"}>
+                        <td className={`py-2.5 px-3 font-mono text-[11px] ${isClerk ? "text-slate-500" : "text-slate-400"}`}>
                           {new Date(item.changed_at).toLocaleString()}
                         </td>
-                        <td className="py-2.5 px-3 font-mono font-bold text-indigo-400">
+                        <td className={`py-2.5 px-3 font-mono font-bold ${isClerk ? "text-indigo-600" : "text-indigo-400"}`}>
                           Batch #{item.details?.batch_id || item.record_id?.replace("disposal_batch_", "")}
                         </td>
-                        <td className="py-2.5 px-3 text-right font-mono font-bold text-rose-400">
+                        <td className="py-2.5 px-3 text-right font-mono font-bold text-rose-600 dark:text-rose-400">
                           -{item.details?.quantity} units
                         </td>
                         <td className="py-2.5 px-3 text-center">
-                          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-500/15 text-rose-300 border border-rose-500/30">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                            isClerk ? "bg-rose-50 text-rose-700 border border-rose-200" : "bg-rose-500/15 text-rose-300 border border-rose-500/30"
+                          }`}>
                             {item.details?.reason || "EXPIRED"}
                           </span>
                         </td>
-                        <td className="py-2.5 px-3 text-right font-mono text-slate-300">
-                          {item.changed_by}
+                        <td className={`py-2.5 px-3 text-right font-mono ${isClerk ? "text-slate-700" : "text-slate-300"}`}>
+                          {item.changed_by?.includes("SYSTEM") || item.details?.event === "AUTO_MIDNIGHT_EXPIRY" ? (
+                            <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                              isClerk
+                                ? "bg-blue-50 text-blue-700 border border-blue-200"
+                                : "bg-blue-950/60 text-blue-300 border border-blue-800"
+                            }`}>
+                              ⚡ 12:00 AM Auto
+                            </span>
+                          ) : (
+                            item.changed_by
+                          )}
                         </td>
                       </tr>
                     ))
@@ -879,12 +953,16 @@ export default function InventoryBatchesPage() {
               </table>
             </div>
 
-            <div className="pt-2 border-t border-slate-800 flex justify-between items-center text-xs text-slate-400">
+            <div className={`pt-2 border-t flex justify-between items-center text-xs ${
+              isClerk ? "border-slate-100 text-slate-500" : "border-slate-800 text-slate-400"
+            }`}>
               <span>Showing up to 50 recent write-off entries from <code>audit_log</code>.</span>
               <button
                 type="button"
                 onClick={() => setHistoryModalOpen(false)}
-                className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold"
+                className={`px-4 py-1.5 rounded-lg font-semibold transition-colors ${
+                  isClerk ? "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200" : "bg-slate-800 hover:bg-slate-700 text-slate-200"
+                }`}
               >
                 Close
               </button>
