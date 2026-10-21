@@ -115,6 +115,10 @@ export default function CashierDashboardPage() {
           discountTotal: sale.discount_total,
           taxTotal: sale.tax_total,
           totalAmount: sale.total_amount,
+          tendered_cash: sale.tendered_cash ?? sale.amountTendered,
+          amountTendered: sale.amountTendered !== undefined ? Number(sale.amountTendered) : (sale.tendered_cash !== undefined && sale.tendered_cash !== null ? Number(sale.tendered_cash) : undefined),
+          changeDue: sale.changeDue !== undefined ? Number(sale.changeDue) : (sale.change_amount !== undefined && sale.change_amount !== null ? Number(sale.change_amount) : undefined),
+          change_amount: sale.change_amount ?? sale.changeDue,
           payments: sale.payments || [],
         });
       }
@@ -127,7 +131,7 @@ export default function CashierDashboardPage() {
     `Rs. ${Number(n || 0).toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 24, paddingBottom: 40 }}>
       {/* Welcome Banner */}
       <div
         style={{

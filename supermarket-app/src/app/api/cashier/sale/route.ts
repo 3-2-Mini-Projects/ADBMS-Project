@@ -139,24 +139,35 @@ export async function POST(req: Request) {
       // Step B: Validate payments sum matches or covers total
       const totalPayments = payments.reduce((acc, p) => acc + Number(p.amount), 0);
       const isCashPayment = payments.some((p) => p.method === "CASH");
-      const effectiveTendered = amountTendered ? Number(amountTendered) : totalPayments;
+      const nonCashTotal = payments
+        .filter((p) => p.method !== "CASH")
+        .reduce((acc, p) => acc + Number(p.amount), 0);
+      const cashLine = payments.find((p) => p.method === "CASH");
+      const cashLineAmount = cashLine ? Number(cashLine.amount) : 0;
 
-      if (effectiveTendered < calculatedGrandTotal - 0.05) {
+      // When split payment is used (e.g. POINTS + CASH), effective total tendered includes non-cash payments plus cash tendered
+      const effectiveCashTendered = amountTendered !== undefined && amountTendered !== null
+        ? Number(amountTendered)
+        : cashLineAmount;
+      const totalEffectiveTendered = nonCashTotal + effectiveCashTendered;
+
+      if (totalPayments < calculatedGrandTotal - 0.05 && totalEffectiveTendered < calculatedGrandTotal - 0.05) {
         throw new Error(
-          `Total payment (Rs. ${effectiveTendered.toFixed(2)}) is less than total amount due (Rs. ${calculatedGrandTotal.toFixed(2)})`
+          `Total payment (Rs. ${Math.max(totalPayments, totalEffectiveTendered).toFixed(2)}) is less than total amount due (Rs. ${calculatedGrandTotal.toFixed(2)})`
         );
       }
 
-      const changeDue = isCashPayment && effectiveTendered > calculatedGrandTotal
-        ? Number((effectiveTendered - calculatedGrandTotal).toFixed(2))
+      const changeDue = isCashPayment && effectiveCashTendered > cashLineAmount
+        ? Number((effectiveCashTendered - cashLineAmount).toFixed(2))
         : 0;
 
       // Step C: Create the sale record
       const [saleInsertResult]: any = await conn.query(
         `INSERT INTO sales (
           branch_id, cashier_id, customer_id, promo_id, coupon_id,
-          sale_date, status, subtotal, discount_total, tax_total, total_amount
-        ) VALUES (?, ?, ?, ?, ?, NOW(), 'COMPLETED', ?, ?, ?, ?)`,
+          sale_date, status, subtotal, discount_total, tax_total, total_amount,
+          tendered_cash, change_amount
+        ) VALUES (?, ?, ?, ?, ?, NOW(), 'COMPLETED', ?, ?, ?, ?, ?, ?)`,
         [
           branchId,
           cashierId,
@@ -167,6 +178,8 @@ export async function POST(req: Request) {
           calculatedDiscountTotal.toFixed(2),
           calculatedTaxTotal.toFixed(2),
           calculatedGrandTotal.toFixed(2),
+          effectiveCashTendered.toFixed(2),
+          changeDue.toFixed(2),
         ]
       );
 
@@ -212,16 +225,126 @@ export async function POST(req: Request) {
         );
       }
 
+      // Step F: Loyalty Points Processing (Atomic with transaction)
+      let pointsEarned = 0;
+      let pointsRedeemed = 0;
+      let updatedPointsBalance: number | null = null;
+      let updatedTier: string | null = null;
+
+      if (customerId) {
+        const [custRows]: any = await conn.query(
+          `SELECT customer_id, card_no, full_name, tier, points_balance, is_active FROM customers WHERE customer_id = ? FOR UPDATE`,
+          [customerId]
+        );
+
+        if (custRows && custRows.length > 0) {
+          const cust = custRows[0];
+          if (cust.is_active) {
+            let currentBal = Number(cust.points_balance || 0);
+
+            // 1. If customer redeemed points as payment
+            const pointsPayment = payments.find((p) => p.method === "POINTS");
+            if (pointsPayment && Number(pointsPayment.amount) > 0) {
+              pointsRedeemed = Math.round(Number(pointsPayment.amount));
+              if (currentBal < pointsRedeemed) {
+                throw new Error(
+                  `Insufficient loyalty points. Customer has ${currentBal} points, but attempted to redeem ${pointsRedeemed} points.`
+                );
+              }
+              if (pointsRedeemed > Math.floor(calculatedGrandTotal)) {
+                throw new Error(
+                  `Cannot redeem more points (${pointsRedeemed}) than the total bill amount (Rs. ${calculatedGrandTotal.toFixed(2)}).`
+                );
+              }
+              currentBal -= pointsRedeemed;
+              await conn.query(
+                `INSERT INTO loyalty_transactions (
+                  customer_id, branch_id, sale_id, points, type, note, created_at
+                ) VALUES (?, ?, ?, ?, 'REDEEM', 'Points redeemed for POS purchase discount', NOW())`,
+                [customerId, branchId, saleId, -pointsRedeemed]
+              );
+            }
+
+            // 2. Calculate earned points: 1 point for every Rs. 100 spent (with tier multiplier)
+            // Business Rule: If customer redeemed points (partial or full payment), no points are earned on this transaction.
+            if (pointsRedeemed === 0) {
+              let multiplier = 1.0;
+              if (cust.tier === "SILVER") multiplier = 1.1;
+              else if (cust.tier === "GOLD") multiplier = 1.25;
+              else if (cust.tier === "PLATINUM") multiplier = 1.5;
+
+              pointsEarned = Math.floor((calculatedGrandTotal / 100) * multiplier);
+
+              if (pointsEarned > 0) {
+                currentBal += pointsEarned;
+                await conn.query(
+                  `INSERT INTO loyalty_transactions (
+                    customer_id, branch_id, sale_id, points, type, note, created_at
+                  ) VALUES (?, ?, ?, ?, 'EARN', ?, NOW())`,
+                  [
+                    customerId,
+                    branchId,
+                    saleId,
+                    pointsEarned,
+                    `Points earned from purchase (${cust.tier} tier: ${multiplier}x)`,
+                  ]
+                );
+              }
+            } else {
+              pointsEarned = 0;
+            }
+
+            // 3. Update customer balance
+            await conn.query(
+              `UPDATE customers SET points_balance = ? WHERE customer_id = ?`,
+              [currentBal, customerId]
+            );
+            updatedPointsBalance = currentBal;
+
+            // 4. Automatic tier progression check
+            const [spendRow]: any = await conn.query(
+              `SELECT COALESCE(SUM(total_amount), 0) AS total_spent FROM sales WHERE customer_id = ? AND status = 'COMPLETED'`,
+              [customerId]
+            );
+            const totalSpent = Number(spendRow[0]?.total_spent || 0) + calculatedGrandTotal;
+            let targetTier = "BRONZE";
+            if (totalSpent >= 100000) targetTier = "PLATINUM";
+            else if (totalSpent >= 50000) targetTier = "GOLD";
+            else if (totalSpent >= 20000) targetTier = "SILVER";
+
+            if (targetTier !== cust.tier) {
+              await conn.query(`UPDATE customers SET tier = ? WHERE customer_id = ?`, [targetTier, customerId]);
+              try {
+                await conn.query(
+                  `INSERT INTO customer_tier_history (customer_id, old_tier, new_tier, reason, changed_at)
+                   VALUES (?, ?, ?, 'Automatic tier progression upon purchase milestone', NOW())`,
+                  [customerId, cust.tier, targetTier]
+                );
+              } catch (thErr) {
+                console.warn("Tier history write error:", thErr);
+              }
+              updatedTier = targetTier;
+            } else {
+              updatedTier = cust.tier;
+            }
+          }
+        }
+      }
+
       return {
         saleId,
         subtotal: calculatedSubtotal,
         discountTotal: calculatedDiscountTotal,
         taxTotal: calculatedTaxTotal,
         totalAmount: calculatedGrandTotal,
-        amountTendered: effectiveTendered,
+        amountTendered: effectiveCashTendered,
         changeDue,
         items: validatedItems,
         payments,
+        pointsEarned,
+        pointsRedeemed,
+        updatedPointsBalance,
+        updatedTier,
       };
     });
 
@@ -240,7 +363,15 @@ export async function POST(req: Request) {
         `SELECT customer_id, card_no, full_name, phone, tier, points_balance FROM customers WHERE customer_id = ?`,
         [customerId]
       );
-      customerInfo = cust || null;
+      if (cust) {
+        customerInfo = {
+          ...cust,
+          points_earned: saleResult.pointsEarned,
+          points_redeemed: saleResult.pointsRedeemed,
+          points_balance: saleResult.updatedPointsBalance ?? cust.points_balance,
+          tier: saleResult.updatedTier ?? cust.tier,
+        };
+      }
     }
 
     const receiptNumber = `REC-${branchInfo?.branch_code || "BR"}-${String(saleResult.saleId).padStart(6, "0")}`;
@@ -257,7 +388,9 @@ export async function POST(req: Request) {
       discountTotal: saleResult.discountTotal,
       taxTotal: saleResult.taxTotal,
       totalAmount: saleResult.totalAmount,
+      tendered_cash: saleResult.amountTendered,
       amountTendered: saleResult.amountTendered,
+      change_amount: saleResult.changeDue,
       changeDue: saleResult.changeDue,
       payments: saleResult.payments,
     };

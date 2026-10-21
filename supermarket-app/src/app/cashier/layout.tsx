@@ -76,9 +76,34 @@ function CashierLayoutContent({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="app-layout">
+    <div
+      className="app-layout"
+      style={{
+        display: "flex",
+        flexDirection: "row",
+        height: "100vh",
+        width: "100%",
+        overflow: "hidden",
+        background: "var(--bg-base, #07090f)",
+        color: "var(--text-primary, #e6edf3)",
+      }}
+    >
       {/* Left Sidebar */}
-      <aside className="sidebar">
+      <aside
+        className="sidebar"
+        style={{
+          width: 250,
+          minWidth: 250,
+          maxWidth: 250,
+          height: "100vh",
+          flexShrink: 0,
+          display: "flex",
+          flexDirection: "column",
+          background: "var(--bg-surface, #0d1117)",
+          borderRight: "1px solid var(--border, #1e2d3d)",
+          overflow: "hidden",
+        }}
+      >
         {/* Brand */}
         <div
           style={{
@@ -288,7 +313,17 @@ function CashierLayoutContent({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main Content Area */}
-      <div className="main-area">
+      <div
+        className="main-area"
+        style={{
+          flex: 1,
+          minWidth: 0,
+          height: "100vh",
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+        }}
+      >
         {/* Topbar */}
         <header className="topbar">
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -386,7 +421,20 @@ function CashierLayoutContent({ children }: { children: React.ReactNode }) {
         </header>
 
         {/* Page Content */}
-        <main className="page-content animate-fade-in">{children}</main>
+        <main
+          className="page-content animate-fade-in"
+          style={{
+            flex: 1,
+            minHeight: 0,
+            overflowY: pathname === "/cashier/pos" ? "hidden" : "auto",
+            overflowX: "hidden",
+            display: "flex",
+            flexDirection: "column",
+            padding: "16px 20px",
+          }}
+        >
+          {children}
+        </main>
       </div>
     </div>
   );
