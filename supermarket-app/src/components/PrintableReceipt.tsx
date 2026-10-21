@@ -38,7 +38,10 @@ export interface ReceiptData {
   discountTotal: number | string;
   taxTotal: number | string;
   totalAmount: number | string;
+  tendered_cash?: number | string;
+  tendered_amount?: number | string;
   amountTendered?: number | string;
+  change_amount?: number | string;
   changeDue?: number | string;
   payments: Array<{
     method: string;
@@ -252,11 +255,13 @@ export default function PrintableReceipt({
             // Extract Cash payment details:
             const cashPayment = receipt.payments?.find((p) => p.method === "CASH");
             const cashLineAmount = cashPayment ? Number(cashPayment.amount) : 0;
-            const tenderedCash = receipt.amountTendered !== undefined && Number(receipt.amountTendered) > 0
-              ? Number(receipt.amountTendered)
+            const rawTendered = receipt.tendered_cash ?? receipt.amountTendered ?? receipt.tendered_amount;
+            const tenderedCash = rawTendered !== undefined && rawTendered !== null && Number(rawTendered) > 0
+              ? Number(rawTendered)
               : cashLineAmount;
-            const changeDue = receipt.changeDue !== undefined && Number(receipt.changeDue) >= 0
-              ? Number(receipt.changeDue)
+            const rawChange = receipt.change_amount ?? receipt.changeDue;
+            const changeDue = rawChange !== undefined && rawChange !== null && Number(rawChange) >= 0
+              ? Number(rawChange)
               : (cashPayment && tenderedCash > cashLineAmount ? Number((tenderedCash - cashLineAmount).toFixed(2)) : 0);
 
             return (

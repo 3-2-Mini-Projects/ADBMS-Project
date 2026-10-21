@@ -35,7 +35,7 @@ export default function TransactionHistoryPage() {
   // Filters
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("ALL");
-  const [dateFilter, setDateFilter] = useState("today");
+  const [dateFilter, setDateFilter] = useState("all");
   const [scopeAllCashiers, setScopeAllCashiers] = useState(false);
 
   // Pagination
@@ -60,7 +60,7 @@ export default function TransactionHistoryPage() {
       }
       if (status !== "ALL") p.set("status", status);
       if (search.trim()) p.set("search", search.trim());
-      if (dateFilter !== "today") p.set("dateFilter", dateFilter);
+      if (dateFilter !== "all") p.set("dateFilter", dateFilter);
       p.set("page", String(page));
       p.set("pageSize", String(pageSize));
 
@@ -122,8 +122,10 @@ export default function TransactionHistoryPage() {
           discountTotal: sale.discount_total,
           taxTotal: sale.tax_total,
           totalAmount: sale.total_amount,
-          amountTendered: sale.amountTendered !== undefined ? Number(sale.amountTendered) : (sale.tendered_amount !== undefined && sale.tendered_amount !== null ? Number(sale.tendered_amount) : undefined),
-          changeDue: sale.changeDue !== undefined ? Number(sale.changeDue) : (sale.change_amount !== undefined && sale.change_amount !== null ? Number(sale.change_amount) : undefined),
+          tendered_cash: sale.tendered_cash ?? sale.tendered_amount ?? sale.amountTendered,
+          amountTendered: sale.tendered_cash ?? sale.tendered_amount ?? sale.amountTendered,
+          change_amount: sale.change_amount ?? sale.changeDue,
+          changeDue: sale.change_amount ?? sale.changeDue,
           payments: sale.payments || [],
         });
       }

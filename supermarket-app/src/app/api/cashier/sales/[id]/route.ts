@@ -20,6 +20,7 @@ export async function GET(_: Request, context: { params: Promise<{ id: string }>
         s.discount_total,
         s.tax_total,
         s.total_amount,
+        s.tendered_cash,
         s.tendered_amount,
         s.change_amount,
         s.branch_id,
@@ -107,11 +108,17 @@ export async function GET(_: Request, context: { params: Promise<{ id: string }>
 
     const receiptNumber = `REC-${sale.branch_code || "BR"}-${String(sale.sale_id).padStart(6, "0")}`;
 
+    const tenderedVal = sale.tendered_cash != null ? Number(sale.tendered_cash) : (sale.tendered_amount != null ? Number(sale.tendered_amount) : undefined);
+    const changeVal = sale.change_amount != null ? Number(sale.change_amount) : undefined;
+
     return NextResponse.json({
       ...sale,
       receipt_number: receiptNumber,
-      amountTendered: sale.tendered_amount != null ? Number(sale.tendered_amount) : undefined,
-      changeDue: sale.change_amount != null ? Number(sale.change_amount) : undefined,
+      tendered_cash: tenderedVal,
+      tendered_amount: tenderedVal,
+      amountTendered: tenderedVal,
+      changeDue: changeVal,
+      change_amount: changeVal,
       items,
       payments,
       returns,

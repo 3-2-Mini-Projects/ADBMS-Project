@@ -171,8 +171,10 @@ function SaleDetailInner({ saleId }: { saleId: string }) {
     discountTotal: sale.discount_total,
     taxTotal: sale.tax_total,
     totalAmount: sale.total_amount,
+    tendered_cash: sale.tendered_cash ?? sale.tendered_amount ?? sale.amountTendered,
     amountTendered: sale.amountTendered !== undefined ? Number(sale.amountTendered) : (sale.tendered_amount !== undefined && sale.tendered_amount !== null ? Number(sale.tendered_amount) : undefined),
     changeDue: sale.changeDue !== undefined ? Number(sale.changeDue) : (sale.change_amount !== undefined && sale.change_amount !== null ? Number(sale.change_amount) : undefined),
+    change_amount: sale.change_amount ?? sale.changeDue,
     payments: sale.payments || [],
   };
 
