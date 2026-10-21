@@ -426,7 +426,8 @@ function CashierLayoutContent({ children }: { children: React.ReactNode }) {
           style={{
             flex: 1,
             minHeight: 0,
-            overflow: "hidden",
+            overflowY: pathname === "/cashier/pos" ? "hidden" : "auto",
+            overflowX: "hidden",
             display: "flex",
             flexDirection: "column",
             padding: "16px 20px",

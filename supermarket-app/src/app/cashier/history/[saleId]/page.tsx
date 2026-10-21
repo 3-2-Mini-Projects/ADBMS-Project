@@ -184,7 +184,7 @@ function SaleDetailInner({ saleId }: { saleId: string }) {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 20, paddingBottom: 40 }}>
       {/* Top Breadcrumb & Actions */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
         <div>
