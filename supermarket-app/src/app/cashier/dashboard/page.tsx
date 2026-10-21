@@ -167,10 +167,13 @@ export default function CashierDashboardPage() {
           </p>
         </div>
 
-        <div style={{ display: "flex", gap: 10 }}>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
           <button onClick={fetchDashboardData} className="btn btn-ghost" title="Refresh Live Data">
             🔄 Refresh
           </button>
+          <Link href="/cashier/summary" className="btn btn-secondary" style={{ padding: "8px 16px", fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
+            📑 Daily Summary
+          </Link>
           <Link href="/cashier/pos" className="btn btn-emerald" style={{ padding: "8px 18px", fontSize: 14 }}>
             🛒 Launch POS Terminal
           </Link>

@@ -9,6 +9,7 @@ const CASHIER_TABS = [
   { label: "Dashboard", href: "/cashier/dashboard", icon: "📊" },
   { label: "POS Billing", href: "/cashier/pos", icon: "🛒", badge: "F2" },
   { label: "Transaction History", href: "/cashier/history", icon: "📋" },
+  { label: "Daily Summary", href: "/cashier/summary", icon: "📑" },
   { label: "Product & Stock", href: "/cashier/products", icon: "🔍" },
   { label: "Returns & Refunds", href: "/cashier/returns", icon: "↩️" },
 ];
