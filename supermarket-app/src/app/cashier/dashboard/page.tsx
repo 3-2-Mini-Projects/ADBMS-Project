@@ -22,6 +22,12 @@ interface DashboardData {
   };
   recentSales: Array<{
     sale_id: number;
+    receipt_number?: string;
+    branch_id?: number;
+    branch_code?: string;
+    branch_name?: string;
+    cashier_id?: number;
+    cashier_name?: string;
     sale_date: string;
     status: string;
     subtotal: string | number;
@@ -31,6 +37,7 @@ interface DashboardData {
     customer_name: string;
     customer_card?: string;
     payment_methods?: string;
+    payment_references?: string;
     items_count: number;
   }>;
   todayReturns: Array<{
@@ -115,6 +122,10 @@ export default function CashierDashboardPage() {
           discountTotal: sale.discount_total,
           taxTotal: sale.tax_total,
           totalAmount: sale.total_amount,
+          tendered_cash: sale.tendered_cash ?? sale.amountTendered,
+          amountTendered: sale.amountTendered !== undefined ? Number(sale.amountTendered) : (sale.tendered_cash !== undefined && sale.tendered_cash !== null ? Number(sale.tendered_cash) : undefined),
+          changeDue: sale.changeDue !== undefined ? Number(sale.changeDue) : (sale.change_amount !== undefined && sale.change_amount !== null ? Number(sale.change_amount) : undefined),
+          change_amount: sale.change_amount ?? sale.changeDue,
           payments: sale.payments || [],
         });
       }
@@ -127,7 +138,7 @@ export default function CashierDashboardPage() {
     `Rs. ${Number(n || 0).toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 24, paddingBottom: 40 }}>
       {/* Welcome Banner */}
       <div
         style={{
@@ -156,10 +167,13 @@ export default function CashierDashboardPage() {
           </p>
         </div>
 
-        <div style={{ display: "flex", gap: 10 }}>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
           <button onClick={fetchDashboardData} className="btn btn-ghost" title="Refresh Live Data">
             🔄 Refresh
           </button>
+          <Link href="/cashier/summary" className="btn btn-secondary" style={{ padding: "8px 16px", fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
+            📑 Daily Summary
+          </Link>
           <Link href="/cashier/pos" className="btn btn-emerald" style={{ padding: "8px 18px", fontSize: 14 }}>
             🛒 Launch POS Terminal
           </Link>
@@ -242,16 +256,32 @@ export default function CashierDashboardPage() {
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)" }}>
-                Latest 50 Transactions
+                Latest 50 Branch Transactions
               </h3>
               <span className="badge badge-completed" style={{ fontSize: 11 }}>
                 {data?.recentSales?.length || 0} Records
               </span>
+              {cashier && (
+                <span
+                  style={{
+                    fontSize: 11,
+                    padding: "2px 8px",
+                    borderRadius: 6,
+                    background: "rgba(16, 185, 129, 0.12)",
+                    color: "var(--accent-emerald)",
+                    border: "1px solid rgba(16, 185, 129, 0.25)",
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontWeight: 600,
+                  }}
+                >
+                  📍 {cashier.branch_name} ({cashier.branch_code})
+                </span>
+              )}
             </div>
             <p style={{ fontSize: 11.5, color: "var(--text-muted)", marginTop: 2 }}>
-              Latest transactions processed today for {cashier?.branch_name || "this branch"}
+              Showing latest 50 transactions processed for <strong>{cashier?.branch_name || "this branch"}</strong> with receipt reference numbers
             </p>
           </div>
           <Link href="/cashier/history" className="btn btn-ghost" style={{ fontSize: 12, padding: "6px 12px" }}>
@@ -261,19 +291,20 @@ export default function CashierDashboardPage() {
 
         {loading ? (
           <div style={{ textAlign: "center", padding: 30, color: "var(--text-muted)" }}>
-            Loading transactions...
+            Loading branch transactions...
           </div>
         ) : !data?.recentSales || data.recentSales.length === 0 ? (
           <div style={{ textAlign: "center", padding: 30, color: "var(--text-muted)" }}>
-            No transactions found for today. Launch POS to start selling!
+            No transactions found for {cashier?.branch_name || "this branch"}. Launch POS to start selling!
           </div>
         ) : (
-          <div className="table-wrapper" style={{ maxHeight: 420, overflowY: "auto" }}>
+          <div className="table-wrapper" style={{ maxHeight: 440, overflowY: "auto" }}>
             <table className="data-table">
               <thead style={{ position: "sticky", top: 0, background: "var(--bg-card)", zIndex: 2 }}>
                 <tr>
-                  <th>Sale ID</th>
+                  <th>Reference No</th>
                   <th>Date & Time</th>
+                  <th>Cashier</th>
                   <th>Customer</th>
                   <th>Items</th>
                   <th>Payment Method</th>
@@ -283,58 +314,84 @@ export default function CashierDashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {data.recentSales.map((s) => (
-                  <tr key={s.sale_id}>
-                    <td className="mono" style={{ fontWeight: 700, color: "var(--accent-blue)" }}>
-                      #{s.sale_id}
-                    </td>
-                    <td>
-                      {new Date(s.sale_date).toLocaleString("en-LK", {
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </td>
-                    <td>
-                      <div style={{ fontWeight: 600, color: "var(--text-primary)" }}>{s.customer_name}</div>
-                      {s.customer_card && (
-                        <div style={{ fontSize: 10, color: "var(--text-muted)" }}>{s.customer_card}</div>
-                      )}
-                    </td>
-                    <td>{s.items_count} items</td>
-                    <td>
-                      <span className="mono" style={{ fontSize: 11 }}>
-                        {s.payment_methods || "CASH"}
-                      </span>
-                    </td>
-                    <td style={{ fontWeight: 700, color: "var(--text-primary)" }}>
-                      {fmt(s.total_amount)}
-                    </td>
-                    <td>
-                      <span
-                        className={
-                          s.status === "COMPLETED"
-                            ? "badge badge-completed"
-                            : s.status === "OPEN"
-                            ? "badge badge-open"
-                            : "badge badge-cancelled"
-                        }
-                      >
-                        {s.status}
-                      </span>
-                    </td>
-                    <td>
-                      <button
-                        className="btn btn-ghost"
-                        style={{ padding: "4px 10px", fontSize: 11 }}
-                        onClick={() => openReceipt(s.sale_id)}
-                      >
-                        🧾 View Receipt
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {data.recentSales.map((s) => {
+                  const refNo = s.receipt_number || `REC-${s.branch_code || cashier?.branch_code || "BR"}-${String(s.sale_id).padStart(6, "0")}`;
+                  return (
+                    <tr key={s.sale_id}>
+                      <td>
+                        <div className="mono" style={{ fontWeight: 800, color: "var(--accent-blue)", fontSize: 12.5 }}>
+                          {refNo}
+                        </div>
+                        <div style={{ fontSize: 10, color: "var(--text-muted)" }}>Sale #{s.sale_id}</div>
+                      </td>
+                      <td>
+                        {new Date(s.sale_date).toLocaleString("en-LK", {
+                          month: "short",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </td>
+                      <td>
+                        <div style={{ fontWeight: 600, color: "var(--text-primary)", fontSize: 12 }}>
+                          {s.cashier_name || (s.cashier_id === cashier?.employee_id ? cashier?.full_name : `Staff #${s.cashier_id}`)}
+                        </div>
+                      </td>
+                      <td>
+                        <div style={{ fontWeight: 600, color: "var(--text-primary)" }}>{s.customer_name}</div>
+                        {s.customer_card && (
+                          <div style={{ fontSize: 10, color: "var(--text-muted)" }}>{s.customer_card}</div>
+                        )}
+                      </td>
+                      <td>{s.items_count} items</td>
+                      <td>
+                        <div className="mono" style={{ fontSize: 11, fontWeight: 700 }}>
+                          {s.payment_methods || "CASH"}
+                        </div>
+                        {s.payment_references && (
+                          <div
+                            style={{
+                              fontSize: 10,
+                              color: "var(--text-muted)",
+                              maxWidth: 130,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                            title={s.payment_references}
+                          >
+                            Ref: {s.payment_references}
+                          </div>
+                        )}
+                      </td>
+                      <td style={{ fontWeight: 700, color: "var(--text-primary)" }}>
+                        {fmt(s.total_amount)}
+                      </td>
+                      <td>
+                        <span
+                          className={
+                            s.status === "COMPLETED"
+                              ? "badge badge-completed"
+                              : s.status === "OPEN"
+                              ? "badge badge-open"
+                              : "badge badge-cancelled"
+                          }
+                        >
+                          {s.status}
+                        </span>
+                      </td>
+                      <td>
+                        <button
+                          className="btn btn-ghost"
+                          style={{ padding: "4px 10px", fontSize: 11 }}
+                          onClick={() => openReceipt(s.sale_id)}
+                        >
+                          🧾 View Receipt
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

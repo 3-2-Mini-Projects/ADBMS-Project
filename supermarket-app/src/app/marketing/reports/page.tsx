@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { useApp } from "@/lib/context";
 import {
   BarChart3,
@@ -13,6 +14,7 @@ import {
   Coins,
   Sparkles,
   Users,
+  Trophy,
 } from "lucide-react";
 
 export default function MarketingReportsPage() {
@@ -54,13 +56,23 @@ export default function MarketingReportsPage() {
           </h1>
         </div>
 
-        <button
-          onClick={() => window.print()}
-          className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-colors border border-slate-700"
-        >
-          <Download className="w-3.5 h-3.5 text-blue-400" />
-          <span>Export Report</span>
-        </button>
+        <div className="flex items-center gap-2.5">
+          <Link
+            href="/marketing/reports/top-loyalty-customers"
+            className="px-3.5 py-2 rounded-xl bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 text-xs font-bold flex items-center gap-1.5 transition-colors border border-amber-500/30 shadow-md"
+          >
+            <Trophy className="w-3.5 h-3.5 text-amber-400" />
+            <span>Top 10 Loyalty Report</span>
+          </Link>
+
+          <button
+            onClick={() => window.print()}
+            className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-colors border border-slate-700"
+          >
+            <Download className="w-3.5 h-3.5 text-blue-400" />
+            <span>Export Report</span>
+          </button>
+        </div>
       </div>
 
       {/* Summary KPI Cards */}
