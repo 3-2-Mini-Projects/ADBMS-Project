@@ -4,14 +4,29 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { CashierProvider, useCashier } from "@/lib/cashierContext";
+import { CashierNotificationBell } from "@/components/CashierNotificationBell";
 
-const CASHIER_TABS = [
+interface CashierTab {
+  label: string;
+  href: string;
+  icon: string;
+  badge?: string;
+}
+
+const CASHIER_TABS: CashierTab[] = [
   { label: "Dashboard", href: "/cashier/dashboard", icon: "📊" },
-  { label: "POS Billing", href: "/cashier/pos", icon: "🛒", badge: "F2" },
+  { label: "POS Billing", href: "/cashier/pos", icon: "🛒" },
   { label: "Transaction History", href: "/cashier/history", icon: "📋" },
   { label: "Daily Summary", href: "/cashier/summary", icon: "📑" },
+  { label: "Sign-in Logs & Alerts", href: "/cashier/activity", icon: "🔔" },
   { label: "Product & Stock", href: "/cashier/products", icon: "🔍" },
   { label: "Returns & Refunds", href: "/cashier/returns", icon: "↩️" },
+];
+
+const ACCOUNT_TABS = [
+  { label: "Profile", href: "/cashier/profile", icon: "👤" },
+  { label: "Settings", href: "/cashier/settings", icon: "⚙️" },
+  { label: "Logout", href: "/cashier/logout", icon: "🚪" },
 ];
 
 function CashierLayoutContent({ children }: { children: React.ReactNode }) {
@@ -216,101 +231,55 @@ function CashierLayoutContent({ children }: { children: React.ReactNode }) {
             );
           })}
 
-          {/* Access Policy Reminder Card */}
+          {/* Account Section (Just like other users) */}
           <div
             style={{
-              marginTop: 24,
-              padding: "12px 14px",
-              borderRadius: 10,
-              background: "rgba(17, 24, 39, 0.6)",
-              border: "1px solid var(--border)",
-              fontSize: 11,
-              lineHeight: 1.5,
-              color: "var(--text-secondary)",
+              fontSize: 10,
+              fontWeight: 700,
+              color: "var(--text-muted)",
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              padding: "0 6px",
+              marginTop: 20,
+              marginBottom: 8,
             }}
           >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                fontWeight: 700,
-                color: "var(--accent-amber)",
-                marginBottom: 4,
-                fontSize: 11.5,
-              }}
-            >
-              🔒 Active Session
-            </div>
-            <p style={{ margin: 0, fontSize: 10.5, color: "var(--text-muted)" }}>
-              Bound to authenticated cashier account. Returns and voids require manager approval PIN.
-            </p>
+            Account
           </div>
+
+          {ACCOUNT_TABS.map((tab) => {
+            const isActive = pathname === tab.href;
+            return (
+              <Link
+                key={tab.href}
+                href={tab.href}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: "9px 12px",
+                  borderRadius: 8,
+                  marginBottom: 3,
+                  fontSize: 13,
+                  fontWeight: isActive ? 600 : 500,
+                  color: tab.href === "/cashier/logout"
+                    ? "var(--accent-rose)"
+                    : isActive
+                    ? "var(--text-primary)"
+                    : "var(--text-secondary)",
+                  background: isActive ? "var(--bg-card2)" : "transparent",
+                  textDecoration: "none",
+                  border: isActive ? "1px solid var(--border-light)" : "1px solid transparent",
+                  transition: "all 0.15s",
+                  boxShadow: isActive ? "0 2px 8px rgba(0,0,0,0.3)" : "none",
+                }}
+              >
+                <span style={{ fontSize: 16 }}>{tab.icon}</span>
+                <span>{tab.label}</span>
+              </Link>
+            );
+          })}
         </nav>
-
-        {/* Logged-in Cashier Profile (No switcher - navigate by signin) */}
-        <div
-          style={{
-            padding: "14px 16px",
-            borderTop: "1px solid var(--border)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            background: "rgba(13, 17, 23, 0.7)",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-            <div
-              style={{
-                width: 34,
-                height: 34,
-                borderRadius: "50%",
-                background: "linear-gradient(135deg, #059669, #0284c7)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#fff",
-                fontWeight: 800,
-                fontSize: 13,
-                flexShrink: 0,
-              }}
-            >
-              {cashier ? cashier.full_name[0] : "C"}
-            </div>
-            <div style={{ overflow: "hidden" }}>
-              <div
-                style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: "var(--text-primary)",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-              >
-                {cashier ? cashier.full_name : "Cashier"}
-              </div>
-              <div
-                style={{
-                  fontSize: 10,
-                  color: "var(--accent-emerald)",
-                  fontFamily: "'JetBrains Mono', monospace",
-                }}
-              >
-                {cashier ? `${cashier.branch_name || "Branch"}` : "CASHIER"}
-              </div>
-            </div>
-          </div>
-
-          <Link
-            href="/logout"
-            className="btn btn-ghost"
-            style={{ padding: "4px 8px", fontSize: 11, color: "var(--accent-rose)" }}
-            title="Sign Out to switch cashier"
-          >
-            Sign Out
-          </Link>
-        </div>
       </aside>
 
       {/* Main Content Area */}
@@ -329,10 +298,10 @@ function CashierLayoutContent({ children }: { children: React.ReactNode }) {
         <header className="topbar">
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: 18 }}>
-              {CASHIER_TABS.find((t) => t.href === pathname)?.icon || "🛒"}
+              {[...CASHIER_TABS, ...ACCOUNT_TABS].find((t) => t.href === pathname)?.icon || "🛒"}
             </span>
             <span style={{ fontWeight: 700, fontSize: 15, color: "var(--text-primary)" }}>
-              {CASHIER_TABS.find((t) => t.href === pathname)?.label || "Cashier System"}
+              {[...CASHIER_TABS, ...ACCOUNT_TABS].find((t) => t.href === pathname)?.label || "Cashier System"}
             </span>
             {cashier && (
               <span
@@ -355,7 +324,7 @@ function CashierLayoutContent({ children }: { children: React.ReactNode }) {
             {/* Quick POS Button */}
             {pathname !== "/cashier/pos" && (
               <Link href="/cashier/pos" className="btn btn-emerald" style={{ padding: "6px 14px", fontSize: 12 }}>
-                🛒 New Sale (F2)
+                🛒 New Sale
               </Link>
             )}
 
@@ -374,6 +343,9 @@ function CashierLayoutContent({ children }: { children: React.ReactNode }) {
             >
               {clockStr}
             </div>
+
+            {/* Cashier Real-Time Notifications & Sign-in Log Bell */}
+            <CashierNotificationBell />
 
             {cashier && (
               <div
@@ -411,7 +383,7 @@ function CashierLayoutContent({ children }: { children: React.ReactNode }) {
             )}
 
             <Link
-              href="/logout"
+              href="/cashier/logout"
               className="btn btn-ghost"
               style={{ padding: "5px 10px", fontSize: 11, color: "var(--accent-rose)" }}
               title="Sign Out"

@@ -3,16 +3,19 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useApp } from "@/lib/context";
 
 const SALES_TABS = [
-  { label: "History", href: "/sales/history", icon: "📋" },
-  { label: "POS Form",  href: "/sales/pos",     icon: "🛒" },
-  { label: "Report",   href: "/sales/report",   icon: "📊" },
-  { label: "Monitor",  href: "/sales/monitor",  icon: "🖥️" },
+  { label: "Sales History", href: "/sales", icon: "📋" },
+  { label: "POS Checkout",  href: "/pos",   icon: "🛒" },
+  { label: "Report",        href: "/sales/report",   icon: "📊" },
+  { label: "Live Monitor",  href: "/sales/monitor",  icon: "🖥️" },
 ];
 
 export default function SalesLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { currentEmployee } = useApp();
+  const isCashier = currentEmployee?.role === "CASHIER";
   const [todayStr, setTodayStr] = useState<string>("");
 
   useEffect(() => {
@@ -140,12 +143,20 @@ export default function SalesLayout({ children }: { children: React.ReactNode })
           <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.08em", textTransform: "uppercase", padding: "0 6px", marginTop: 24, marginBottom: 8 }}>
             Other Modules
           </div>
-          {[
-            { label: "Cashier Portal", href: "/cashier/dashboard", icon: "🛒" },
-            { label: "Inventory",  href: "/inventory", icon: "📦" },
-            { label: "Customers",  href: "/customers", icon: "👥" },
-            { label: "Reports",    href: "/reports",   icon: "📈" },
-          ].map((item) => (
+          {(isCashier
+            ? [
+                { label: "Cashier Desk", href: "/cashier/dashboard", icon: "🛒" },
+                { label: "Branch Stock", href: "/cashier/products", icon: "🔍" },
+                { label: "Daily Summary", href: "/cashier/summary", icon: "📑" },
+                { label: "Customers", href: "/customers", icon: "👥" },
+              ]
+            : [
+                { label: "Cashier Portal", href: "/cashier/dashboard", icon: "🛒" },
+                { label: "Inventory", href: "/inventory", icon: "📦" },
+                { label: "Customers", href: "/customers", icon: "👥" },
+                { label: "Admin Reports", href: "/admin/reports", icon: "📈" },
+              ]
+          ).map((item) => (
             <Link
               key={item.href}
               href={item.href}

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useApp } from "@/lib/context";
 import { InventoryItem, ProductBatch } from "@/lib/types";
 import {
@@ -20,7 +21,19 @@ import {
 } from "lucide-react";
 
 export default function InventoryPage() {
+  const router = useRouter();
   const { currentBranch, currentEmployee, showToast } = useApp();
+
+  useEffect(() => {
+    if (currentEmployee?.role === "CASHIER") {
+      router.replace("/cashier/dashboard");
+    }
+  }, [currentEmployee, router]);
+
+  if (currentEmployee?.role === "CASHIER") {
+    return null;
+  }
+
   const isClerk = currentEmployee?.role === "STOCK_CLERK";
   const [activeTab, setActiveTab] = useState<"stock" | "batches">("stock");
 

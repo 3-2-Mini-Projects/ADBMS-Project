@@ -34,7 +34,8 @@ interface StockAlertItem {
 }
 
 export function StockAlertBell() {
-  const { currentBranch, showToast } = useApp();
+  const { currentBranch, currentEmployee, showToast } = useApp();
+  const isCashier = currentEmployee?.role === "CASHIER";
   const [alerts, setAlerts] = useState<StockAlertItem[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
@@ -344,22 +345,24 @@ export function StockAlertBell() {
           {/* Footer Navigation */}
           <div className="p-2.5 bg-slate-900 border-t border-slate-800 flex items-center justify-between text-xs">
             <Link
-              href="/inventory/stock-alerts"
+              href={isCashier ? "/cashier/products" : "/inventory/stock-alerts"}
               onClick={() => setIsOpen(false)}
               className="text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1 text-[11px]"
             >
-              <span>View All Alerts</span>
+              <span>{isCashier ? "View Branch Stock" : "View All Alerts"}</span>
               <ExternalLink className="w-3 h-3" />
             </Link>
 
-            <Link
-              href="/inventory/reorder-suggestions"
-              onClick={() => setIsOpen(false)}
-              className="text-slate-400 hover:text-slate-200 flex items-center gap-1 text-[11px]"
-            >
-              <Package className="w-3 h-3" />
-              <span>Reorder Suggestions</span>
-            </Link>
+            {!isCashier && (
+              <Link
+                href="/inventory/reorder-suggestions"
+                onClick={() => setIsOpen(false)}
+                className="text-slate-400 hover:text-slate-200 flex items-center gap-1 text-[11px]"
+              >
+                <Package className="w-3 h-3" />
+                <span>Reorder Suggestions</span>
+              </Link>
+            )}
           </div>
         </div>
       )}

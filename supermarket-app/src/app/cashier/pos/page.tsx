@@ -126,18 +126,9 @@ export default function POSBillingPage() {
     fetchProducts(searchQuery, selectedCategory);
   }, [fetchProducts, searchQuery, selectedCategory]);
 
-  // Focus barcode input on mount and on 'F2' or 'Escape'
+  // Focus barcode input on mount
   useEffect(() => {
     barcodeInputRef.current?.focus();
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "F2") {
-        e.preventDefault();
-        barcodeInputRef.current?.focus();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   // Open Quantity Entry Modal

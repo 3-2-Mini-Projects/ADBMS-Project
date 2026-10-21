@@ -1,13 +1,21 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useApp } from "@/lib/context";
 import { UserCircle, ShieldCheck, Mail, Phone, Calendar, DollarSign, Building2, ArrowLeft } from "lucide-react";
 
 export default function ProfilePage() {
+  const router = useRouter();
   const { currentEmployee, currentBranch } = useApp();
   const isAdmin = currentEmployee?.role === "ADMIN";
+
+  useEffect(() => {
+    if (currentEmployee?.role === "CASHIER") {
+      router.replace("/cashier/profile");
+    }
+  }, [currentEmployee, router]);
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto animate-in fade-in duration-300">
@@ -20,11 +28,11 @@ export default function ProfilePage() {
           <h1 className="text-2xl font-black text-white mt-1">Staff Profile &amp; Role Credentials</h1>
         </div>
         <Link
-          href="/dashboard"
+          href={currentEmployee?.role === "CASHIER" ? "/cashier/dashboard" : "/dashboard"}
           className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 hover:text-white transition-all"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Dashboard</span>
+          <span>{currentEmployee?.role === "CASHIER" ? "Cashier Desk" : "Dashboard"}</span>
         </Link>
       </div>
 

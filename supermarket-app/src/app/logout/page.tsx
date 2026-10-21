@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/lib/context";
@@ -10,6 +10,12 @@ export default function LogoutPage() {
   const router = useRouter();
   const { currentEmployee, setCurrentEmployee, showToast, refreshAppData } = useApp();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  useEffect(() => {
+    if (currentEmployee?.role === "CASHIER") {
+      router.replace("/cashier/logout");
+    }
+  }, [currentEmployee, router]);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
