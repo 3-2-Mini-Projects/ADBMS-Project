@@ -352,6 +352,11 @@ DELIMITER $$
 -- PROCEDURE 1: Check Low Stock Items for a Branch
 CREATE PROCEDURE sp_check_low_stock(IN p_branch_id INT)
 BEGIN
+    IF p_branch_id IS NULL OR p_branch_id <= 0 THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'A valid branch ID is required';
+    END IF;
+
     SELECT i.branch_id, p.product_id, p.name AS product_name, i.quantity_on_hand, i.reorder_level
     FROM inventory i
     JOIN products p ON p.product_id = i.product_id
@@ -363,6 +368,11 @@ END $$
 -- PROCEDURE 2: Check Batches Expiring within 30 Days
 CREATE PROCEDURE sp_expiring_batches(IN p_branch_id INT)
 BEGIN
+    IF p_branch_id IS NULL OR p_branch_id <= 0 THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'A valid branch ID is required';
+    END IF;
+
     SELECT batch_id, product_id, batch_no, quantity, expiry_date, DATEDIFF(expiry_date, CURRENT_DATE) AS days_to_expiry
     FROM product_batches
     WHERE branch_id = p_branch_id
@@ -377,21 +387,31 @@ CREATE PROCEDURE sp_update_inventory(
     IN p_received_qty INT
 )
 BEGIN
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        RESIGNAL;
+    END;
+
     IF p_received_qty <= 0 THEN
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'Received quantity must be greater than zero';
-    ELSE
-        UPDATE inventory
-        SET quantity_on_hand = quantity_on_hand + p_received_qty,
-            last_updated = NOW()
-        WHERE branch_id = p_branch_id
-          AND product_id = p_product_id;
-
-        IF ROW_COUNT() = 0 THEN
-            SIGNAL SQLSTATE '45000'
-                SET MESSAGE_TEXT = 'Inventory record not found';
-        END IF;
     END IF;
+
+    START TRANSACTION;
+
+    UPDATE inventory
+    SET quantity_on_hand = quantity_on_hand + p_received_qty,
+        last_updated = NOW()
+    WHERE branch_id = p_branch_id
+      AND product_id = p_product_id;
+
+    IF ROW_COUNT() = 0 THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Inventory record not found';
+    END IF;
+
+    COMMIT;
 END $$
 
 -- PROCEDURE 4: Create Purchase Order (Draft)
@@ -403,15 +423,41 @@ CREATE PROCEDURE sp_create_purchase_order(
 )
 BEGIN
     DECLARE v_po_number VARCHAR(50);
-    SET v_po_number = CONCAT('PO-', UNIX_TIMESTAMP());
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        RESIGNAL;
+    END;
 
     IF p_expected_date < CURRENT_DATE THEN
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'Expected date cannot be in the past';
-    ELSE
-        INSERT INTO purchase_orders (po_number, supplier_id, branch_id, created_by, order_date, expected_date, status, total_cost)
-        VALUES (v_po_number, p_supplier_id, p_branch_id, p_created_by, CURRENT_DATE, p_expected_date, 'DRAFT', 0.00);
     END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM suppliers WHERE supplier_id = p_supplier_id) THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Invalid supplier ID';
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM branches WHERE branch_id = p_branch_id) THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Invalid branch ID';
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM employees WHERE employee_id = p_created_by) THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Invalid employee ID (created_by)';
+    END IF;
+
+    SET v_po_number = CONCAT('PO-', UNIX_TIMESTAMP());
+
+    START TRANSACTION;
+
+    INSERT INTO purchase_orders (po_number, supplier_id, branch_id, created_by, order_date, expected_date, status, total_cost)
+    VALUES (v_po_number, p_supplier_id, p_branch_id, p_created_by, CURRENT_DATE, p_expected_date, 'DRAFT', 0.00);
+
+    COMMIT;
 END $$
 
 -- PROCEDURE 5: Receive Purchase Order Transaction
@@ -727,6 +773,11 @@ ON SCHEDULE EVERY 1 DAY
 STARTS (CURRENT_DATE + INTERVAL 1 DAY + INTERVAL 1 MINUTE)
 DO
 BEGIN
+    -- Handler ensures an unexpected error in one alert query does not block subsequent alert sweeps
+    DECLARE CONTINUE HANDLER FOR SQLEXCEPTION
+    BEGIN
+    END;
+
     -- 1. Insert LOW_STOCK alerts automatically if not already unresolved
     INSERT INTO stock_alerts (branch_id, product_id, alert_type, message, is_resolved, created_at)
     SELECT 
