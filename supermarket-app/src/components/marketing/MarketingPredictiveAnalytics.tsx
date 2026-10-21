@@ -3,19 +3,12 @@
 import React, { useMemo } from "react";
 import {
   TrendingUp,
-  Ticket,
   Sparkles,
 } from "lucide-react";
 import type { DailyTrendRow, MarketingSummaryRow } from "@/app/api/marketing/reports/route";
 
 interface MarketingPredictiveAnalyticsProps {
   summary?: {
-    total_coupons?: number;
-    available_coupons?: number;
-    redeemed_coupons?: number;
-    expired_coupons?: number;
-    coupon_redemption_rate?: number;
-    redemption_rate?: number;
     discount_ratio_pct?: number;
     total_revenue?: number;
     total_discounts?: number;
@@ -149,47 +142,6 @@ export function MarketingPredictiveAnalytics({
     };
   }, [trendPoints, forecast]);
 
-  // 4. SVG Donut Chart Calculation for Voucher Conversion
-  const donutChart = useMemo(() => {
-    const total = Number(summary?.total_coupons || 0);
-    const available = Number(summary?.available_coupons || 0);
-    const redeemed = Number(summary?.redeemed_coupons || 0);
-    const expired = Number(summary?.expired_coupons || 0);
-
-    const safeTotal = Math.max(1, total);
-    const radius = 38;
-    const circumference = 2 * Math.PI * radius; // ~238.76
-
-    const redeemedPct = (redeemed / safeTotal) * 100;
-    const availablePct = (available / safeTotal) * 100;
-    const expiredPct = (expired / safeTotal) * 100;
-
-    const redeemedDash = (redeemed / safeTotal) * circumference;
-    const availableDash = (available / safeTotal) * circumference;
-    const expiredDash = (expired / safeTotal) * circumference;
-
-    const redeemedOffset = 0;
-    const availableOffset = -redeemedDash;
-    const expiredOffset = -(redeemedDash + availableDash);
-
-    return {
-      radius,
-      circumference,
-      redeemedPct: Math.round(redeemedPct),
-      availablePct: Math.round(availablePct),
-      expiredPct: Math.round(expiredPct),
-      redeemedDash,
-      availableDash,
-      expiredDash,
-      redeemedOffset,
-      availableOffset,
-      expiredOffset,
-      total,
-      redeemed,
-      available,
-      expired,
-    };
-  }, [summary]);
 
   return (
     <div className="space-y-6">
@@ -220,10 +172,8 @@ export function MarketingPredictiveAnalytics({
         </div>
       </div>
 
-      {/* Visual Analytics Dual-Grid: SVG Trend Graph & Donut Conversion Chart */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left: Dual-Axis Trend Graph + Projection (2 Columns) */}
-        <div className="lg:col-span-2 p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4 shadow-xl">
+      {/* Marketing Performance & Growth Projection Chart */}
+      <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4 shadow-xl">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/60 pb-3">
             <div>
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
@@ -391,109 +341,6 @@ export function MarketingPredictiveAnalytics({
             </svg>
           </div>
         </div>
-
-        {/* Right: Coupon Utilization Donut Chart (1 Column) */}
-        <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4 shadow-xl flex flex-col justify-between">
-          <div>
-            <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <Ticket className="w-4 h-4 text-purple-400" />
-              <span>Coupon Conversion Funnel</span>
-            </h3>
-          </div>
-
-          {/* SVG Donut Circle */}
-          <div className="flex items-center justify-center relative py-2">
-            <svg width={140} height={140} viewBox="0 0 100 100" className="transform -rotate-90">
-              {/* Background ring */}
-              <circle
-                cx={50}
-                cy={50}
-                r={donutChart.radius}
-                fill="transparent"
-                stroke="#1e293b"
-                strokeWidth={12}
-              />
-              {/* Available Segment (Amber) */}
-              {donutChart.availableDash > 0 && (
-                <circle
-                  cx={50}
-                  cy={50}
-                  r={donutChart.radius}
-                  fill="transparent"
-                  stroke="#f59e0b"
-                  strokeWidth={12}
-                  strokeDasharray={`${donutChart.availableDash} ${donutChart.circumference}`}
-                  strokeDashoffset={donutChart.availableOffset}
-                  strokeLinecap="round"
-                />
-              )}
-              {/* Redeemed Segment (Emerald) */}
-              {donutChart.redeemedDash > 0 && (
-                <circle
-                  cx={50}
-                  cy={50}
-                  r={donutChart.radius}
-                  fill="transparent"
-                  stroke="#10b981"
-                  strokeWidth={12}
-                  strokeDasharray={`${donutChart.redeemedDash} ${donutChart.circumference}`}
-                  strokeDashoffset={donutChart.redeemedOffset}
-                  strokeLinecap="round"
-                />
-              )}
-              {/* Expired Segment (Rose) */}
-              {donutChart.expiredDash > 0 && (
-                <circle
-                  cx={50}
-                  cy={50}
-                  r={donutChart.radius}
-                  fill="transparent"
-                  stroke="#f43f5e"
-                  strokeWidth={12}
-                  strokeDasharray={`${donutChart.expiredDash} ${donutChart.circumference}`}
-                  strokeDashoffset={donutChart.expiredOffset}
-                  strokeLinecap="round"
-                />
-              )}
-            </svg>
-
-            {/* Donut Center Metrics */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-lg font-mono font-black text-white">
-                {donutChart.redeemedPct}%
-              </span>
-              <span className="text-[9px] text-slate-400 uppercase tracking-wider font-semibold">
-                Redeemed
-              </span>
-            </div>
-          </div>
-
-          {/* Donut Chart Legend */}
-          <div className="space-y-2 pt-2 border-t border-slate-800/80 font-mono text-xs">
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-1.5 text-slate-300 font-sans">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                <span>Available & Ready</span>
-              </span>
-              <span className="font-bold text-amber-400">{donutChart.available} ({donutChart.availablePct}%)</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-1.5 text-slate-300 font-sans">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                <span>Redeemed at POS</span>
-              </span>
-              <span className="font-bold text-emerald-400">{donutChart.redeemed} ({donutChart.redeemedPct}%)</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-1.5 text-slate-300 font-sans">
-                <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
-                <span>Expired Unused</span>
-              </span>
-              <span className="font-bold text-rose-400">{donutChart.expired} ({donutChart.expiredPct}%)</span>
-            </div>
-          </div>
-        </div>
-      </div>
 
     </div>
   );
