@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { ResultSetHeader } from "mysql2/promise";
 import { pool, query, queryOne } from "@/lib/db";
 import { requireAdmin, logAuthEvent } from "@/lib/auth";
+import { validateStaffEmail } from "@/lib/emailValidator";
 import { UserRole } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -94,9 +95,11 @@ export async function POST(req: Request) {
     if (typeof full_name !== "string" || full_name.trim().length === 0) {
       return NextResponse.json({ error: "Full name is required" }, { status: 400 });
     }
-    if (typeof email !== "string" || email.trim().length === 0 || !email.includes("@")) {
-      return NextResponse.json({ error: "A valid email address is required" }, { status: 400 });
+    const emailResult = validateStaffEmail(typeof email === "string" ? email : "");
+    if (!emailResult.valid) {
+      return NextResponse.json({ error: emailResult.error }, { status: 400 });
     }
+    const normalizedEmail = emailResult.normalizedEmail;
     if (!branch_id || Number.isNaN(Number(branch_id))) {
       return NextResponse.json({ error: "A valid branch ID is required" }, { status: 400 });
     }
@@ -107,7 +110,6 @@ export async function POST(req: Request) {
       );
     }
 
-    const normalizedEmail = email.trim().toLowerCase();
     const branchIdNum = Number(branch_id);
     const salaryNum =
       monthly_salary !== undefined && !Number.isNaN(Number(monthly_salary))
@@ -228,10 +230,11 @@ export async function PATCH(req: Request) {
     }
 
     if (email !== undefined) {
-      if (typeof email !== "string" || email.trim().length === 0 || !email.includes("@")) {
-        return NextResponse.json({ error: "A valid email address is required" }, { status: 400 });
+      const emailResult = validateStaffEmail(typeof email === "string" ? email : "");
+      if (!emailResult.valid) {
+        return NextResponse.json({ error: emailResult.error }, { status: 400 });
       }
-      const normalizedEmail = email.trim().toLowerCase();
+      const normalizedEmail = emailResult.normalizedEmail;
       const conflict = await queryOne<{ employee_id: number }>(
         "SELECT employee_id FROM employees WHERE email = ? AND employee_id != ? LIMIT 1",
         [normalizedEmail, employee_id]

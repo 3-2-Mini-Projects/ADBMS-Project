@@ -22,11 +22,14 @@ export async function POST(req: Request) {
 
     const { email } = body as { email?: unknown };
 
-    if (typeof email !== "string" || email.trim().length === 0 || !email.includes("@")) {
-      return NextResponse.json({ error: "Please enter a valid work email address" }, { status: 400 });
+    if (typeof email !== "string" || email.trim().length === 0) {
+      return NextResponse.json({ error: "Please enter your work email address" }, { status: 400 });
     }
 
-    const normalizedEmail = email.trim().toLowerCase();
+    let normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail.includes("@")) {
+      normalizedEmail = `${normalizedEmail}@shop.lk`;
+    }
 
     const employee = await queryOne<EmployeeCheckRow>(
       `SELECT employee_id, full_name, role, is_active, (password_hash IS NOT NULL) AS is_registered

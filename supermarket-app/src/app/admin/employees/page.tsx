@@ -652,14 +652,17 @@ export default function EmployeesPage() {
               </div>
 
               <div>
-                <label className="text-xs text-slate-300 block mb-1">Email</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs text-slate-300 font-medium">Work Email Address</label>
+                  <span className="text-[10px] text-purple-400 font-mono">Company Domain: @shop.lk</span>
+                </div>
                 <input
-                  type="email"
+                  type="text"
                   required
-                  placeholder="ruwan@shop.lk"
+                  placeholder="e.g. ruwan or ruwan@shop.lk"
                   value={newEmp.email}
                   onChange={(e) => setNewEmp({ ...newEmp, email: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white font-mono"
                 />
               </div>
 
@@ -737,9 +740,12 @@ export default function EmployeesPage() {
                 </div>
 
                 <div>
-                  <label className="text-xs text-slate-300 block mb-1 font-medium">Work Email Address</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs text-slate-300 font-medium">Work Email Address</label>
+                    <span className="text-[10px] text-purple-400 font-mono">@shop.lk</span>
+                  </div>
                   <input
-                    type="email"
+                    type="text"
                     required
                     value={editEmail}
                     onChange={(e) => setEditEmail(e.target.value)}

@@ -66,12 +66,15 @@ export default function LoginPage() {
     e.preventDefault();
     setErrorMessage(null);
 
-    const trimmedEmail = email.trim();
-    if (!trimmedEmail || !trimmedEmail.includes("@")) {
-      setErrorMessage("Please enter a valid work email address.");
+    let trimmedEmail = email.trim().toLowerCase();
+    if (!trimmedEmail) {
+      setErrorMessage("Please enter your work email or username.");
       return;
     }
-
+    if (!trimmedEmail.includes("@")) {
+      trimmedEmail = `${trimmedEmail}@shop.lk`;
+      setEmail(trimmedEmail);
+    }
     setIsSubmitting(true);
 
     try {
