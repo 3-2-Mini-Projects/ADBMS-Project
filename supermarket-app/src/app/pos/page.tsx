@@ -1051,6 +1051,9 @@ export default function POSPage() {
               className="my-4 p-5 bg-white text-slate-900 rounded-xl font-mono text-xs shadow-inner overflow-y-auto max-h-[60vh] space-y-3"
             >
               <div className="text-center border-b border-dashed border-slate-400 pb-3">
+                <div className="flex justify-center mb-1.5">
+                  <img src="/logo.png" alt="Nexus Supermarket Logo" className="h-10 object-contain" />
+                </div>
                 <div className="font-extrabold text-sm uppercase">NEXUS SUPERMARKET</div>
                 <div className="text-[11px] text-slate-600">{receiptData.branch_name}</div>
                 <div className="text-[10px] text-slate-500">{receiptData.branch_address}</div>

@@ -153,18 +153,32 @@ export default function CashierDashboardPage() {
           border: "1px solid var(--border)",
         }}
       >
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <h1 style={{ fontSize: 22, fontWeight: 800, color: "var(--text-primary)" }}>
-              Welcome back, {cashier?.full_name || "Cashier"} 👋
-            </h1>
-            <span className="badge badge-completed">
-              {cashier?.role || "CASHIER"} • ID: #{cashier?.employee_id ?? "—"}
-            </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <img
+            src="/logo.png"
+            alt="Nexus Supermarket Logo"
+            style={{
+              width: 58,
+              height: 58,
+              objectFit: "contain",
+              borderRadius: 14,
+              background: "#ffffff",
+              padding: 4,
+              boxShadow: "0 4px 14px rgba(0,0,0,0.25)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              flexShrink: 0,
+            }}
+          />
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <h1 style={{ fontSize: 22, fontWeight: 800, color: "var(--text-primary)" }}>
+                Welcome back, {cashier?.full_name || "Cashier"} 👋
+              </h1>
+            </div>
+            <p style={{ fontSize: 13, color: "var(--text-secondary)", marginTop: 4 }}>
+              Cashier: <strong style={{ color: "var(--accent-emerald)" }}>{cashier?.full_name || "Cashier"}</strong> • Terminal assigned to: <strong>{cashier?.branch_name || "Colombo Main"}</strong> ({cashier?.branch_code || "POS"}) • Ready for checkout
+            </p>
           </div>
-          <p style={{ fontSize: 13, color: "var(--text-secondary)", marginTop: 4 }}>
-            Cashier: <strong style={{ color: "var(--accent-emerald)" }}>{cashier?.full_name || "Cashier"}</strong> • Terminal assigned to: <strong>{cashier?.branch_name || "Colombo Main"}</strong> ({cashier?.branch_code || "POS"}) • Ready for checkout
-          </p>
         </div>
 
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>

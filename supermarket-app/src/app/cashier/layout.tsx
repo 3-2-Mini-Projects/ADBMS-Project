@@ -128,22 +128,20 @@ function CashierLayoutContent({ children }: { children: React.ReactNode }) {
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <div
+            <img
+              src="/logo.png"
+              alt="Nexus Supermarket Logo"
               style={{
                 width: 38,
                 height: 38,
                 borderRadius: 10,
-                background: "linear-gradient(135deg, #10b981, #0284c7)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 18,
+                background: "#ffffff",
+                padding: 3,
+                objectFit: "contain",
                 flexShrink: 0,
-                boxShadow: "0 4px 12px rgba(16, 185, 129, 0.3)",
+                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.25)",
               }}
-            >
-              🛒
-            </div>
+            />
             <div>
               <div
                 style={{
@@ -153,7 +151,7 @@ function CashierLayoutContent({ children }: { children: React.ReactNode }) {
                   letterSpacing: "-0.3px",
                 }}
               >
-                CASHIER<span style={{ color: "var(--accent-emerald)" }}>DESK</span>
+                NEXUS<span style={{ color: "var(--accent-emerald)" }}> DESK</span>
               </div>
               <div
                 style={{
@@ -163,7 +161,7 @@ function CashierLayoutContent({ children }: { children: React.ReactNode }) {
                   letterSpacing: "0.06em",
                 }}
               >
-                SUPERMARKET ADBMS
+                CASHIER TERMINAL
               </div>
             </div>
           </div>

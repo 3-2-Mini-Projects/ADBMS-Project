@@ -554,11 +554,25 @@ export default function POSBillingPage() {
           alignItems: "center",
           flexWrap: "wrap",
           background: "var(--bg-card)",
-          padding: "12px 16px",
+          padding: "10px 16px",
           borderRadius: 12,
           border: "1px solid var(--border)",
         }}
       >
+        <img
+          src="/logo.png"
+          alt="Nexus Supermarket Logo"
+          style={{
+            height: 38,
+            width: 38,
+            objectFit: "contain",
+            borderRadius: 8,
+            background: "#ffffff",
+            padding: 2,
+            boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+            flexShrink: 0,
+          }}
+        />
         {/* Barcode Scanner Input */}
         <form onSubmit={handleBarcodeSubmit} style={{ display: "flex", gap: 6, flex: 1, minWidth: 260, alignItems: "center" }}>
           <div style={{ position: "relative", width: "100%", flex: 1 }}>
