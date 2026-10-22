@@ -39,6 +39,11 @@ interface ReorderItem {
 
 export default function ReorderSuggestionsPage() {
   const { currentEmployee, currentBranch } = useApp();
+  const isClerk = currentEmployee?.role === "STOCK_CLERK";
+  const assignedBranchId = isClerk && currentEmployee?.branch_id
+    ? currentEmployee.branch_id
+    : currentBranch?.branch_id;
+
   const [items, setItems] = useState<ReorderItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterMode, setFilterMode] = useState<"recommended" | "all">("recommended");
@@ -49,7 +54,7 @@ export default function ReorderSuggestionsPage() {
   const fetchSuggestions = async () => {
     setLoading(true);
     try {
-      const branchParam = currentBranch ? `?branchId=${currentBranch.branch_id}` : "";
+      const branchParam = assignedBranchId ? `?branchId=${assignedBranchId}` : "";
       const res = await fetch(`/api/inventory${branchParam}`);
       const data = await res.json();
       if (Array.isArray(data)) setItems(data);
@@ -62,7 +67,7 @@ export default function ReorderSuggestionsPage() {
 
   useEffect(() => {
     fetchSuggestions();
-  }, [currentBranch]);
+  }, [assignedBranchId]);
 
   const getDefaultSuggestedQty = (item: ReorderItem): number => {
     return Number(item.suggested_reorder_qty) > 0
@@ -115,7 +120,6 @@ export default function ReorderSuggestionsPage() {
   );
 
   const manualEditsCount = Object.keys(customQuantities).length;
-  const isClerk = currentEmployee?.role === "STOCK_CLERK";
 
   const theme = {
     wrapper: isClerk
