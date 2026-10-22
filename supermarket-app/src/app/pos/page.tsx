@@ -241,7 +241,10 @@ export default function POSPage() {
     if (!customerSearch.trim()) return;
     setLookingUpCustomer(true);
     try {
-      const res = await fetch(`/api/customers?search=${encodeURIComponent(customerSearch.trim())}`);
+      const res = await fetch(`/api/customers?search=${encodeURIComponent(customerSearch.trim())}&_t=${Date.now()}`, {
+        cache: "no-store",
+        headers: { "Cache-Control": "no-cache" },
+      });
       const data = await res.json();
       if (Array.isArray(data) && data.length > 0) {
         setSelectedCustomer(data[0]);
@@ -357,7 +360,22 @@ export default function POSPage() {
         });
         setPaymentModalOpen(false);
         setReceiptModalOpen(true);
-        clearCart();
+
+        // Always refresh customer details with newly updated points balance and tier
+        if (selectedCustomer && result.receipt?.new_points_balance !== undefined) {
+          setSelectedCustomer({
+            ...selectedCustomer,
+            points_balance: result.receipt.new_points_balance,
+            tier: result.receipt.customer_tier || selectedCustomer.tier,
+          });
+          setCart([]);
+          setPointsToRedeem(0);
+          setAppliedCoupon(null);
+          setCouponCode("");
+        } else {
+          clearCart();
+        }
+
         fetchProducts(); // refresh inventory
       } else {
         showToast(result.error || "Checkout failed", "error");

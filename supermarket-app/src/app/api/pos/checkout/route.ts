@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { pool } from "@/lib/db";
 import { authorizeRequest } from "@/lib/auth";
-import { sendLoyaltySaleSms } from "@/lib/sms";
+import { sendLoyaltyEmail } from "@/lib/email";
 interface CartItemInput {
   product_id: number;
   quantity: number;
@@ -252,11 +252,12 @@ export async function POST(req: Request) {
     let newPointsBalance = 0;
     let customerTier = "BRONZE";
     let customerPhone: string | null = null;
+    let customerEmail: string | null = null;
     let customerFullName = "Valued Customer";
 
     if (customer_id) {
       const [custRows]: any = await connection.query(
-        "SELECT customer_id, card_no, full_name, phone, tier, points_balance, is_active FROM customers WHERE customer_id = ? FOR UPDATE",
+        "SELECT customer_id, card_no, full_name, phone, email, tier, points_balance, is_active FROM customers WHERE customer_id = ? FOR UPDATE",
         [customer_id]
       );
 
@@ -264,6 +265,7 @@ export async function POST(req: Request) {
         const cust = custRows[0];
         customerTier = cust.tier;
         customerPhone = cust.phone;
+        customerEmail = cust.email;
         customerFullName = cust.full_name;
         let currentPoints = Number(cust.points_balance || 0);
 
@@ -377,11 +379,11 @@ export async function POST(req: Request) {
     // Commit Transaction
     await connection.commit();
 
-    let smsNotification = null;
-    if (customer_id && customerPhone) {
+    let emailNotification = null;
+    if (customer_id && customerEmail) {
       try {
-        smsNotification = await sendLoyaltySaleSms({
-          phone: customerPhone,
+        emailNotification = await sendLoyaltyEmail({
+          email: customerEmail,
           customerName: customerFullName,
           customerTier: customerTier,
           pointsEarned: earnedPoints || 0,
@@ -390,15 +392,15 @@ export async function POST(req: Request) {
           receiptNumber: `REC-${branch_id}-${String(sale_id).padStart(6, "0")}`,
           totalAmount: total_amount,
         });
-      } catch (smsErr) {
-        console.warn("[POS Checkout] Loyalty SMS dispatch error:", smsErr);
+      } catch (emailErr) {
+        console.warn("[POS Checkout] Loyalty Email dispatch error:", emailErr);
       }
     }
 
     return NextResponse.json({
       success: true,
       sale_id,
-      sms: smsNotification,
+      email: emailNotification,
       receipt: {
         sale_id,
         sale_date: new Date().toISOString(),

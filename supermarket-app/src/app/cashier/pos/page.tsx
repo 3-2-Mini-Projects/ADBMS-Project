@@ -366,7 +366,9 @@ export default function POSBillingPage() {
     }
   };
 
-  // Customer Loyalty Lookup
+  const [isRefreshingCustomer, setIsRefreshingCustomer] = useState(false);
+
+  // Customer Loyalty Lookup (Bypass cache completely with cache: no-store and timestamp)
   const handleCustomerSearch = async (val: string) => {
     setCustomerSearch(val);
     if (!val.trim()) {
@@ -374,11 +376,35 @@ export default function POSBillingPage() {
       return;
     }
     try {
-      const res = await fetch(`/api/cashier/customers?q=${encodeURIComponent(val)}`);
+      const res = await fetch(`/api/cashier/customers?q=${encodeURIComponent(val.trim())}&_t=${Date.now()}`, {
+        cache: "no-store",
+        headers: { "Cache-Control": "no-cache" },
+      });
       const data = await res.json();
-      setCustomerResults(data);
+      setCustomerResults(Array.isArray(data) ? data : []);
     } catch {
       setCustomerResults([]);
+    }
+  };
+
+  // Re-fetch customer directly from DB to guarantee real-time balance
+  const refreshCustomer = async (targetId?: number) => {
+    const id = targetId || customer?.customer_id;
+    if (!id) return;
+    setIsRefreshingCustomer(true);
+    try {
+      const res = await fetch(`/api/cashier/customers?id=${id}&_t=${Date.now()}`, {
+        cache: "no-store",
+        headers: { "Cache-Control": "no-cache" },
+      });
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        setCustomer(data[0]);
+      }
+    } catch (err) {
+      console.error("Failed to refresh customer points", err);
+    } finally {
+      setIsRefreshingCustomer(false);
     }
   };
 
@@ -484,7 +510,25 @@ export default function POSBillingPage() {
         setCompletedReceipt(data.receipt);
         setShowCheckout(false);
         setCart([]);
-        setCustomer(null);
+
+        // Always refresh customer details with latest points balance and tier from completed sale
+        if (data.receipt.customer) {
+          setCustomer({
+            customer_id: data.receipt.customer.customer_id,
+            card_no: data.receipt.customer.card_no,
+            full_name: data.receipt.customer.full_name,
+            phone: data.receipt.customer.phone,
+            tier: data.receipt.customer.tier || "BRONZE",
+            points_balance: Number(data.receipt.customer.points_balance || 0),
+          });
+        } else {
+          setCustomer(null);
+        }
+
+        // Reset customer search dropdown state
+        setCustomerResults([]);
+        setCustomerSearch("");
+
         // Refresh products stock in background
         fetchProducts(searchQuery, selectedCategory);
       } else {
@@ -624,6 +668,16 @@ export default function POSBillingPage() {
                 {customer.points_balance || 0} pts
               </span>
               <button
+                type="button"
+                className="btn btn-ghost"
+                style={{ padding: "1px 5px", fontSize: 11 }}
+                onClick={() => refreshCustomer(customer.customer_id)}
+                title="Refresh loyalty points from database"
+                disabled={isRefreshingCustomer}
+              >
+                {isRefreshingCustomer ? "⏳" : "🔄"}
+              </button>
+              <button
                 className="btn btn-ghost"
                 style={{ padding: "1px 4px", fontSize: 10 }}
                 onClick={() => setCustomer(null)}
@@ -683,10 +737,12 @@ export default function POSBillingPage() {
                 {customerResults.map((c) => (
                   <div
                     key={c.customer_id}
-                    onClick={() => {
+                    onClick={async () => {
                       setCustomer(c);
                       setShowCustSearch(false);
                       setCustomerSearch("");
+                      // Guarantee latest DB points
+                      await refreshCustomer(c.customer_id);
                     }}
                     style={{
                       padding: "6px 8px",
