@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { withTransaction, query } from "@/lib/db";
+import { sendLoyaltySaleSms } from "@/lib/sms";
 
 interface SaleItemInput {
   product_id: number;
@@ -376,6 +377,27 @@ export async function POST(req: Request) {
 
     const receiptNumber = `REC-${branchInfo?.branch_code || "BR"}-${String(saleResult.saleId).padStart(6, "0")}`;
 
+    // Send Loyalty Points SMS if customer phone is available
+    let smsNotification = null;
+    if (customerInfo && customerInfo.phone) {
+      try {
+        smsNotification = await sendLoyaltySaleSms({
+          phone: customerInfo.phone,
+          customerName: customerInfo.full_name,
+          customerTier: customerInfo.tier,
+          cardNumber: customerInfo.card_no,
+          pointsEarned: saleResult.pointsEarned || 0,
+          pointsRedeemed: saleResult.pointsRedeemed || 0,
+          newPointsBalance: customerInfo.points_balance || 0,
+          receiptNumber,
+          totalAmount: saleResult.totalAmount,
+          branchName: branchInfo?.name || "Nexus Supermarket",
+        });
+      } catch (smsErr) {
+        console.warn("[Cashier Sale] Loyalty SMS dispatch error:", smsErr);
+      }
+    }
+
     const receipt = {
       saleId: saleResult.saleId,
       receiptNumber,
@@ -393,6 +415,7 @@ export async function POST(req: Request) {
       change_amount: saleResult.changeDue,
       changeDue: saleResult.changeDue,
       payments: saleResult.payments,
+      sms: smsNotification,
     };
 
     if (idempotencyKey) {
@@ -403,6 +426,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       receipt,
+      sms: smsNotification,
     });
   } catch (error: any) {
     console.error("Sale processing error:", error);

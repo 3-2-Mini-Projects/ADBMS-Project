@@ -73,12 +73,6 @@ export default function CashierProductsPage() {
             Real-time selling prices and inventory availability for <strong>{cashier?.branch_name}</strong>
           </p>
         </div>
-
-        <div style={{ display: "flex", gap: 10 }}>
-          <Link href="/cashier/pos" className="btn btn-emerald">
-            🛒 Go to POS Terminal
-          </Link>
-        </div>
       </div>
 
       {/* Permissions Banner */}

@@ -321,13 +321,7 @@ function CashierLayoutContent({ children }: { children: React.ReactNode }) {
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            {/* Quick POS Button */}
-            {pathname !== "/cashier/pos" && (
-              <Link href="/cashier/pos" className="btn btn-emerald" style={{ padding: "6px 14px", fontSize: 12 }}>
-                🛒 New Sale
-              </Link>
-            )}
-
+            
             <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--text-secondary)" }}>
               <span className="pulse-live" />
               Live Online

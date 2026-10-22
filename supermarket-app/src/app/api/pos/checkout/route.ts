@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { pool } from "@/lib/db";
 import { authorizeRequest } from "@/lib/auth";
+import { sendLoyaltySaleSms } from "@/lib/sms";
 interface CartItemInput {
   product_id: number;
   quantity: number;
@@ -269,16 +270,20 @@ export async function POST(req: Request) {
     let pointsRedeemed = 0;
     let newPointsBalance = 0;
     let customerTier = "BRONZE";
+    let customerPhone: string | null = null;
+    let customerFullName = "Valued Customer";
 
     if (customer_id) {
       const [custRows]: any = await connection.query(
-        "SELECT customer_id, card_no, full_name, tier, points_balance, is_active FROM customers WHERE customer_id = ? FOR UPDATE",
+        "SELECT customer_id, card_no, full_name, phone, tier, points_balance, is_active FROM customers WHERE customer_id = ? FOR UPDATE",
         [customer_id]
       );
 
       if (custRows.length > 0 && custRows[0].is_active === 1) {
         const cust = custRows[0];
         customerTier = cust.tier;
+        customerPhone = cust.phone;
+        customerFullName = cust.full_name;
         let currentPoints = Number(cust.points_balance || 0);
 
         // A. Points Spent / Redeemed as payment
@@ -391,9 +396,28 @@ export async function POST(req: Request) {
     // Commit Transaction
     await connection.commit();
 
+    let smsNotification = null;
+    if (customer_id && customerPhone) {
+      try {
+        smsNotification = await sendLoyaltySaleSms({
+          phone: customerPhone,
+          customerName: customerFullName,
+          customerTier: customerTier,
+          pointsEarned: earnedPoints || 0,
+          pointsRedeemed: pointsRedeemed || 0,
+          newPointsBalance: newPointsBalance || 0,
+          receiptNumber: `REC-${branch_id}-${String(sale_id).padStart(6, "0")}`,
+          totalAmount: total_amount,
+        });
+      } catch (smsErr) {
+        console.warn("[POS Checkout] Loyalty SMS dispatch error:", smsErr);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       sale_id,
+      sms: smsNotification,
       receipt: {
         sale_id,
         sale_date: new Date().toISOString(),
