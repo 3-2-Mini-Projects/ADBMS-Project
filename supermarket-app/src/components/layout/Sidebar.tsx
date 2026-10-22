@@ -66,14 +66,6 @@ const ADMIN_NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    group: "INVENTORY & PURCHASING",
-    items: [
-      { title: "Inventory", href: "/inventory", icon: Boxes },
-      { title: "Stock Transfers", href: "/inventory/transfers", icon: ArrowLeftRight, badge: "Live" },
-      { title: "Purchase Orders", href: "/purchases", icon: FileSpreadsheet },
-    ],
-  },
-  {
     group: "SECURITY & AUDIT",
     items: [
       { title: "Audit Trail & Logs", href: "/admin/audit", icon: ShieldAlert, badge: "Security", permission: "view_audit_log" },
@@ -256,7 +248,15 @@ export function Sidebar() {
   const role: UserRole =
     currentEmployee?.role ||
     cachedRole ||
-    (pathname.startsWith("/cashier") ? "CASHIER" : "CASHIER");
+    (pathname.startsWith("/admin")
+      ? "ADMIN"
+      : pathname.startsWith("/cashier")
+      ? "CASHIER"
+      : pathname.startsWith("/marketing")
+      ? "MARKETING"
+      : pathname.startsWith("/inventory")
+      ? "STOCK_CLERK"
+      : "ADMIN");
   const isAdmin = role === "ADMIN";
   const navGroups =
     isAdmin
