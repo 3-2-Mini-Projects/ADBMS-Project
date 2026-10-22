@@ -95,7 +95,7 @@ const NAV_GROUPS: NavGroup[] = [
     group: "OPERATIONS",
     items: [
       { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-      { title: "POS Checkout", href: "/pos", icon: ShoppingCart, permission: "create_pos_sales", badge: "Live", highlight: true },
+      { title: "POS Checkout", href: "/cashier/pos", icon: ShoppingCart, permission: "create_pos_sales", badge: "Live", highlight: true },
       { title: "Sales History", href: "/sales", icon: Receipt },
       { title: "Returns & Refunds", href: "/returns", icon: RotateCcw, permission: "process_returns" },
     ],
