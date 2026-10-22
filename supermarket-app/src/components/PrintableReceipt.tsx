@@ -26,6 +26,12 @@ export interface ReceiptData {
     points_earned?: number;
     points_redeemed?: number;
     phone?: string;
+    email?: string;
+  } | null;
+  email?: {
+    success?: boolean;
+    recipient?: string;
+    messageId?: string;
   } | null;
   sms?: {
     success?: boolean;
@@ -416,7 +422,12 @@ export default function PrintableReceipt({
                     <span>{receipt.customer.points_balance} pts</span>
                   </div>
                 )}
-                {receipt.sms?.success && (
+                {receipt.email?.success && (
+                  <div style={{ fontSize: 9.5, color: "#047857", textAlign: "center", marginTop: 4, paddingTop: 4, borderTop: "1px dashed #d1d5db" }}>
+                    ✓ Loyalty Rewards Email sent to {receipt.email.recipient}
+                  </div>
+                )}
+                {!receipt.email?.success && receipt.sms?.success && (
                   <div style={{ fontSize: 9.5, color: "#047857", textAlign: "center", marginTop: 4, paddingTop: 4, borderTop: "1px dashed #d1d5db" }}>
                     ✓ Loyalty SMS sent to {receipt.sms.recipient}
                   </div>

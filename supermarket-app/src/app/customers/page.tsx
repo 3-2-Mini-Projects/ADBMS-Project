@@ -591,15 +591,16 @@ export default function CustomersPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs text-slate-300 block mb-1 flex items-center justify-between">
-                    <span>Email</span>
-                    <span className="text-[10px] text-slate-500 font-mono">Optional</span>
+                    <span>Email <span className="text-rose-400">*</span></span>
+                    <span className="text-[10px] text-emerald-400 font-mono">Required</span>
                   </label>
                   <input
                     type="email"
+                    required
                     value={editingCustomer.email}
                     onChange={(e) => setEditingCustomer({ ...editingCustomer, email: e.target.value })}
                     className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus:border-blue-500"
-                    placeholder="email@example.com (optional)"
+                    placeholder="customer@example.com"
                   />
                 </div>
 

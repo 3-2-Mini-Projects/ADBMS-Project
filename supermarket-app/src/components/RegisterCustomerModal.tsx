@@ -45,6 +45,7 @@ export default function RegisterCustomerModal({
 
     const trimmedName = fullName.trim();
     const trimmedPhone = phone.trim();
+    const trimmedEmail = email.trim();
 
     if (!trimmedName) {
       setErrorMsg("Please enter customer's full name");
@@ -53,6 +54,11 @@ export default function RegisterCustomerModal({
 
     if (!trimmedPhone || trimmedPhone.length < 9) {
       setErrorMsg("Please enter a valid phone number (e.g. 0771234567)");
+      return;
+    }
+
+    if (!trimmedEmail || !trimmedEmail.includes("@") || !trimmedEmail.includes(".")) {
+      setErrorMsg("Customer email is required for loyalty rewards updates (e.g. customer@gmail.com)");
       return;
     }
 
@@ -65,7 +71,7 @@ export default function RegisterCustomerModal({
         body: JSON.stringify({
           full_name: trimmedName,
           phone: trimmedPhone,
-          email: email.trim() || null,
+          email: trimmedEmail,
           city: city.trim() || defaultCity,
           card_no: customCardNo.trim() || undefined,
           giveBonus,
@@ -261,15 +267,19 @@ export default function RegisterCustomerModal({
             {/* Email */}
             <div>
               <label style={{ display: "block", fontSize: 11.5, fontWeight: 700, marginBottom: 5, color: "var(--text-secondary)" }}>
-                Email Address (Optional)
+                Email Address <span style={{ color: "var(--accent-rose)" }}>*</span>
               </label>
               <input
                 type="email"
                 className="input"
-                placeholder="e.g. kamal@gmail.com"
+                placeholder="e.g. customer@gmail.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                required
               />
+              <span style={{ fontSize: 10, color: "var(--text-muted)", display: "block", marginTop: 3 }}>
+                Required for earning & redeeming points receipts
+              </span>
             </div>
 
             {/* City */}

@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
 import { getServerSession } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
@@ -118,7 +121,13 @@ export async function GET(req: Request) {
     sql += ` ORDER BY c.customer_id DESC`;
 
     const customers = await query(sql, params);
-    return NextResponse.json(customers);
+    return NextResponse.json(customers, {
+      headers: {
+        "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0",
+      },
+    });
   } catch (err: any) {
     console.error("GET /api/customers error:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
@@ -129,9 +138,9 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const { full_name, phone, email, city } = body;
-
-    if (!full_name || !phone) {
-      return NextResponse.json({ error: "Name and phone are required" }, { status: 400 });
+    const cleanEmail = email?.trim();
+    if (!full_name || !phone || !cleanEmail || !cleanEmail.includes("@")) {
+      return NextResponse.json({ error: "Name, phone, and a valid email are required" }, { status: 400 });
     }
 
     // Auto-generate sequential card number like C0001, C0002, ..., C0006 -> C0007
@@ -159,14 +168,14 @@ export async function POST(req: Request) {
     try {
       const procRes: any = await query(
         `CALL register_customer(?, ?, ?, ?, ?)`,
-        [card_no, full_name, phone, email || null, city || "Colombo"]
+        [card_no, full_name, phone, cleanEmail, city || "Colombo"]
       );
       customer_id = procRes?.[0]?.[0]?.customer_id || procRes?.insertId;
     } catch {
       const result: any = await query(
         `INSERT INTO customers (card_no, full_name, phone, email, city, join_date, tier, points_balance, is_active)
          VALUES (?, ?, ?, ?, ?, CURDATE(), 'BRONZE', 0, 1)`,
-        [card_no, full_name, phone, email || null, city || null]
+        [card_no, full_name, phone, cleanEmail, city || null]
       );
       customer_id = result.insertId;
     }
@@ -186,9 +195,9 @@ export async function PUT(req: Request) {
   try {
     const body = await req.json();
     const { customer_id, card_no, full_name, phone, email, city, tier, points_balance, join_date, is_active } = body;
-
-    if (!customer_id || !full_name || !phone) {
-      return NextResponse.json({ error: "Customer ID, full name and phone number are required" }, { status: 400 });
+    const cleanEmail = email?.trim();
+    if (!customer_id || !full_name || !phone || !cleanEmail || !cleanEmail.includes("@")) {
+      return NextResponse.json({ error: "Customer ID, full name, phone number, and a valid email are required" }, { status: 400 });
     }
 
     // Format join_date if provided (YYYY-MM-DD)

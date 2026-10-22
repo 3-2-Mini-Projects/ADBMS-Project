@@ -1,26 +1,57 @@
 import { NextResponse } from "next/server";
 import { query, withTransaction } from "@/lib/db";
 
-// GET /api/cashier/customers?q=... — Lookup customers by card number, phone, or name
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+// GET /api/cashier/customers?q=... or ?id=... — Lookup customers by card, phone, name, or customer_id
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const q = searchParams.get("q")?.trim() || "";
+    const id = searchParams.get("id")?.trim() || "";
+
+    if (id) {
+      const customers = await query<any>(`
+        SELECT customer_id, card_no, full_name, phone, email, tier, points_balance, is_active
+        FROM customers
+        WHERE customer_id = ?
+        LIMIT 1
+      `, [id]);
+
+      return NextResponse.json(customers, {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+          "Pragma": "no-cache",
+          "Expires": "0",
+        },
+      });
+    }
 
     if (!q) {
-      return NextResponse.json([]);
+      return NextResponse.json([], {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+        },
+      });
     }
 
     const customers = await query<any>(`
       SELECT customer_id, card_no, full_name, phone, email, tier, points_balance, is_active
       FROM customers
       WHERE is_active = 1 
-        AND (card_no LIKE ? OR phone LIKE ? OR full_name LIKE ?)
+        AND (card_no LIKE ? OR phone LIKE ? OR full_name LIKE ? OR email LIKE ?)
       ORDER BY full_name ASC
       LIMIT 10
-    `, [`%${q}%`, `%${q}%`, `%${q}%`]);
+    `, [`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`]);
 
-    return NextResponse.json(customers);
+    return NextResponse.json(customers, {
+      headers: {
+        "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0",
+      },
+    });
   } catch (error: any) {
     console.error("Customer lookup error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -50,6 +81,27 @@ export async function POST(req: Request) {
     if (existingPhone) {
       return NextResponse.json(
         { error: `Phone number is already registered to customer "${existingPhone.full_name}" (${existingPhone.card_no})` },
+        { status: 409 }
+      );
+    }
+
+    // Step 2b: Validate email is provided and valid
+    const cleanEmail = email?.trim();
+    if (!cleanEmail || !cleanEmail.includes("@") || !cleanEmail.includes(".")) {
+      return NextResponse.json(
+        { error: "A valid customer email is required for loyalty rewards updates" },
+        { status: 400 }
+      );
+    }
+
+    // Step 2c: Validate email uniqueness
+    const [existingEmail]: any = await query(
+      `SELECT customer_id, card_no, full_name FROM customers WHERE email = ? LIMIT 1`,
+      [cleanEmail]
+    );
+    if (existingEmail) {
+      return NextResponse.json(
+        { error: `Email address "${cleanEmail}" is already registered to customer "${existingEmail.full_name}" (${existingEmail.card_no})` },
         { status: 409 }
       );
     }
@@ -86,7 +138,7 @@ export async function POST(req: Request) {
           card_no,
           full_name.trim(),
           cleanPhone,
-          email?.trim() || null,
+          cleanEmail,
           city?.trim() || "Galle",
           startingPoints,
         ]
@@ -123,7 +175,7 @@ export async function POST(req: Request) {
         card_no,
         full_name: full_name.trim(),
         phone: cleanPhone,
-        email: email?.trim() || null,
+        email: cleanEmail,
         city: city?.trim() || "Galle",
         tier: "BRONZE",
         points_balance: startingPoints,

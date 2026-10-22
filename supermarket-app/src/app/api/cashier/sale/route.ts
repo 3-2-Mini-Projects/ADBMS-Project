@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { withTransaction, query } from "@/lib/db";
-import { sendLoyaltySaleSms } from "@/lib/sms";
+import { sendLoyaltyEmail } from "@/lib/email";
 
 interface SaleItemInput {
   product_id: number;
@@ -361,7 +361,7 @@ export async function POST(req: Request) {
     let customerInfo = null;
     if (customerId) {
       const [cust]: any = await query(
-        `SELECT customer_id, card_no, full_name, phone, tier, points_balance FROM customers WHERE customer_id = ?`,
+        `SELECT customer_id, card_no, full_name, phone, email, tier, points_balance FROM customers WHERE customer_id = ?`,
         [customerId]
       );
       if (cust) {
@@ -377,12 +377,12 @@ export async function POST(req: Request) {
 
     const receiptNumber = `REC-${branchInfo?.branch_code || "BR"}-${String(saleResult.saleId).padStart(6, "0")}`;
 
-    // Send Loyalty Points SMS if customer phone is available
-    let smsNotification = null;
-    if (customerInfo && customerInfo.phone) {
+    // Send Loyalty Points Email if customer email is available
+    let emailNotification = null;
+    if (customerInfo && customerInfo.email) {
       try {
-        smsNotification = await sendLoyaltySaleSms({
-          phone: customerInfo.phone,
+        emailNotification = await sendLoyaltyEmail({
+          email: customerInfo.email,
           customerName: customerInfo.full_name,
           customerTier: customerInfo.tier,
           cardNumber: customerInfo.card_no,
@@ -393,8 +393,8 @@ export async function POST(req: Request) {
           totalAmount: saleResult.totalAmount,
           branchName: branchInfo?.name || "Nexus Supermarket",
         });
-      } catch (smsErr) {
-        console.warn("[Cashier Sale] Loyalty SMS dispatch error:", smsErr);
+      } catch (emailErr) {
+        console.warn("[Cashier Sale] Loyalty Email dispatch error:", emailErr);
       }
     }
 
@@ -415,7 +415,7 @@ export async function POST(req: Request) {
       change_amount: saleResult.changeDue,
       changeDue: saleResult.changeDue,
       payments: saleResult.payments,
-      sms: smsNotification,
+      email: emailNotification,
     };
 
     if (idempotencyKey) {
@@ -426,7 +426,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       receipt,
-      sms: smsNotification,
+      email: emailNotification,
     });
   } catch (error: any) {
     console.error("Sale processing error:", error);
