@@ -17,6 +17,8 @@ import {
   ShoppingCart,
   PackagePlus,
   Radar,
+  Store,
+  ChevronDown,
 } from "lucide-react";
 
 interface StockAlertItem {
@@ -35,19 +37,39 @@ interface StockAlertItem {
 }
 
 export default function StockAlertsPage() {
-  const { currentEmployee, currentBranch, showToast } = useApp();
+  const { currentEmployee, currentBranch, branches, showToast } = useApp();
   const isClerk = currentEmployee?.role === "STOCK_CLERK";
+  const assignedBranchId = currentEmployee?.branch_id;
+  const assignedBranch = branches.find((b) => b.branch_id === assignedBranchId);
+  const assignedBranchName = assignedBranch?.name || currentEmployee?.branch_name || "Colombo Main";
 
+  // Default to Clerk's assigned branch, or current active branch, or ALL
+  const defaultBranchId = isClerk && assignedBranchId
+    ? String(assignedBranchId)
+    : currentBranch?.branch_id
+    ? String(currentBranch.branch_id)
+    : "ALL";
+
+  const [selectedBranchId, setSelectedBranchId] = useState<string>(defaultBranchId);
   const [alerts, setAlerts] = useState<StockAlertItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "resolved">("active");
   const [resolvingId, setResolvingId] = useState<number | null>(null);
 
+  // Sync default branch when employee or context loads
+  useEffect(() => {
+    if (isClerk && currentEmployee?.branch_id) {
+      setSelectedBranchId(String(currentEmployee.branch_id));
+    } else if (currentBranch?.branch_id && selectedBranchId === "ALL") {
+      setSelectedBranchId(String(currentBranch.branch_id));
+    }
+  }, [isClerk, currentEmployee, currentBranch]);
+
   const fetchAlerts = async () => {
     setLoading(true);
     try {
-      const branchParam = currentBranch ? `&branchId=${currentBranch.branch_id}` : "";
+      const branchParam = selectedBranchId && selectedBranchId !== "ALL" ? `&branchId=${selectedBranchId}` : "";
       // Fetch all alerts so counts remain consistent, filter locally
       const res = await fetch(`/api/inventory/stock-alerts?status=all${branchParam}`);
       const data = await res.json();
@@ -61,15 +83,16 @@ export default function StockAlertsPage() {
 
   useEffect(() => {
     fetchAlerts();
-  }, [currentBranch]);
+  }, [selectedBranchId]);
 
   const handleScanNow = async () => {
     setScanning(true);
     try {
+      const scanBranchId = selectedBranchId && selectedBranchId !== "ALL" ? Number(selectedBranchId) : undefined;
       const res = await fetch("/api/inventory/stock-alerts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ branchId: currentBranch?.branch_id }),
+        body: JSON.stringify({ branchId: scanBranchId }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -195,6 +218,9 @@ export default function StockAlertsPage() {
     badgeStatusActive: isClerk
       ? "bg-amber-50 text-amber-700 border border-amber-200 animate-pulse font-bold"
       : "bg-amber-500/10 text-amber-400 border border-amber-500/20 animate-pulse font-bold",
+    select: isClerk
+      ? "px-3 py-1.5 pl-8 pr-8 rounded-xl bg-white border border-slate-300 text-xs text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all appearance-none cursor-pointer shadow-sm"
+      : "px-3 py-1.5 pl-8 pr-8 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-200 font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all appearance-none cursor-pointer",
   };
 
   return (
@@ -207,6 +233,11 @@ export default function StockAlertsPage() {
               <AlertTriangle className="w-6 h-6 text-amber-500" />
               <span>Stock Alerts Management</span>
             </h1>
+            {isClerk && assignedBranchId && (
+              <span className="text-[11px] font-mono font-semibold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
+                Branch #{assignedBranchId} ({assignedBranchName})
+              </span>
+            )}
           </div>
           <p className={theme.subtitle}>
             Real-time low stock thresholds and expiration warnings monitored live across supermarket inventory.
@@ -278,38 +309,66 @@ export default function StockAlertsPage() {
         </div>
       </div>
 
-      {/* Filter Tabs */}
-      <div className={`flex items-center gap-2 border-b ${theme.tabBorder} pb-3`}>
-        <button
-          onClick={() => setStatusFilter("active")}
-          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-            statusFilter === "active"
-              ? "bg-amber-600 text-white shadow-sm"
-              : theme.tabInactive
-          }`}
-        >
-          Active Unresolved ({activeCount})
-        </button>
-        <button
-          onClick={() => setStatusFilter("resolved")}
-          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-            statusFilter === "resolved"
-              ? "bg-emerald-600 text-white shadow-sm"
-              : theme.tabInactive
-          }`}
-        >
-          Resolved ({resolvedCount})
-        </button>
-        <button
-          onClick={() => setStatusFilter("all")}
-          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-            statusFilter === "all"
-              ? "bg-blue-600 text-white shadow-sm"
-              : theme.tabInactive
-          }`}
-        >
-          All Alerts ({totalCount})
-        </button>
+      {/* Controls Bar: Filter Tabs + Branch Selector */}
+      <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b ${theme.tabBorder} pb-3`}>
+        {/* Status Filter Tabs */}
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setStatusFilter("active")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              statusFilter === "active"
+                ? "bg-amber-600 text-white shadow-sm"
+                : theme.tabInactive
+            }`}
+          >
+            Active Unresolved ({activeCount})
+          </button>
+          <button
+            onClick={() => setStatusFilter("resolved")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              statusFilter === "resolved"
+                ? "bg-emerald-600 text-white shadow-sm"
+                : theme.tabInactive
+            }`}
+          >
+            Resolved ({resolvedCount})
+          </button>
+          <button
+            onClick={() => setStatusFilter("all")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              statusFilter === "all"
+                ? "bg-blue-600 text-white shadow-sm"
+                : theme.tabInactive
+            }`}
+          >
+            All Alerts ({totalCount})
+          </button>
+        </div>
+
+        {/* Branch Filter Dropdown */}
+        <div className="relative shrink-0 flex items-center gap-2">
+          <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 hidden sm:inline">
+            Branch:
+          </span>
+          <div className="relative">
+            <Store className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+            <select
+              id="alerts-branch-filter"
+              value={selectedBranchId}
+              onChange={(e) => setSelectedBranchId(e.target.value)}
+              className={theme.select}
+              title="Filter stock alerts by supermarket branch"
+            >
+              <option value="ALL">All Branches</option>
+              {branches.map((b) => (
+                <option key={b.branch_id} value={String(b.branch_id)}>
+                  {b.name} {isClerk && b.branch_id === currentEmployee?.branch_id ? "(Assigned Branch)" : ""}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+          </div>
+        </div>
       </div>
 
       {/* Alerts Table */}

@@ -35,6 +35,10 @@ export default function InventoryPage() {
   }
 
   const isClerk = currentEmployee?.role === "STOCK_CLERK";
+  const assignedBranchId = isClerk && currentEmployee?.branch_id
+    ? currentEmployee.branch_id
+    : currentBranch?.branch_id;
+
   const [activeTab, setActiveTab] = useState<"stock" | "batches">("stock");
 
   // Stock State
@@ -77,7 +81,7 @@ export default function InventoryPage() {
     setAuditModalOpen(true);
     setLoadingAudit(true);
     try {
-      const branchParam = currentBranch ? `&branchId=${currentBranch.branch_id}` : "";
+      const branchParam = assignedBranchId ? `&branchId=${assignedBranchId}` : "";
       const res = await fetch(`/api/inventory/audit?type=${type}${branchParam}`);
       const data = await res.json();
       if (Array.isArray(data)) setAuditResults(data);
@@ -100,7 +104,7 @@ export default function InventoryPage() {
     setLoadingStock(true);
     try {
       const params = new URLSearchParams();
-      if (currentBranch) params.append("branchId", String(currentBranch.branch_id));
+      if (assignedBranchId) params.append("branchId", String(assignedBranchId));
       if (lowStockOnly) params.append("lowStock", "true");
       if (search.trim()) params.append("search", search.trim());
       params.append("_t", String(Date.now()));
@@ -119,7 +123,7 @@ export default function InventoryPage() {
     setLoadingBatches(true);
     try {
       const params = new URLSearchParams();
-      if (currentBranch) params.append("branchId", String(currentBranch.branch_id));
+      if (assignedBranchId) params.append("branchId", String(assignedBranchId));
       params.append("_t", String(Date.now()));
 
       const res = await fetch(`/api/inventory/batches?${params.toString()}`, { cache: "no-store" });
@@ -135,7 +139,7 @@ export default function InventoryPage() {
   useEffect(() => {
     fetchStock();
     fetchBatches();
-  }, [currentBranch, lowStockOnly]);
+  }, [assignedBranchId, lowStockOnly]);
 
   const handleAdjustStock = async (e: React.FormEvent) => {
     e.preventDefault();

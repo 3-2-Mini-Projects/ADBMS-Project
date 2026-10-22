@@ -24,14 +24,18 @@ import {
 export function InventoryDashboardView() {
   const { currentBranch, currentEmployee } = useApp();
   const isClerk = currentEmployee?.role === "STOCK_CLERK";
+  const assignedBranchId = isClerk && currentEmployee?.branch_id
+    ? currentEmployee.branch_id
+    : currentBranch?.branch_id;
+
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const url = currentBranch
-        ? `/api/inventory/dashboard?branchId=${currentBranch.branch_id}`
+      const url = assignedBranchId
+        ? `/api/inventory/dashboard?branchId=${assignedBranchId}`
         : "/api/inventory/dashboard";
       const res = await fetch(url);
       const json = await res.json();
@@ -45,7 +49,7 @@ export function InventoryDashboardView() {
 
   useEffect(() => {
     fetchData();
-  }, [currentBranch]);
+  }, [assignedBranchId]);
 
   const summary = data?.summary ?? {};
   const expiry = data?.expiry ?? {};
