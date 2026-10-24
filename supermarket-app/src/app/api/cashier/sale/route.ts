@@ -22,6 +22,8 @@ interface CreateSaleRequest {
   customerId?: number | null;
   promoId?: number | null;
   couponId?: number | null;
+  couponCode?: string | null;
+  coupon_code?: string | null;
   items: SaleItemInput[];
   payments: PaymentInput[];
   amountTendered?: number;
@@ -40,7 +42,7 @@ export async function POST(req: Request) {
       return NextResponse.json(idempotencyMap.get(idempotencyKey));
     }
 
-    const { branchId, cashierId, customerId, promoId, couponId, items, payments, amountTendered } = body;
+    const { branchId, cashierId, customerId, promoId, couponId, couponCode, coupon_code, items, payments, amountTendered } = body;
 
     // 1. Validation
     if (!branchId || !cashierId) {
@@ -127,6 +129,52 @@ export async function POST(req: Request) {
         });
       }
 
+      // Step B: Validate Coupon if provided
+      let resolvedCouponId: number | null = couponId || null;
+      let resolvedPromoId: number | null = promoId || null;
+      let couponDiscount = 0;
+      const targetCouponCode = (couponCode || coupon_code || "").trim();
+
+      if (targetCouponCode) {
+        const [couponRows]: any = await conn.query(
+          `SELECT c.coupon_id, c.promo_id, c.customer_id, c.is_used, c.expiry_date,
+                  COALESCE(c.max_products, 5) AS max_products,
+                  COALESCE(c.purchase_limit, 3000.00) AS purchase_limit,
+                  p.discount_percent
+           FROM coupons c
+           JOIN promotions p ON c.promo_id = p.promo_id
+           WHERE c.code = ? AND c.is_used = 0 AND c.expiry_date >= CURRENT_DATE FOR UPDATE`,
+          [targetCouponCode]
+        );
+
+        if (couponRows && couponRows.length > 0) {
+          const cp = couponRows[0];
+
+          // Rule: Customer-bound check
+          if (cp.customer_id && (!customerId || Number(customerId) !== Number(cp.customer_id))) {
+            throw new Error(`Coupon "${targetCouponCode}" is exclusively reserved for an authorized Top Customer.`);
+          }
+
+          // Rule: Max products limit check (default max 5)
+          const maxProd = Number(cp.max_products || 5);
+          if (validatedItems.length > maxProd) {
+            throw new Error(`Coupon "${targetCouponCode}" allows a maximum of ${maxProd} products (Cart contains ${validatedItems.length} products).`);
+          }
+
+          resolvedCouponId = cp.coupon_id;
+          resolvedPromoId = cp.promo_id;
+          const couponDiscPct = Number(cp.discount_percent || 10);
+          const purchaseLimit = Number(cp.purchase_limit || 3000.00);
+
+          // Apply discount capped at purchase limit (e.g. 3000)
+          const eligibleBase = Math.min(calculatedSubtotal, purchaseLimit);
+          couponDiscount = (eligibleBase * couponDiscPct) / 100;
+          calculatedDiscountTotal += couponDiscount;
+        } else {
+          throw new Error(`Coupon "${targetCouponCode}" is invalid, already used, or expired.`);
+        }
+      }
+
       // If no item-level taxes were specified, use standard 18% VAT on taxable base
       if (calculatedTaxTotal === 0) {
         const taxableBase = Math.max(0, calculatedSubtotal - calculatedDiscountTotal);
@@ -137,7 +185,7 @@ export async function POST(req: Request) {
         (calculatedSubtotal - calculatedDiscountTotal + calculatedTaxTotal).toFixed(2)
       );
 
-      // Step B: Validate payments sum matches or covers total
+      // Step C: Validate payments sum matches or covers total
       const totalPayments = payments.reduce((acc, p) => acc + Number(p.amount), 0);
       const isCashPayment = payments.some((p) => p.method === "CASH");
       const nonCashTotal = payments
@@ -162,7 +210,7 @@ export async function POST(req: Request) {
         ? Number((effectiveCashTendered - cashLineAmount).toFixed(2))
         : 0;
 
-      // Step C: Create the sale record
+      // Step D: Create the sale record
       const [saleInsertResult]: any = await conn.query(
         `INSERT INTO sales (
           branch_id, cashier_id, customer_id, promo_id, coupon_id,
@@ -173,8 +221,8 @@ export async function POST(req: Request) {
           branchId,
           cashierId,
           customerId || null,
-          promoId || null,
-          couponId || null,
+          resolvedPromoId,
+          resolvedCouponId,
           calculatedSubtotal.toFixed(2),
           calculatedDiscountTotal.toFixed(2),
           calculatedTaxTotal.toFixed(2),
@@ -186,7 +234,7 @@ export async function POST(req: Request) {
 
       const saleId = saleInsertResult.insertId;
 
-      // Step D: Insert sale_items and decrement branch inventory
+      // Step E: Insert sale_items and decrement branch inventory + FIFO product_batches
       for (const item of validatedItems) {
         await conn.query(
           `INSERT INTO sale_items (
@@ -202,16 +250,48 @@ export async function POST(req: Request) {
           ]
         );
 
-        // Deduct inventory
+        // Deduct branch inventory
         await conn.query(
           `UPDATE inventory 
            SET quantity_on_hand = quantity_on_hand - ? 
            WHERE branch_id = ? AND product_id = ?`,
           [item.quantity, branchId, item.product_id]
         );
+
+        // Deduct from product_batches using FIFO (oldest expiry first)
+        try {
+          const [batches]: any = await conn.query(
+            `SELECT batch_id, quantity 
+             FROM product_batches 
+             WHERE branch_id = ? AND product_id = ? AND quantity > 0 
+             ORDER BY expiry_date ASC, received_date ASC FOR UPDATE`,
+            [branchId, item.product_id]
+          );
+
+          let remainingToDeduct = item.quantity;
+          for (const b of batches) {
+            if (remainingToDeduct <= 0) break;
+            const deductFromBatch = Math.min(Number(b.quantity), remainingToDeduct);
+            await conn.query(
+              "UPDATE product_batches SET quantity = quantity - ? WHERE batch_id = ?",
+              [deductFromBatch, b.batch_id]
+            );
+            remainingToDeduct -= deductFromBatch;
+          }
+        } catch (bErr) {
+          console.warn("FIFO batch deduction warning:", bErr);
+        }
       }
 
-      // Step E: Insert payment records
+      // Step F: Mark Coupon as used if applied
+      if (resolvedCouponId) {
+        await conn.query(
+          "UPDATE coupons SET is_used = 1, used_at = NOW() WHERE coupon_id = ?",
+          [resolvedCouponId]
+        );
+      }
+
+      // Step G: Insert payment records
       for (const pay of payments) {
         await conn.query(
           `INSERT INTO payments (
@@ -226,7 +306,7 @@ export async function POST(req: Request) {
         );
       }
 
-      // Step F: Loyalty Points Processing (Atomic with transaction)
+      // Step H: Loyalty Points Processing (Atomic with transaction)
       let pointsEarned = 0;
       let pointsRedeemed = 0;
       let updatedPointsBalance: number | null = null;

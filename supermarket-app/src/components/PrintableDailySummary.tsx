@@ -162,6 +162,13 @@ export default function PrintableDailySummary({
         >
           {/* Document Header */}
           <div style={{ textAlign: "center", borderBottom: "2px solid #0f172a", paddingBottom: 14, marginBottom: 16 }}>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}>
+              <img
+                src="/logo.png"
+                alt="Nexus Supermarket Logo"
+                style={{ height: 48, maxWidth: 180, objectFit: "contain" }}
+              />
+            </div>
             <h1 style={{ fontSize: 20, fontWeight: 900, letterSpacing: "1px", margin: 0, textTransform: "uppercase", color: "#0f172a" }}>
               NEXUS SUPERMARKET
             </h1>

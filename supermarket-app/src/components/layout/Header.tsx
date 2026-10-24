@@ -129,7 +129,7 @@ export function Header() {
           </Link>
         ) : canLaunchPOS ? (
           <Link
-            href="/pos"
+            href="/cashier/pos"
             className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-medium text-xs shadow-lg shadow-emerald-900/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
             <ShoppingCart className="w-3.5 h-3.5" />

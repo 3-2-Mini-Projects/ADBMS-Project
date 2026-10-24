@@ -7,7 +7,7 @@ import { useApp } from "@/lib/context";
 
 const SALES_TABS = [
   { label: "Sales History", href: "/sales", icon: "📋" },
-  { label: "POS Checkout",  href: "/pos",   icon: "🛒" },
+  { label: "POS Checkout",  href: "/cashier/pos", icon: "🛒" },
   { label: "Report",        href: "/sales/report",   icon: "📊" },
   { label: "Live Monitor",  href: "/sales/monitor",  icon: "🖥️" },
 ];

@@ -95,7 +95,7 @@ const NAV_GROUPS: NavGroup[] = [
     group: "OPERATIONS",
     items: [
       { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-      { title: "POS Checkout", href: "/pos", icon: ShoppingCart, permission: "create_pos_sales", badge: "Live", highlight: true },
+      { title: "POS Checkout", href: "/cashier/pos", icon: ShoppingCart, permission: "create_pos_sales", badge: "Live", highlight: true },
       { title: "Sales History", href: "/sales", icon: Receipt },
       { title: "Returns & Refunds", href: "/returns", icon: RotateCcw, permission: "process_returns" },
     ],
@@ -344,9 +344,11 @@ export function Sidebar() {
               }
               className="flex items-center gap-2.5"
             >
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-emerald-500 flex items-center justify-center text-white shadow-lg shadow-blue-500/25">
-                <Sparkles className="w-5 h-5 text-white" />
-              </div>
+              <img
+                src="/logo.png"
+                alt="Nexus Supermarket Logo"
+                className="w-9 h-9 rounded-xl bg-white p-1 object-contain shadow-md shadow-blue-500/20 shrink-0"
+              />
               <div>
                 <div className="font-bold text-sm tracking-tight text-white flex items-center gap-1.5">
                   <span>NEXUS</span>
@@ -360,14 +362,11 @@ export function Sidebar() {
               </div>
             </Link>
           ) : (
-            <div
-              className={`mx-auto w-9 h-9 rounded-xl flex items-center justify-center text-white ${isAdmin
-                  ? "bg-gradient-to-tr from-purple-600 to-indigo-600"
-                  : "bg-gradient-to-tr from-blue-600 to-emerald-500"
-                }`}
-            >
-              {isAdmin ? <ShieldCheck className="w-5 h-5" /> : <Sparkles className="w-5 h-5" />}
-            </div>
+            <img
+              src="/logo.png"
+              alt="Nexus Supermarket Logo"
+              className="mx-auto w-9 h-9 rounded-xl bg-white p-1 object-contain shadow-md shadow-blue-500/20"
+            />
           )}
 
           <button

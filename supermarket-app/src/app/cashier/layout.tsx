@@ -128,22 +128,20 @@ function CashierLayoutContent({ children }: { children: React.ReactNode }) {
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <div
+            <img
+              src="/logo.png"
+              alt="Nexus Supermarket Logo"
               style={{
                 width: 38,
                 height: 38,
                 borderRadius: 10,
-                background: "linear-gradient(135deg, #10b981, #0284c7)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 18,
+                background: "#ffffff",
+                padding: 3,
+                objectFit: "contain",
                 flexShrink: 0,
-                boxShadow: "0 4px 12px rgba(16, 185, 129, 0.3)",
+                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.25)",
               }}
-            >
-              🛒
-            </div>
+            />
             <div>
               <div
                 style={{
@@ -153,7 +151,7 @@ function CashierLayoutContent({ children }: { children: React.ReactNode }) {
                   letterSpacing: "-0.3px",
                 }}
               >
-                CASHIER<span style={{ color: "var(--accent-emerald)" }}>DESK</span>
+                NEXUS<span style={{ color: "var(--accent-emerald)" }}> DESK</span>
               </div>
               <div
                 style={{
@@ -163,7 +161,7 @@ function CashierLayoutContent({ children }: { children: React.ReactNode }) {
                   letterSpacing: "0.06em",
                 }}
               >
-                SUPERMARKET ADBMS
+                CASHIER TERMINAL
               </div>
             </div>
           </div>
@@ -279,6 +277,30 @@ function CashierLayoutContent({ children }: { children: React.ReactNode }) {
               </Link>
             );
           })}
+
+          {/* Switch to Management / Admin Dashboard */}
+          <div style={{ marginTop: 20, paddingTop: 12, borderTop: "1px solid var(--border)" }}>
+            <Link
+              href="/dashboard"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "9px 12px",
+                borderRadius: 8,
+                fontSize: 12.5,
+                fontWeight: 600,
+                color: "var(--accent-blue, #60a5fa)",
+                background: "rgba(59, 130, 246, 0.08)",
+                textDecoration: "none",
+                border: "1px solid rgba(59, 130, 246, 0.25)",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <span style={{ fontSize: 16 }}>🏛️</span>
+              <span>Admin Dashboard</span>
+            </Link>
+          </div>
         </nav>
       </aside>
 
@@ -321,7 +343,27 @@ function CashierLayoutContent({ children }: { children: React.ReactNode }) {
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            
+            <Link
+              href="/dashboard"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "4px 10px",
+                borderRadius: 7,
+                fontSize: 11.5,
+                fontWeight: 600,
+                color: "var(--accent-blue, #60a5fa)",
+                background: "rgba(59, 130, 246, 0.12)",
+                border: "1px solid rgba(59, 130, 246, 0.28)",
+                textDecoration: "none",
+              }}
+              title="Return to Admin / Manager Dashboard"
+            >
+              <span>🏛️</span>
+              <span>Admin Panel</span>
+            </Link>
+
             <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--text-secondary)" }}>
               <span className="pulse-live" />
               Live Online

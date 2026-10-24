@@ -169,6 +169,13 @@ export default function PrintableReceipt({
         >
           {/* Header */}
           <div style={{ textAlign: "center", marginBottom: 16 }}>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}>
+              <img
+                src="/logo.png"
+                alt="Nexus Supermarket Logo"
+                style={{ height: 46, maxWidth: 160, objectFit: "contain" }}
+              />
+            </div>
             <h2 style={{ fontSize: 18, fontWeight: 900, letterSpacing: "1px", margin: 0, textTransform: "uppercase" }}>
               NEXUS SUPERMARKET
             </h2>

@@ -237,18 +237,12 @@ export default function LoginPage() {
 
           {/* Logo & Heading */}
           <div className="text-center mb-6">
-            <div
-              className={`w-14 h-14 rounded-2xl flex items-center justify-center text-white mx-auto mb-3.5 shadow-lg transition-all ${
-                stage === "SETUP_PASSWORD"
-                  ? "bg-gradient-to-tr from-amber-600 to-orange-600 shadow-amber-600/20"
-                  : "bg-gradient-to-tr from-blue-600 to-indigo-600 shadow-blue-500/20"
-              }`}
-            >
-              {stage === "SETUP_PASSWORD" ? (
-                <KeyRound className="w-7 h-7" />
-              ) : (
-                <Store className="w-7 h-7" />
-              )}
+            <div className="mx-auto mb-4 flex justify-center">
+              <img
+                src="/logo.png"
+                alt="Nexus Supermarket Logo"
+                className="w-20 h-20 object-contain rounded-2xl bg-white p-2 shadow-xl shadow-blue-500/10 border border-slate-700/50"
+              />
             </div>
             <h1 className="text-2xl font-bold text-white tracking-tight">
               {stage === "SETUP_PASSWORD"
@@ -525,16 +519,7 @@ export default function LoginPage() {
             </form>
           )}
 
-          {/* Footer & Demo Note */}
-          <div className="mt-8 pt-6 border-t border-slate-800/80 text-center">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-950 border border-slate-800 text-[11px] text-slate-400">
-              <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
-              <span>
-                Demo Admin:{" "}
-                <strong className="text-slate-300 font-mono">admin@shop.lk</strong>
-              </span>
-            </div>
-          </div>
+          
         </div>
       </div>
 

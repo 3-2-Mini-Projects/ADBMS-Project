@@ -72,6 +72,8 @@ export default function POSBillingPage() {
   const [paymentLines, setPaymentLines] = useState<PaymentLine[]>([{ method: "CASH", amount: 0 }]);
   const [customPointsInput, setCustomPointsInput] = useState<string>("");
   const [cashTendered, setCashTendered] = useState<string>("");
+  const [couponCode, setCouponCode] = useState<string>("");
+  const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -480,6 +482,7 @@ export default function POSBillingPage() {
         branchId: cashier.branch_id,
         cashierId: cashier.employee_id,
         customerId: customer?.customer_id || null,
+        couponCode: appliedCoupon || null,
         items: cart.map((c) => ({
           product_id: c.product_id,
           quantity: c.quantity,
@@ -510,6 +513,8 @@ export default function POSBillingPage() {
         setCompletedReceipt(data.receipt);
         setShowCheckout(false);
         setCart([]);
+        setAppliedCoupon(null);
+        setCouponCode("");
 
         // Always refresh customer details with latest points balance and tier from completed sale
         if (data.receipt.customer) {
@@ -554,11 +559,25 @@ export default function POSBillingPage() {
           alignItems: "center",
           flexWrap: "wrap",
           background: "var(--bg-card)",
-          padding: "12px 16px",
+          padding: "10px 16px",
           borderRadius: 12,
           border: "1px solid var(--border)",
         }}
       >
+        <img
+          src="/logo.png"
+          alt="Nexus Supermarket Logo"
+          style={{
+            height: 38,
+            width: 38,
+            objectFit: "contain",
+            borderRadius: 8,
+            background: "#ffffff",
+            padding: 2,
+            boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+            flexShrink: 0,
+          }}
+        />
         {/* Barcode Scanner Input */}
         <form onSubmit={handleBarcodeSubmit} style={{ display: "flex", gap: 6, flex: 1, minWidth: 260, alignItems: "center" }}>
           <div style={{ position: "relative", width: "100%", flex: 1 }}>
@@ -1286,6 +1305,77 @@ export default function POSBillingPage() {
                 </div>
               );
             })()}
+
+            {/* Promotional Coupon Section */}
+            <div
+              style={{
+                background: appliedCoupon ? "rgba(16, 185, 129, 0.08)" : "rgba(30, 41, 59, 0.5)",
+                border: appliedCoupon ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid var(--border)",
+                padding: "10px 14px",
+                borderRadius: 10,
+                marginBottom: 14,
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-secondary)" }}>
+                  🏷️ Promotional Coupon
+                </span>
+                {appliedCoupon && (
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "#34d399" }}>
+                    ✓ Applied: <strong>{appliedCoupon}</strong>
+                  </span>
+                )}
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input
+                  type="text"
+                  className="input"
+                  style={{
+                    flex: 1,
+                    padding: "6px 10px",
+                    fontSize: 12,
+                    textTransform: "uppercase",
+                    fontFamily: "monospace",
+                    letterSpacing: "0.05em",
+                  }}
+                  placeholder="Enter coupon code (e.g. TOP20, DAIRY10)..."
+                  value={couponCode}
+                  onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                  disabled={!!appliedCoupon}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && couponCode.trim() && !appliedCoupon) {
+                      e.preventDefault();
+                      setAppliedCoupon(couponCode.trim().toUpperCase());
+                    }
+                  }}
+                />
+                {appliedCoupon ? (
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ fontSize: 11, padding: "6px 12px", color: "var(--accent-rose)" }}
+                    onClick={() => {
+                      setAppliedCoupon(null);
+                      setCouponCode("");
+                    }}
+                  >
+                    Remove
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ fontSize: 11, padding: "6px 12px" }}
+                    onClick={() => {
+                      if (!couponCode.trim()) return;
+                      setAppliedCoupon(couponCode.trim().toUpperCase());
+                    }}
+                  >
+                    Apply
+                  </button>
+                )}
+              </div>
+            </div>
 
             {/* Customer Loyalty Banner in Checkout */}
             {customer && (() => {

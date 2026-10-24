@@ -190,12 +190,26 @@ export default function RegisterCustomerModal({
               }}
             />
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-              <div>
-                <div style={{ fontSize: 9.5, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--accent-emerald)", fontWeight: 800 }}>
-                  NEXUS SUPERMARKET
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 800, color: "#fff", letterSpacing: "0.02em" }}>
-                  LOYALTY CLUB CARD
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <img
+                  src="/logo.png"
+                  alt="Nexus Supermarket Logo"
+                  style={{
+                    height: 28,
+                    width: 28,
+                    objectFit: "contain",
+                    background: "#ffffff",
+                    borderRadius: 6,
+                    padding: 2,
+                  }}
+                />
+                <div>
+                  <div style={{ fontSize: 9.5, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--accent-emerald)", fontWeight: 800 }}>
+                    NEXUS SUPERMARKET
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: "#fff", letterSpacing: "0.02em" }}>
+                    LOYALTY CLUB CARD
+                  </div>
                 </div>
               </div>
               <span

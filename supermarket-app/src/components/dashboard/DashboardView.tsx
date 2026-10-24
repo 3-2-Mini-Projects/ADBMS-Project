@@ -93,7 +93,7 @@ export function DashboardView() {
               <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin text-blue-400" : ""}`} />
             </button>
             <Link
-              href="/pos"
+              href="/cashier/pos"
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold text-sm shadow-xl shadow-emerald-950/50 hover:scale-[1.02] active:scale-[0.98] transition-all"
             >
               <ShoppingCart className="w-4 h-4" />
