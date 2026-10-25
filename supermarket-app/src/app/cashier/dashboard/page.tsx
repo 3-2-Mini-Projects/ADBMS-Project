@@ -138,137 +138,138 @@ export default function CashierDashboardPage() {
     `Rs. ${Number(n || 0).toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 24, paddingBottom: 40 }}>
-      {/* Welcome Banner */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: 16,
-          background: "linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(2, 132, 199, 0.08) 100%)",
-          padding: "20px 24px",
-          borderRadius: 16,
-          border: "1px solid var(--border)",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <img
-            src="/logo.png"
-            alt="Nexus Supermarket Logo"
-            style={{
-              width: 58,
-              height: 58,
-              objectFit: "contain",
-              borderRadius: 14,
-              background: "#ffffff",
-              padding: 4,
-              boxShadow: "0 4px 14px rgba(0,0,0,0.25)",
-              border: "1px solid rgba(255,255,255,0.1)",
-              flexShrink: 0,
-            }}
-          />
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <h1 style={{ fontSize: 22, fontWeight: 800, color: "var(--text-primary)" }}>
-                Welcome back, {cashier?.full_name || "Cashier"} 👋
-              </h1>
+    <div className="space-y-6 pb-12 animate-in fade-in duration-300">
+      {/* Welcome Hero Banner */}
+      <div className="rounded-3xl p-6 sm:p-8 bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 text-white relative overflow-hidden shadow-xs border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="absolute top-0 right-0 -mr-16 -mt-16 w-80 h-80 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
+        <div className="relative z-10 flex items-center gap-4">
+          <div className="w-16 h-16 rounded-2xl bg-white p-2 border border-white/20 shadow-md flex items-center justify-center shrink-0">
+            <img
+              src="/logo.png"
+              alt="Nexus Supermarket Logo"
+              className="w-full h-full object-contain"
+            />
+          </div>
+          <div className="!text-white">
+            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 !text-white text-[11px] font-semibold uppercase tracking-wider mb-1.5">
+              <span>Point of Sale Terminal</span>
             </div>
-            <p style={{ fontSize: 13, color: "var(--text-secondary)", marginTop: 4 }}>
-              Cashier: <strong style={{ color: "var(--accent-emerald)" }}>{cashier?.full_name || "Cashier"}</strong> • Terminal assigned to: <strong>{cashier?.branch_name || "Colombo Main"}</strong> ({cashier?.branch_code || "POS"}) • Ready for checkout
+
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight !text-white">
+              Welcome back, {cashier?.full_name} 👋
+            </h1>
+
+            <p className="text-xs sm:text-sm mt-1 max-w-2xl leading-relaxed !text-white">
+
+              Branch:{" "}
+              <strong className="!text-white">
+                {cashier?.branch_name}
+              </strong>
             </p>
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <button onClick={fetchDashboardData} className="btn btn-ghost" title="Refresh Live Data">
-            🔄 Refresh
+        <div className="relative z-10 flex items-center gap-3 flex-wrap">
+          <button
+            onClick={fetchDashboardData}
+            className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white border border-white/20 backdrop-blur-xs font-semibold text-xs shadow-xs transition-all flex items-center gap-1.5"
+            title="Refresh Live Data"
+          >
+            <span>🔄</span> Refresh
           </button>
-          <Link href="/cashier/summary" className="btn btn-secondary" style={{ padding: "8px 16px", fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
-            📑 Daily Summary
+          <Link
+            href="/cashier/summary"
+            className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white border border-white/20 backdrop-blur-xs font-semibold text-xs shadow-xs transition-all flex items-center gap-1.5"
+          >
+            <span>📑</span> Daily Summary
           </Link>
-          <Link href="/cashier/pos" className="btn btn-emerald" style={{ padding: "8px 18px", fontSize: 14 }}>
-            🛒 Launch POS Terminal
+          <Link
+            href="/cashier/pos"
+            className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-2"
+          >
+            <span>🛒</span> Launch POS Terminal
           </Link>
         </div>
       </div>
 
       {/* Today's Sales Stat Cards (Cashier Specific) */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-          gap: 16,
-        }}
-      >
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Today's Revenue */}
-        <div className="stat-card">
-          <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-muted)", fontSize: 12 }}>
-            <span>TODAY&apos;S COLLECTED SALES</span>
-            <span style={{ fontSize: 16 }}>💰</span>
+        <div className="rounded-2xl bg-white border border-slate-200 p-5 shadow-xs relative overflow-hidden group hover:border-slate-300 transition-all">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Today&apos;s Sales</span>
+            <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 text-base">
+              💰
+            </div>
           </div>
-          <div style={{ fontSize: 24, fontWeight: 800, color: "var(--accent-emerald)", marginTop: 10 }}>
-            {fmt(data?.cashierToday.total_sales || 0)}
-          </div>
-          <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 6 }}>
-            Completed sales by you today
+          <div className="mt-3">
+            <div className="text-2xl font-black text-emerald-600 font-mono tracking-tight">
+              {fmt(data?.cashierToday.total_sales || 0)}
+            </div>
+            <div className="mt-2 text-[11px] text-slate-500 font-medium">
+              Completed sales by you today
+            </div>
           </div>
         </div>
 
         {/* Card 2: Today's Transactions Count */}
-        <div className="stat-card">
-          <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-muted)", fontSize: 12 }}>
-            <span>TRANSACTIONS COUNT</span>
-            <span style={{ fontSize: 16 }}>🧾</span>
+        <div className="rounded-2xl bg-white border border-slate-200 p-5 shadow-xs relative overflow-hidden group hover:border-slate-300 transition-all">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Receipts Issued</span>
+            <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 text-base">
+              🧾
+            </div>
           </div>
-          <div style={{ fontSize: 24, fontWeight: 800, color: "var(--text-primary)", marginTop: 10 }}>
-            {data?.cashierToday.transactions_count || 0}
-          </div>
-          <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 6 }}>
-            Checkout receipts processed today
+          <div className="mt-3">
+            <div className="text-2xl font-black text-slate-900 font-mono tracking-tight">
+              {data?.cashierToday.transactions_count || 0}
+            </div>
+            <div className="mt-2 text-[11px] text-slate-500 font-medium">
+              Checkout receipts processed today
+            </div>
           </div>
         </div>
 
         {/* Card 3: Today's Tax Collected */}
-        <div className="stat-card">
-          <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-muted)", fontSize: 12 }}>
-            <span>TAX & DISCOUNTS</span>
-            <span style={{ fontSize: 16 }}>📊</span>
+        <div className="rounded-2xl bg-white border border-slate-200 p-5 shadow-xs relative overflow-hidden group hover:border-slate-300 transition-all">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Tax &amp; Discounts</span>
+            <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 text-base">
+              📊
+            </div>
           </div>
-          <div style={{ fontSize: 20, fontWeight: 700, color: "var(--accent-blue)", marginTop: 10 }}>
-            {fmt(data?.cashierToday.total_tax || 0)}
-          </div>
-          <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 6 }}>
-            Discounts: -{fmt(data?.cashierToday.total_discount || 0)}
+          <div className="mt-3">
+            <div className="text-2xl font-black text-slate-900 font-mono tracking-tight">
+              {fmt(data?.cashierToday.total_tax || 0)}
+            </div>
+            <div className="mt-2 text-[11px] text-rose-600 font-medium">
+              Discounts: -{fmt(data?.cashierToday.total_discount || 0)}
+            </div>
           </div>
         </div>
 
         {/* Card 4: Branch Daily Comparison */}
-        <div className="stat-card">
-          <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-muted)", fontSize: 12 }}>
-            <span>BRANCH TODAY TOTAL</span>
-            <span style={{ fontSize: 16 }}>🏢</span>
+        <div className="rounded-2xl bg-white border border-slate-200 p-5 shadow-xs relative overflow-hidden group hover:border-slate-300 transition-all">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Branch Total Today</span>
+            <div className="w-9 h-9 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600 text-base">
+              🏢
+            </div>
           </div>
-          <div style={{ fontSize: 20, fontWeight: 700, color: "var(--accent-purple)", marginTop: 10 }}>
-            {fmt(data?.branchToday.total_sales || 0)}
-          </div>
-          <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 6 }}>
-            {data?.branchToday.transactions_count || 0} branch transactions today
+          <div className="mt-3">
+            <div className="text-2xl font-black text-slate-900 font-mono tracking-tight">
+              {fmt(data?.branchToday.total_sales || 0)}
+            </div>
+            <div className="mt-2 text-[11px] text-slate-500 font-medium">
+              {data?.branchToday.transactions_count || 0} branch transactions
+            </div>
           </div>
         </div>
       </div>
 
       {/* Component A: Latest 50 Transactions of That Day */}
-      <div
-        style={{
-          background: "var(--bg-card)",
-          border: "1px solid var(--border)",
-          borderRadius: 14,
-          padding: 20,
-        }}
-      >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+      <div className="rounded-2xl bg-white border border-slate-200 p-6 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5 pb-4 border-b border-slate-100">
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)" }}>
@@ -413,15 +414,8 @@ export default function CashierDashboardPage() {
       </div>
 
       {/* Component B: Latest 10 Return Details of That Day */}
-      <div
-        style={{
-          background: "var(--bg-card)",
-          border: "1px solid var(--border)",
-          borderRadius: 14,
-          padding: 20,
-        }}
-      >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+      <div className="rounded-2xl bg-white border border-slate-200 p-6 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5 pb-4 border-b border-slate-100">
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ fontSize: 18 }}>↩️</span>
@@ -451,7 +445,7 @@ export default function CashierDashboardPage() {
               textAlign: "center",
               padding: "32px 16px",
               color: "var(--text-muted)",
-              background: "rgba(255, 255, 255, 0.01)",
+              background: "#f8fafc",
               borderRadius: 10,
               border: "1px dashed var(--border)",
               fontSize: 13,

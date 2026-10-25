@@ -91,23 +91,22 @@ export function InventoryDashboardView() {
   return (
     <div className={theme.wrapper}>
       {/* Hero Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-indigo-700 text-white p-6 sm:p-8 shadow-xl shadow-indigo-950/20 border border-indigo-500/20">
-        <div className="absolute right-0 top-0 -mt-10 -mr-10 w-72 h-72 bg-white/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 text-white p-6 sm:p-8 shadow-xs border border-slate-800">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-blue-200 mb-1.5">
-              <Boxes className="w-4 h-4 text-blue-200" />
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
+              <Boxes className="w-4 h-4 text-blue-400" />
               <span>Inventory Intelligence & Control Hub</span>
               {isClerk && (
-                <span className="px-2 py-0.5 rounded-full bg-white/20 text-white text-[10px] font-mono">
+                <span className="px-2 py-0.5 rounded-full bg-white/10 text-white text-[10px] font-mono border border-white/20">
                   Stock Clerk Mode
                 </span>
               )}
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
               Inventory Dashboard
             </h1>
-            <p className="text-blue-100/90 text-xs sm:text-sm mt-1 max-w-xl">
+            <p className="text-slate-300 text-xs sm:text-sm mt-1 max-w-xl">
               Active Branch:{" "}
               <strong className="text-white font-bold">{currentBranch?.name ?? "All Branches"}</strong>
               {" "}— Real-time stock levels, batch health, expiry risk & dispatch telemetry.
@@ -117,16 +116,16 @@ export function InventoryDashboardView() {
             <button
               onClick={fetchData}
               disabled={loading}
-              className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-all shadow-sm active:scale-95"
+              className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-all shadow-xs"
               title="Refresh Data"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin text-white" : ""}`} />
             </button>
             <Link
               href="/inventory"
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white hover:bg-slate-100 text-indigo-700 font-bold text-xs sm:text-sm shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs hover:scale-[1.01] active:scale-[0.99] transition-all"
             >
-              <Boxes className="w-4 h-4 text-indigo-700" />
+              <Boxes className="w-4 h-4" />
               <span>Manage Stock</span>
             </Link>
           </div>

@@ -268,10 +268,10 @@ export default function ShiftsPage() {
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
         <div>
           <h1 className="text-2xl font-black text-slate-900 flex items-center gap-2.5">
-            <Clock className="w-6 h-6 text-sky-600" />
+            <Clock className="w-6 h-6 text-blue-600" />
             <span>Employee Shifts &amp; Attendance</span>
           </h1>
           <p className="text-xs text-slate-500 mt-1">
@@ -282,14 +282,14 @@ export default function ShiftsPage() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setKioskOpen(true)}
-            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs shadow-xs flex items-center gap-2 transition-all shrink-0 hover:scale-[1.02] active:scale-[0.98]"
+            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs shadow-xs flex items-center gap-2 transition-all shrink-0 active:scale-95"
           >
             <Scan className="w-4 h-4" />
             <span>Launch Attendance Kiosk</span>
           </button>
           <button
             onClick={() => setAddModalOpen(true)}
-            className="px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs shadow-xs flex items-center gap-2 transition-all shrink-0"
+            className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs flex items-center gap-2 transition-all shrink-0 active:scale-95"
           >
             <Plus className="w-4 h-4" />
             <span>Schedule New Shift</span>

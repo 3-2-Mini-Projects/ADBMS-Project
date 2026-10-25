@@ -392,11 +392,11 @@ export default function PromotionsPage() {
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
         <div>
           <h1 className="text-2xl font-black text-slate-900 flex items-center gap-2.5">
-            <Tag className="w-6 h-6 text-purple-600" />
-            <span>Campaign & Promotion Management</span>
+            <Tag className="w-6 h-6 text-blue-600" />
+            <span>Campaign &amp; Promotion Management</span>
           </h1>
           <p className="text-xs text-slate-500 mt-1">
             Create, schedule, and track customer promotional discount campaigns.
@@ -406,7 +406,7 @@ export default function PromotionsPage() {
         <div className="flex items-center gap-2.5 flex-wrap">
           <button
             onClick={() => setPromoModalOpen(true)}
-            className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-sm flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
+            className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs flex items-center gap-2 transition-all active:scale-95"
             title="Create promotion via stored procedure create_promotion()"
           >
             <Plus className="w-4 h-4" />
@@ -425,7 +425,7 @@ export default function PromotionsPage() {
           onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") handleSelectFilter("ALL"); }}
           className={`rounded-2xl border p-5 shadow-xs relative overflow-hidden group cursor-pointer transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] select-none ${
             filterMode === "ALL" && statusFilter === "ALL"
-              ? "bg-purple-50/70 border-purple-500 ring-2 ring-purple-100"
+              ? "bg-blue-50/70 border-blue-500 ring-2 ring-blue-100"
               : "bg-white border-slate-200 hover:border-slate-300"
           }`}
         >
@@ -434,7 +434,7 @@ export default function PromotionsPage() {
             <div
               className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${
                 filterMode === "ALL" && statusFilter === "ALL"
-                  ? "bg-purple-100 text-purple-700"
+                  ? "bg-blue-100 text-blue-700"
                   : "bg-slate-100 text-slate-600"
               }`}
             >
@@ -450,7 +450,7 @@ export default function PromotionsPage() {
                 All registered campaigns
               </span>
               {filterMode === "ALL" && statusFilter === "ALL" && (
-                <span className="text-[10px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full border border-purple-200">
+                <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full border border-blue-200">
                   Active Filter
                 </span>
               )}

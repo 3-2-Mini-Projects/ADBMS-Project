@@ -233,9 +233,9 @@ export default function CashierDailySummaryPage() {
           style={{
             padding: "10px 16px",
             borderRadius: 10,
-            background: syncMessage.startsWith("✓") ? "rgba(16, 185, 129, 0.12)" : "rgba(245, 158, 11, 0.12)",
-            border: `1px solid ${syncMessage.startsWith("✓") ? "rgba(16, 185, 129, 0.3)" : "rgba(245, 158, 11, 0.3)"}`,
-            color: syncMessage.startsWith("✓") ? "#34d399" : "#fbbf24",
+            background: syncMessage.startsWith("✓") ? "#ecfdf5" : "#fffbeb",
+            border: `1px solid ${syncMessage.startsWith("✓") ? "#a7f3d0" : "#fde68a"}`,
+            color: syncMessage.startsWith("✓") ? "#059669" : "#b45309",
             fontSize: 12.5,
             fontWeight: 600,
           }}

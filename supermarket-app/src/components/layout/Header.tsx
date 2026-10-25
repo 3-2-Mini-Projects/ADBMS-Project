@@ -43,7 +43,7 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-30 h-16 bg-white/95 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-6 select-none shadow-xs text-slate-800">
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         {/* Branch Indicator / Selector */}
         {canManageBranches ? (
           <div className="relative">
@@ -52,19 +52,19 @@ export function Header() {
                 setBranchDropdownOpen(!branchDropdownOpen);
                 setEmployeeDropdownOpen(false);
               }}
-              className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg border transition-all text-xs font-medium text-purple-900 bg-purple-50 hover:bg-purple-100 border-purple-200"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-300 hover:border-slate-400 bg-white text-xs font-semibold text-slate-700 shadow-xs transition-colors"
               title="Click to switch active branch (Admin)"
             >
-              <Building2 className="w-3.5 h-3.5 text-purple-600" />
+              <Building2 className="w-3.5 h-3.5 text-blue-600" />
               <span>
-                Branch: <strong className="text-purple-950 font-semibold">{currentBranch?.name ?? "Select Branch"}</strong>
+                Branch: <strong className="text-slate-900 font-bold">{currentBranch?.name ?? "Select Branch"}</strong>
               </span>
-              <ChevronDown className="w-3 h-3 text-purple-500" />
+              <ChevronDown className="w-3 h-3 text-slate-400" />
             </button>
 
             {branchDropdownOpen && (
-              <div className="absolute left-0 mt-2 w-64 bg-white border border-slate-200 rounded-xl shadow-2xl py-2 z-50 animate-in fade-in zoom-in-95">
-                <div className="px-3 py-1.5 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+              <div className="absolute left-0 mt-2 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl py-2 z-50 animate-in fade-in zoom-in-95">
+                <div className="px-3.5 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                   Select Active Branch
                 </div>
                 {branches.map((b) => (
@@ -74,16 +74,16 @@ export function Header() {
                       setCurrentBranch(b);
                       setBranchDropdownOpen(false);
                     }}
-                    className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-purple-50 transition-colors ${
-                      currentBranch?.branch_id === b.branch_id ? "text-purple-700 font-semibold bg-purple-50/80" : "text-slate-700"
+                    className={`w-full text-left px-3.5 py-2 text-xs flex items-center justify-between hover:bg-slate-50 transition-colors ${
+                      currentBranch?.branch_id === b.branch_id ? "text-blue-700 font-bold bg-blue-50/70" : "text-slate-700"
                     }`}
                   >
                     <div>
-                      <div className="font-medium text-slate-800">{b.name}</div>
+                      <div className="font-semibold text-slate-900">{b.name}</div>
                       <div className="text-[10px] text-slate-500">{b.city} • Code: {b.branch_code}</div>
                     </div>
                     {currentBranch?.branch_id === b.branch_id && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-purple-600" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
                     )}
                   </button>
                 ))}
@@ -92,40 +92,40 @@ export function Header() {
           </div>
         ) : (
           <div
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-100 text-xs font-medium text-slate-700 select-none cursor-default"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-700 select-none cursor-default"
             title={`Assigned Branch: ${currentBranch?.name ?? currentEmployee?.branch_name ?? "Assigned Branch"} (Read-only)`}
           >
             <Building2 className="w-3.5 h-3.5 text-blue-600" />
             <span>
-              Branch: <strong className="text-slate-900 font-semibold">{currentBranch?.name ?? currentEmployee?.branch_name ?? "Assigned Branch"}</strong>
+              Branch: <strong className="text-slate-900 font-bold">{currentBranch?.name ?? currentEmployee?.branch_name ?? "Assigned Branch"}</strong>
             </span>
             <Lock className="w-3 h-3 text-slate-400 ml-0.5" />
           </div>
         )}
 
         {isAdmin && (
-          <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-purple-50 border border-purple-200 text-[11px] font-semibold text-purple-700">
-            <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
-            <span>Admin Active</span>
+          <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-[11px] font-bold text-slate-700 font-mono">
+            <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
+            <span>ADMIN MODE</span>
           </div>
         )}
       </div>
 
       {/* Right Controls */}
       <div className="flex items-center gap-3">
-        {/* Fast Action Button: Audit Logs for Admin, POS for others */}
+        {/* Fast Action Button */}
         {isAdmin ? (
           <Link
             href="/admin/audit"
-            className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-600 hover:to-indigo-600 text-white font-medium text-xs shadow-lg shadow-purple-900/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
+            className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs shadow-xs transition-all hover:scale-[1.01] active:scale-[0.99]"
           >
-            <ShieldAlert className="w-3.5 h-3.5 text-amber-300" />
+            <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
             <span>Audit Logs</span>
           </Link>
         ) : canLaunchPOS ? (
           <Link
             href="/cashier/pos"
-            className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-medium text-xs shadow-lg shadow-emerald-900/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
+            className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-xs transition-all hover:scale-[1.01] active:scale-[0.99]"
           >
             <ShoppingCart className="w-3.5 h-3.5" />
             <span>Launch POS</span>
@@ -143,7 +143,7 @@ export function Header() {
         {!currentEmployee ? (
           <Link
             href="/login"
-            className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs shadow-md shadow-blue-900/30 transition-all hover:scale-[1.02]"
+            className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-xs transition-all"
           >
             <UserCheck className="w-3.5 h-3.5" />
             <span>Sign In</span>
@@ -155,28 +155,18 @@ export function Header() {
                 setEmployeeDropdownOpen(!employeeDropdownOpen);
                 setBranchDropdownOpen(false);
               }}
-              className={`flex items-center gap-2.5 px-3 py-1.5 rounded-lg border transition-all text-xs ${
-                isAdmin
-                  ? "bg-purple-50 hover:bg-purple-100 border-purple-200 text-purple-900"
-                  : "bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-800"
-              }`}
+              className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl border border-slate-300 hover:border-slate-400 bg-white transition-all text-xs text-slate-800 shadow-xs"
             >
-              <div
-                className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold ${
-                  isAdmin
-                    ? "bg-gradient-to-tr from-purple-600 to-indigo-600 shadow-md shadow-purple-900/30"
-                    : "bg-gradient-to-tr from-blue-600 to-indigo-500 shadow-md shadow-blue-900/20"
-                }`}
-              >
+              <div className="w-6 h-6 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0">
                 {currentEmployee?.full_name ? currentEmployee.full_name[0] : "U"}
               </div>
               <div className="text-left hidden sm:block">
-                <div className="text-slate-900 font-semibold leading-none">{currentEmployee?.full_name}</div>
-                <div className={`text-[10px] font-mono mt-0.5 ${isAdmin ? "text-purple-700 font-bold" : "text-blue-700 font-bold"}`}>
+                <div className="text-slate-900 font-bold leading-none">{currentEmployee?.full_name}</div>
+                <div className="text-[10px] font-mono mt-0.5 text-blue-600 font-bold">
                   {currentEmployee?.role}
                 </div>
               </div>
-              <ChevronDown className="w-3 h-3 text-slate-500" />
+              <ChevronDown className="w-3 h-3 text-slate-400" />
             </button>
 
             {employeeDropdownOpen && (

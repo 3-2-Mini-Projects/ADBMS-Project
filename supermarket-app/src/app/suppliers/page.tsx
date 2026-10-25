@@ -93,7 +93,7 @@ export default function SuppliersPage() {
 
         <button
           onClick={() => setAddModalOpen(true)}
-          className="px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs shadow-sm flex items-center gap-2 transition-all shrink-0"
+          className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs flex items-center gap-2 transition-all shrink-0 active:scale-95"
         >
           <Plus className="w-4 h-4" />
           <span>Add New Supplier</span>
@@ -109,7 +109,7 @@ export default function SuppliersPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search suppliers by name, vendor code, or contact person..."
-            className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-white border border-slate-300 text-xs text-slate-900 placeholder-slate-400 font-mono focus:outline-none focus:border-teal-500 shadow-2xs"
+            className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-white border border-slate-300 text-xs text-slate-900 placeholder-slate-400 font-mono focus:outline-none focus:border-blue-500 shadow-2xs"
           />
         </div>
       </div>
@@ -278,7 +278,7 @@ export default function SuppliersPage() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-2/3 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition-all shadow-sm"
+                  className="w-2/3 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-xs active:scale-95"
                 >
                   {isSubmitting ? "Registering..." : "Register Supplier"}
                 </button>

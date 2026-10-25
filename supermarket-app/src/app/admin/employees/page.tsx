@@ -308,11 +308,11 @@ export default function EmployeesPage() {
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
         <div>
           <h1 className="text-2xl font-black text-slate-900 flex items-center gap-2.5">
-            <UserCog className="w-6 h-6 text-purple-600" />
-            <span>Staff & Employee Directory</span>
+            <UserCog className="w-6 h-6 text-blue-600" />
+            <span>Staff &amp; Employee Directory</span>
           </h1>
           <p className="text-xs text-slate-500 mt-1">
             Maintain staff profiles, branch allocations, salary compensation, and system permission roles.
@@ -321,7 +321,7 @@ export default function EmployeesPage() {
 
         <button
           onClick={() => setAddModalOpen(true)}
-          className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-xs flex items-center gap-2 transition-all shrink-0"
+          className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs flex items-center gap-2 transition-all shrink-0 active:scale-95"
         >
           <Plus className="w-4 h-4" />
           <span>Add New Staff Member</span>
@@ -335,7 +335,7 @@ export default function EmployeesPage() {
           onClick={() => setActiveTab("ACTIVE")}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
             activeTab === "ACTIVE"
-              ? "bg-purple-600 text-white shadow-xs"
+              ? "bg-blue-600 text-white shadow-xs"
               : "bg-white text-slate-700 hover:bg-slate-50 border border-slate-200"
           }`}
         >
@@ -343,7 +343,7 @@ export default function EmployeesPage() {
           <span>Active Staff</span>
           <span
             className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono ${
-              activeTab === "ACTIVE" ? "bg-purple-700 text-purple-100" : "bg-slate-100 text-slate-600"
+              activeTab === "ACTIVE" ? "bg-blue-700 text-blue-100" : "bg-slate-100 text-slate-600"
             }`}
           >
             {activeCount}

@@ -213,21 +213,13 @@ export default function CustomersPage() {
         {!isMarketing && !isCashier && (
           <button
             onClick={() => setRegisterModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-all hover:scale-[1.02] active:scale-[0.98] self-start sm:self-auto"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition-all active:scale-95 self-start sm:self-auto"
           >
             <Plus className="w-4 h-4" />
             <span>+ Register New Customer</span>
           </button>
         )}
       </div>
-
-      {/* Cashier View Banner */}
-      {isCashier && (
-        <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-semibold shadow-xs">
-          <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0" />
-          <span>Cashier Portal: Showing all branches loyalty customers & your branch customers (You can edit name, phone, email & city)</span>
-        </div>
-      )}
 
       {/* Search & Branch Filter Controls */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
@@ -273,9 +265,6 @@ export default function CustomersPage() {
           <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-slate-300 shadow-xs hover:border-slate-400 transition-colors">
             <Store className="w-4 h-4 text-amber-600 shrink-0" />
             <div className="flex-1 min-w-0">
-              <div className="text-[10px] text-slate-500 font-medium uppercase tracking-wider leading-none mb-0.5">
-                Branch Wise
-              </div>
               <select
                 value={selectedBranchId}
                 onChange={(e) => {
@@ -297,7 +286,6 @@ export default function CustomersPage() {
                 ))}
               </select>
             </div>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0 pointer-events-none" />
           </div>
         </div>
       </div>

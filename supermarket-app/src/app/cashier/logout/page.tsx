@@ -46,39 +46,39 @@ export default function CashierLogoutPage() {
 
   return (
     <div className="flex-1 flex items-center justify-center p-4">
-      <div className="max-w-md w-full mx-auto my-12 p-8 rounded-3xl bg-slate-900/90 border border-slate-800 text-center space-y-6 shadow-2xl backdrop-blur-xl animate-in zoom-in-95 duration-200">
-        <div className="w-16 h-16 mx-auto rounded-2xl bg-red-950/40 border border-red-800/40 flex items-center justify-center text-red-400 shadow-lg shadow-red-950/50">
+      <div className="max-w-md w-full mx-auto my-12 p-8 rounded-3xl bg-white border border-slate-200 text-center space-y-6 shadow-xl animate-in zoom-in-95 duration-200">
+        <div className="w-16 h-16 mx-auto rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 shadow-sm">
           <LogOut className="w-8 h-8" />
         </div>
 
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
             Session Sign Out
           </h1>
-          <p className="text-xs text-slate-400 mt-2">
+          <p className="text-xs text-slate-500 mt-2">
             End your authenticated session for the Supermarket ADBMS platform.
           </p>
         </div>
 
         {cashier || currentEmployee ? (
-          <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800/80 text-left space-y-2">
-            <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-              <Shield className="w-3.5 h-3.5 text-blue-400" />
+          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-left space-y-2">
+            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+              <Shield className="w-3.5 h-3.5 text-blue-600" />
               <span>Active Authenticated Employee</span>
             </div>
-            <div className="text-sm font-semibold text-white">
+            <div className="text-sm font-semibold text-slate-900">
               {activeName}
             </div>
-            <div className="text-xs text-slate-400 font-mono">
+            <div className="text-xs text-slate-600 font-mono">
               {activeEmail} • Role:{" "}
-              <span className="text-emerald-400 font-semibold">CASHIER</span>
+              <span className="text-emerald-700 font-semibold">CASHIER</span>
             </div>
-            <div className="text-[11px] text-slate-500 font-mono pt-1 border-t border-slate-800/60">
+            <div className="text-[11px] text-slate-500 font-mono pt-1 border-t border-slate-200">
               Branch: {branchName} ({branchCode})
             </div>
           </div>
         ) : (
-          <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/60 text-xs text-slate-400">
+          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-500">
             No active authenticated session detected.
           </div>
         )}
@@ -89,7 +89,7 @@ export default function CashierLogoutPage() {
               <button
                 onClick={handleLogout}
                 disabled={isLoggingOut}
-                className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-semibold shadow-lg shadow-red-900/40 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                className="flex-1 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {isLoggingOut ? (
                   <>
@@ -105,7 +105,7 @@ export default function CashierLogoutPage() {
               </button>
               <Link
                 href="/cashier/dashboard"
-                className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-all flex items-center justify-center gap-1.5"
+                className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-all flex items-center justify-center gap-1.5"
               >
                 <span>Cancel</span>
               </Link>
@@ -113,7 +113,7 @@ export default function CashierLogoutPage() {
           ) : (
             <Link
               href="/login"
-              className="w-full px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-lg shadow-blue-900/40 transition-all flex items-center justify-center gap-2"
+              className="w-full px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition-all flex items-center justify-center gap-2"
             >
               <UserCheck className="w-4 h-4" />
               <span>Sign In to Your Account</span>

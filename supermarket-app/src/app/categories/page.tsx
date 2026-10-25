@@ -64,7 +64,7 @@ export default function CategoriesPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
         <div>
           <h1 className="text-2xl font-black text-slate-900 flex items-center gap-2.5">
-            <Layers className="w-6 h-6 text-indigo-600" />
+            <Layers className="w-6 h-6 text-blue-600" />
             <span>Product Categories Hierarchy</span>
           </h1>
           <p className="text-xs text-slate-500 mt-1">
@@ -74,7 +74,7 @@ export default function CategoriesPage() {
 
         <button
           onClick={() => setAddModalOpen(true)}
-          className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm flex items-center gap-2 transition-all shrink-0"
+          className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs flex items-center gap-2 transition-all shrink-0 active:scale-95"
         >
           <Plus className="w-4 h-4" />
           <span>Add New Category</span>
@@ -186,7 +186,7 @@ export default function CategoriesPage() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-2/3 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-sm"
+                  className="w-2/3 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-xs"
                 >
                   {isSubmitting ? "Saving..." : "Save Category"}
                 </button>

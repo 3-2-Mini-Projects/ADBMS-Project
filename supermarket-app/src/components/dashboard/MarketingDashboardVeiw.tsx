@@ -152,37 +152,39 @@ export function MarketingDashboardVeiw() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
-      {/* Top Banner Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-2 border-b border-slate-200">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
-            Marketing & Loyalty Dashboard
-          </h1>
-          <p className="text-xs text-slate-500 mt-1">
-            Real-time customer loyalty analytics, membership tier progression, and active campaigns.
-          </p>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex items-center gap-2.5 flex-wrap">
-          <button
-            onClick={fetchDashboardData}
-            disabled={loading}
-            className="p-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-xs hover:text-slate-900 transition-all text-xs font-semibold flex items-center gap-1.5"
-            title="Refresh analytics"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-blue-600" : ""}`} />
-            <span className="hidden sm:inline">Refresh</span>
-          </button>
-
-          <Link
-            href="/marketing/promotions"
-            className="px-3.5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs shadow-sm flex items-center gap-1.5 transition-all"
-          >
-            <Plus className="w-4 h-4" />
-            <span>New Promotion</span>
-          </Link>
-
+      {/* Top Hero Banner */}
+      <div className="rounded-3xl p-6 sm:p-8 bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 text-white relative overflow-hidden shadow-xs border border-slate-800">
+        <div className="absolute top-0 right-0 -mr-16 -mt-16 w-80 h-80 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-blue-200 text-xs font-semibold uppercase tracking-wider mb-3">
+              <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+              <span>Marketing &amp; Loyalty Intelligence</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+              Customer Loyalty &amp; Campaigns
+            </h1>
+            <p className="text-slate-300 text-xs sm:text-sm mt-1.5 max-w-2xl leading-relaxed">
+              Real-time customer loyalty analytics, membership tier progression, voucher redemptions, and active promotional campaigns.
+            </p>
+          </div>
+          <div className="flex items-center gap-3 flex-wrap">
+            <button
+              onClick={fetchDashboardData}
+              disabled={loading}
+              className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white border border-white/20 backdrop-blur-xs font-semibold text-xs shadow-xs transition-all flex items-center gap-2"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-blue-400" : ""}`} />
+              <span>Refresh</span>
+            </button>
+            <Link
+              href="/promotions"
+              className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              <span>New Promotion</span>
+            </Link>
+          </div>
         </div>
       </div>
 

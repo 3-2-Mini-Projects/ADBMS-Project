@@ -250,11 +250,11 @@ export default function InventoryPage() {
   return (
     <div className={theme.wrapper}>
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
         <div>
           <h1 className={theme.title}>
-            <Boxes className="w-6 h-6 text-indigo-500" />
-            <span>Inventory & Batch Expiry Tracking</span>
+            <Boxes className="w-6 h-6 text-blue-600" />
+            <span>Inventory &amp; Batch Expiry Tracking</span>
           </h1>
           <p className={theme.subtitle}>
             Track branch quantities, reorder thresholds, and FIFO expiry date rotations.
@@ -264,7 +264,7 @@ export default function InventoryPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setBatchModalOpen(true)}
-            className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-500/20 flex items-center gap-2 transition-all"
+            className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs flex items-center gap-2 transition-all active:scale-95"
           >
             <Plus className="w-4 h-4" />
             <span>Receive New Batch</span>

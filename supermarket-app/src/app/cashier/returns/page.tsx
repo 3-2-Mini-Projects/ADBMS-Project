@@ -463,7 +463,7 @@ function ReturnsContent() {
                     alignItems: "center",
                     gap: 10,
                     padding: "8px 12px",
-                    background: "rgba(255, 255, 255, 0.02)",
+                    background: "#f8fafc",
                     borderRadius: 8,
                     border: "1px solid var(--border)",
                   }}

@@ -76,22 +76,22 @@ export function AdminDashboardView() {
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       {/* Admin Hero Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-purple-700 via-indigo-700 to-indigo-800 p-6 md:p-8 shadow-md">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 p-6 md:p-8 shadow-xs border border-slate-800 text-white">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6 text-white">
           <div>
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-purple-200">
-              <ShieldCheck className="w-4 h-4 text-amber-300" />
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-300">
+              <ShieldCheck className="w-4 h-4 text-amber-400" />
               <span>Super Administrator Governance Console</span>
             </div>
-            <h1 className="text-2xl md:text-3xl font-extrabold text-white mt-1.5 flex items-center gap-3">
+            <h1 className="text-2xl md:text-3xl font-black text-white mt-1.5 flex items-center gap-3">
               <span>Admin Management Hub</span>
-              <span className="px-2.5 py-0.5 text-xs font-mono font-bold bg-white/20 text-white border border-white/30 rounded-full">
+              <span className="px-2.5 py-0.5 text-xs font-mono font-bold bg-white/10 text-white border border-white/20 rounded-full">
                 ADMIN ACCESS
               </span>
             </h1>
-            <p className="text-purple-100 text-sm mt-1.5 max-w-2xl leading-relaxed">
-              Enterprise administration for <strong className="text-white font-semibold">{branches.length} Supermarket Branches</strong> and{" "}
-              <strong className="text-white font-semibold">{employees.length} Staff Members</strong>. Full authority over branch allocations, system permissions, audit trails, and SQL analytics.
+            <p className="text-slate-300 text-xs md:text-sm mt-1.5 max-w-2xl leading-relaxed">
+              Enterprise administration for <strong className="text-white font-bold">{branches.length} Supermarket Branches</strong> and{" "}
+              <strong className="text-white font-bold">{employees.length} Staff Members</strong>. Full authority over branch allocations, system permissions, audit trails, and SQL analytics.
             </p>
           </div>
 
@@ -99,21 +99,21 @@ export function AdminDashboardView() {
             <button
               onClick={fetchAdminData}
               disabled={loading}
-              className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-all shadow-2xs"
+              className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-all shadow-xs"
               title="Refresh Admin Stats"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin text-white" : ""}`} />
             </button>
             <Link
-              href="/audit"
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-semibold shadow-2xs transition-all"
+              href="/admin/audit"
+              className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-semibold shadow-xs transition-all"
             >
               <ShieldAlert className="w-4 h-4 text-amber-300" />
               <span>Security Logs</span>
             </Link>
             <Link
-              href="/branches"
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple-500 hover:bg-purple-600 text-white font-semibold text-xs shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all"
+              href="/admin/branches"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs hover:scale-[1.01] active:scale-[0.99] transition-all"
             >
               <Building2 className="w-4 h-4" />
               <span>Manage Branches</span>
@@ -122,7 +122,7 @@ export function AdminDashboardView() {
         </div>
 
         {/* Database Status Pill Bar */}
-        <div className="relative z-10 mt-6 pt-5 border-t border-white/20 flex flex-wrap items-center gap-4 text-xs text-purple-100">
+        <div className="relative z-10 mt-6 pt-5 border-t border-white/10 flex flex-wrap items-center gap-4 text-xs text-slate-300">
           <div className="flex items-center gap-2">
             <Database className="w-3.5 h-3.5 text-amber-300" />
             <span>Database: <strong className="text-white font-mono">supermarket_ADBMS</strong></span>

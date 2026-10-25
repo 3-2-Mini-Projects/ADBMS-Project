@@ -148,8 +148,8 @@ export default function QuantityEntryModal({
       style={{
         position: "fixed",
         inset: 0,
-        backgroundColor: "rgba(0, 0, 0, 0.75)",
-        backdropFilter: "blur(6px)",
+        backgroundColor: "rgba(15, 23, 42, 0.45)",
+        backdropFilter: "blur(4px)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -165,15 +165,15 @@ export default function QuantityEntryModal({
         style={{
           width: "100%",
           maxWidth: 480,
-          background: "var(--bg-card, #161b22)",
-          border: "1px solid var(--border, #30363d)",
+          background: "#ffffff",
+          border: "1px solid #e2e8f0",
           borderRadius: 16,
-          boxShadow: "0 25px 60px rgba(0, 0, 0, 0.7), 0 0 25px rgba(46, 160, 67, 0.15)",
+          boxShadow: "0 20px 40px -10px rgba(15, 23, 42, 0.15)",
           padding: 24,
           display: "flex",
           flexDirection: "column",
           gap: 16,
-          animation: "fadeInScale 0.15s ease-out",
+          animation: "fadeIn 0.15s ease-out",
         }}
       >
         {/* Header */}
@@ -184,11 +184,11 @@ export default function QuantityEntryModal({
                 style={{
                   fontFamily: "'JetBrains Mono', monospace",
                   fontSize: 11,
-                  background: "rgba(88, 166, 255, 0.12)",
-                  color: "var(--accent-blue, #58a6ff)",
+                  background: "#eff6ff",
+                  color: "#2563eb",
                   padding: "2px 8px",
                   borderRadius: 6,
-                  border: "1px solid rgba(88, 166, 255, 0.25)",
+                  border: "1px solid #bfdbfe",
                 }}
               >
                 🏷️ {product.barcode}
@@ -197,8 +197,8 @@ export default function QuantityEntryModal({
                 <span
                   style={{
                     fontSize: 11,
-                    color: "var(--text-muted, #8b949e)",
-                    background: "rgba(255, 255, 255, 0.05)",
+                    color: "#64748b",
+                    background: "#f1f5f9",
                     padding: "2px 8px",
                     borderRadius: 6,
                   }}
@@ -211,7 +211,7 @@ export default function QuantityEntryModal({
               style={{
                 fontSize: 18,
                 fontWeight: 800,
-                color: "var(--text-primary, #f0f6fc)",
+                color: "#0f172a",
                 margin: 0,
                 lineHeight: 1.3,
               }}
@@ -219,7 +219,7 @@ export default function QuantityEntryModal({
               {product.name}
             </h2>
             {product.brand && (
-              <div style={{ fontSize: 12, color: "var(--text-muted, #8b949e)", marginTop: 2 }}>
+              <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>
                 {product.brand}
               </div>
             )}
@@ -231,7 +231,7 @@ export default function QuantityEntryModal({
             style={{
               padding: "4px 8px",
               fontSize: 14,
-              color: "var(--text-muted, #8b949e)",
+              color: "#64748b",
               borderRadius: 8,
             }}
             onClick={onClose}
@@ -247,28 +247,28 @@ export default function QuantityEntryModal({
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            background: "var(--bg-surface, #0d1117)",
+            background: "#f8fafc",
             padding: "10px 14px",
             borderRadius: 10,
-            border: "1px solid var(--border, #30363d)",
+            border: "1px solid #e2e8f0",
           }}
         >
           <div>
-            <div style={{ fontSize: 11, color: "var(--text-muted, #8b949e)" }}>Unit Price</div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: "var(--accent-emerald, #3fb950)" }}>
+            <div style={{ fontSize: 11, color: "#64748b" }}>Unit Price</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: "#059669" }}>
               {fmt(unitPrice)}
             </div>
           </div>
 
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 11, color: "var(--text-muted, #8b949e)" }}>Available Stock</div>
+            <div style={{ fontSize: 11, color: "#64748b" }}>Available Stock</div>
             <div
               style={{
                 fontSize: 14,
                 fontWeight: 700,
                 color: isOutOfStock
-                  ? "var(--accent-rose, #f85149)"
-                  : "var(--text-primary, #f0f6fc)",
+                  ? "#e11d48"
+                  : "#0f172a",
               }}
             >
               {product.available_stock} units
@@ -283,14 +283,14 @@ export default function QuantityEntryModal({
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
-              background: "rgba(88, 166, 255, 0.08)",
-              border: "1px solid rgba(88, 166, 255, 0.2)",
+              background: "#eff6ff",
+              border: "1px solid #bfdbfe",
               padding: "8px 12px",
               borderRadius: 8,
               fontSize: 12,
             }}
           >
-            <span style={{ color: "var(--accent-blue, #58a6ff)", fontWeight: 600 }}>
+            <span style={{ color: "#1d4ed8", fontWeight: 600 }}>
               🛒 Already in cart: <strong>{currentCartQty}</strong> units
             </span>
             <div style={{ display: "flex", gap: 4 }}>
@@ -335,12 +335,12 @@ export default function QuantityEntryModal({
                 justifyContent: "space-between",
                 fontSize: 12,
                 fontWeight: 700,
-                color: "var(--text-secondary, #c9d1d9)",
+                color: "#334155",
                 marginBottom: 6,
               }}
             >
               <span>{mode === "add" ? "Quantity to Add" : "Total Quantity"}</span>
-              <span style={{ fontSize: 11, fontWeight: 400, color: "var(--text-muted, #8b949e)" }}>
+              <span style={{ fontSize: 11, fontWeight: 400, color: "#64748b" }}>
                 Type number and press Enter ↵
               </span>
             </label>
@@ -355,12 +355,13 @@ export default function QuantityEntryModal({
                   width: 52,
                   fontSize: 22,
                   fontWeight: 700,
-                  background: "var(--bg-surface, #0d1117)",
-                  border: "1px solid var(--border, #30363d)",
+                  background: "#f8fafc",
+                  border: "1px solid #cbd5e1",
                   borderRadius: 10,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
+                  color: "#0f172a",
                 }}
                 title="Decrease (ArrowDown)"
               >
@@ -387,12 +388,12 @@ export default function QuantityEntryModal({
                     fontWeight: 900,
                     textAlign: "center",
                     letterSpacing: 1,
-                    color: exceedsStock ? "var(--accent-rose, #f85149)" : "var(--accent-emerald, #3fb950)",
+                    color: exceedsStock ? "#e11d48" : "#059669",
                     borderColor: exceedsStock
-                      ? "var(--accent-rose, #f85149)"
-                      : "var(--accent-emerald, #3fb950)",
-                    boxShadow: "0 0 15px rgba(46, 160, 67, 0.15)",
-                    background: "var(--bg-surface, #0d1117)",
+                      ? "#e11d48"
+                      : "#059669",
+                    boxShadow: "0 0 10px rgba(16, 185, 129, 0.12)",
+                    background: "#ffffff",
                   }}
                   placeholder="1"
                   autoComplete="off"
@@ -407,12 +408,13 @@ export default function QuantityEntryModal({
                   width: 52,
                   fontSize: 22,
                   fontWeight: 700,
-                  background: "var(--bg-surface, #0d1117)",
-                  border: "1px solid var(--border, #30363d)",
+                  background: "#f8fafc",
+                  border: "1px solid #cbd5e1",
                   borderRadius: 10,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
+                  color: "#0f172a",
                 }}
                 title="Increase (ArrowUp)"
               >
@@ -423,7 +425,7 @@ export default function QuantityEntryModal({
 
           {/* Quick Presets */}
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-            <span style={{ fontSize: 11, color: "var(--text-muted, #8b949e)", marginRight: 2 }}>
+            <span style={{ fontSize: 11, color: "#64748b", marginRight: 2 }}>
               Quick:
             </span>
             {[1, 2, 3, 5, 10, 12, 20].map((preset) => {
@@ -444,8 +446,9 @@ export default function QuantityEntryModal({
                     fontSize: 11.5,
                     fontWeight: 600,
                     borderRadius: 6,
-                    background: "var(--bg-surface, #0d1117)",
-                    border: "1px solid var(--border, #30363d)",
+                    background: "#f8fafc",
+                    border: "1px solid #e2e8f0",
+                    color: "#334155",
                     opacity: disabled ? 0.4 : 1,
                   }}
                 >
@@ -469,9 +472,9 @@ export default function QuantityEntryModal({
                   fontSize: 11,
                   fontWeight: 600,
                   borderRadius: 6,
-                  color: "var(--accent-blue, #58a6ff)",
-                  background: "rgba(88, 166, 255, 0.08)",
-                  border: "1px solid rgba(88, 166, 255, 0.3)",
+                  color: "#2563eb",
+                  background: "#eff6ff",
+                  border: "1px solid #bfdbfe",
                 }}
               >
                 Max Stock ({product.available_stock})
@@ -482,8 +485,8 @@ export default function QuantityEntryModal({
           {/* Live Line Calculation & Total */}
           <div
             style={{
-              background: "rgba(255, 255, 255, 0.03)",
-              border: "1px solid var(--border, #30363d)",
+              background: "#f8fafc",
+              border: "1px solid #e2e8f0",
               borderRadius: 10,
               padding: "10px 14px",
               display: "flex",
@@ -492,12 +495,12 @@ export default function QuantityEntryModal({
             }}
           >
             <div>
-              <div style={{ fontSize: 11, color: "var(--text-muted, #8b949e)" }}>Line Total</div>
-              <div style={{ fontSize: 11, color: "var(--text-secondary, #c9d1d9)" }}>
+              <div style={{ fontSize: 11, color: "#64748b" }}>Line Total</div>
+              <div style={{ fontSize: 11, color: "#475569" }}>
                 {fmt(unitPrice)} × {currentQty} units
               </div>
             </div>
-            <div style={{ fontSize: 18, fontWeight: 900, color: "var(--accent-emerald, #3fb950)" }}>
+            <div style={{ fontSize: 18, fontWeight: 900, color: "#059669" }}>
               {fmt(lineTotal)}
             </div>
           </div>
@@ -508,9 +511,9 @@ export default function QuantityEntryModal({
               style={{
                 padding: "8px 12px",
                 borderRadius: 8,
-                background: "rgba(248, 81, 73, 0.12)",
-                border: "1px solid rgba(248, 81, 73, 0.3)",
-                color: "var(--accent-rose, #f85149)",
+                background: "#fff1f2",
+                border: "1px solid #fecdd3",
+                color: "#e11d48",
                 fontSize: 12,
                 display: "flex",
                 alignItems: "center",
@@ -535,7 +538,7 @@ export default function QuantityEntryModal({
             <span
               style={{
                 fontSize: 11,
-                color: "var(--text-muted, #8b949e)",
+                color: "#94a3b8",
                 marginRight: "auto",
                 fontFamily: "monospace",
               }}
@@ -565,12 +568,16 @@ export default function QuantityEntryModal({
                 gap: 8,
                 background:
                   !isValidNumber || currentQty <= 0 || exceedsStock
-                    ? "var(--bg-surface, #0d1117)"
-                    : "linear-gradient(135deg, #2ea043 0%, #238636 100%)",
+                    ? "#e2e8f0"
+                    : "#10b981",
+                color:
+                  !isValidNumber || currentQty <= 0 || exceedsStock
+                    ? "#94a3b8"
+                    : "#ffffff",
                 boxShadow:
                   !isValidNumber || currentQty <= 0 || exceedsStock
                     ? "none"
-                    : "0 4px 14px rgba(46, 160, 67, 0.35)",
+                    : "0 4px 14px rgba(16, 185, 129, 0.35)",
               }}
             >
               <span>✓</span>

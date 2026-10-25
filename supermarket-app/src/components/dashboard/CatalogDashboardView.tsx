@@ -171,23 +171,24 @@ export function CatalogDashboardView() {
   return (
     <div className="space-y-8 pb-12">
       {/* Top Hero Banner */}
-      <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 md:p-8 shadow-xs">
+      <div className="rounded-3xl p-6 sm:p-8 bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 text-white relative overflow-hidden shadow-xs border border-slate-800">
+        <div className="absolute top-0 right-0 -mr-16 -mt-16 w-80 h-80 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
         <div className="relative z-10 flex flex-col justify-between gap-6 md:flex-row md:items-center">
           <div>
-            <div className="mb-2 flex items-center gap-2.5">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold tracking-wider text-indigo-700 uppercase">
-                <Sparkles className="h-3.5 w-3.5" /> Catalog Manager Command Center
+            <div className="mb-3 flex items-center gap-2.5">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 backdrop-blur-md px-3 py-1 text-xs font-semibold tracking-wider text-blue-200 uppercase">
+                <Sparkles className="h-3.5 w-3.5 text-blue-400" /> Catalog Command Center
               </span>
               {currentBranch && (
-                <span className="rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-xs text-slate-700 font-medium">
+                <span className="rounded-full border border-white/10 bg-white/10 px-2.5 py-0.5 text-xs text-slate-200 font-medium">
                   📍 {currentBranch.name}
                 </span>
               )}
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">
+            <h1 className="text-2xl font-black tracking-tight text-white md:text-3xl">
               Product Merchandising &amp; Pricing Intelligence
             </h1>
-            <p className="mt-1 max-w-2xl text-sm text-slate-500">
+            <p className="mt-1.5 max-w-2xl text-xs sm:text-sm text-slate-300 leading-relaxed">
               Manage product master records, category hierarchy, vendor pricing, supervisor review gates, and identify stagnant slow-moving inventory across all branch locations.
             </p>
           </div>
@@ -196,14 +197,14 @@ export function CatalogDashboardView() {
             <button
               onClick={handleRefresh}
               disabled={refreshing}
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-medium text-slate-700 transition-all hover:bg-slate-50 disabled:opacity-50 shadow-xs"
+              className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-xs font-semibold text-white transition-all hover:bg-white/15 disabled:opacity-50 shadow-xs backdrop-blur-xs"
             >
-              <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin text-indigo-600" : ""}`} />
+              <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin text-blue-400" : ""}`} />
               Refresh
             </button>
             <Link
               href="/products"
-              className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-xs transition-all hover:bg-indigo-700 active:scale-95"
+              className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white shadow-xs transition-all hover:bg-blue-700 active:scale-95"
             >
               <Plus className="h-3.5 w-3.5" />
               Manage Products

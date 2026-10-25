@@ -137,16 +137,7 @@ export default function CashierSettingsPage() {
           <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
             POS hardware audio feedback, receipt printing behavior, and account password security
           </p>
-        </div>
-
-        <Link
-          href="/cashier/profile"
-          className="btn btn-secondary"
-          style={{ padding: "8px 16px", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}
-        >
-          <User className="w-4 h-4" />
-          <span>View Profile</span>
-        </Link>
+        </div>        
       </div>
 
       {/* Account Identity Chip Card */}
@@ -179,11 +170,7 @@ export default function CashierSettingsPage() {
               Operator ID #{cashier?.employee_id} • 📍 {cashier?.branch_name} ({cashier?.branch_code})
             </div>
           </div>
-        </div>
-
-        <Link href="/cashier/pos" className="btn btn-emerald" style={{ padding: "6px 14px", fontSize: 12 }}>
-          🛒 Open POS
-        </Link>
+        </div>        
       </div>
 
       {/* Grid: Preferences & Security */}
@@ -340,9 +327,9 @@ export default function CashierSettingsPage() {
                 borderRadius: 8,
                 fontSize: 12,
                 fontWeight: 600,
-                background: passwordNotice.startsWith("✓") ? "rgba(16, 185, 129, 0.15)" : "rgba(245, 158, 11, 0.15)",
-                color: passwordNotice.startsWith("✓") ? "#34d399" : "#fbbf24",
-                border: `1px solid ${passwordNotice.startsWith("✓") ? "rgba(16, 185, 129, 0.3)" : "rgba(245, 158, 11, 0.3)"}`,
+                background: passwordNotice.startsWith("✓") ? "#ecfdf5" : "#fffbeb",
+                color: passwordNotice.startsWith("✓") ? "#059669" : "#b45309",
+                border: `1px solid ${passwordNotice.startsWith("✓") ? "#a7f3d0" : "#fde68a"}`,
               }}
             >
               {passwordNotice}

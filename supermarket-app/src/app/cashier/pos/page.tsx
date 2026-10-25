@@ -740,7 +740,7 @@ export default function POSBillingPage() {
                 border: "1px solid var(--border)",
                 borderRadius: 10,
                 padding: 12,
-                boxShadow: "0 10px 25px rgba(0,0,0,0.5)",
+                boxShadow: "0 10px 25px -5px rgba(15, 23, 42, 0.12)",
                 zIndex: 20,
               }}
             >
@@ -1173,7 +1173,7 @@ export default function POSBillingPage() {
                   marginTop: 10,
                   padding: "8px 12px",
                   borderRadius: 8,
-                  background: "rgba(255, 255, 255, 0.03)",
+                  background: "#f8fafc",
                   border: "1px dashed var(--border)",
                   display: "flex",
                   justifyContent: "space-between",
@@ -1289,7 +1289,7 @@ export default function POSBillingPage() {
                       <span style={{ fontFamily: "monospace" }}>-{fmt(redeemedPts)}</span>
                     </div>
                   )}
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 6, borderTop: "1px solid rgba(255, 255, 255, 0.08)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 6, borderTop: "1px solid #e2e8f0" }}>
                     <div>
                       <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>
                         {redeemedPts > 0 ? "Remaining Purchase Value" : "Grand Total Due"}
@@ -1309,8 +1309,8 @@ export default function POSBillingPage() {
             {/* Promotional Coupon Section */}
             <div
               style={{
-                background: appliedCoupon ? "rgba(16, 185, 129, 0.08)" : "rgba(30, 41, 59, 0.5)",
-                border: appliedCoupon ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid var(--border)",
+                background: appliedCoupon ? "#ecfdf5" : "#f8fafc",
+                border: appliedCoupon ? "1px solid #a7f3d0" : "1px solid var(--border)",
                 padding: "10px 14px",
                 borderRadius: 10,
                 marginBottom: 14,
@@ -1599,7 +1599,7 @@ export default function POSBillingPage() {
                         style={{
                           width: 120,
                           padding: "6px 8px",
-                          ...(isPoints ? { background: "rgba(255,255,255,0.05)", cursor: "not-allowed", color: "#c084fc", fontWeight: 700 } : {}),
+                          ...(isPoints ? { background: "#f1f5f9", cursor: "not-allowed", color: "#9333ea", fontWeight: 700 } : {}),
                         }}
                         placeholder="Amount"
                         value={line.amount || ""}
@@ -1613,7 +1613,7 @@ export default function POSBillingPage() {
                         style={{
                           flex: 1,
                           padding: "6px 8px",
-                          ...(isPoints ? { background: "rgba(255,255,255,0.05)", cursor: "not-allowed", color: "var(--text-muted)" } : {}),
+                          ...(isPoints ? { background: "#f1f5f9", cursor: "not-allowed", color: "var(--text-muted)" } : {}),
                         }}
                         placeholder={
                           isPoints
@@ -1634,7 +1634,7 @@ export default function POSBillingPage() {
 
             {/* Cash Tendered Input & Remaining Purchase Value Reduction */}
             {hasCash && (
-              <div style={{ marginBottom: 16, background: "rgba(255, 255, 255, 0.02)", padding: "12px", borderRadius: 10, border: "1px solid var(--border)" }}>
+              <div style={{ marginBottom: 16, background: "#f8fafc", padding: "12px", borderRadius: 10, border: "1px solid var(--border)" }}>
                 <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
                   <div style={{ flex: 1 }}>
                     <label style={{ fontSize: 11, color: "var(--text-muted)", display: "block", marginBottom: 4 }}>

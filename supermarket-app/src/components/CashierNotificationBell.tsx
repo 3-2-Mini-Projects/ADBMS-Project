@@ -195,20 +195,20 @@ export function CashierNotificationBell() {
             maxHeight: 520,
             display: "flex",
             flexDirection: "column",
-            borderRadius: 14,
-            background: "#0f172a",
-            border: "1px solid #334155",
+            borderRadius: 16,
+            background: "#ffffff",
+            border: "1px solid #e2e8f0",
             zIndex: 9999,
             overflow: "hidden",
-            boxShadow: "0 20px 40px rgba(0, 0, 0, 0.6)",
+            boxShadow: "0 20px 40px -10px rgba(15, 23, 42, 0.15)",
           }}
         >
           {/* Header */}
           <div
             style={{
               padding: "12px 16px",
-              borderBottom: "1px solid #1e293b",
-              background: "#0b0f19",
+              borderBottom: "1px solid #e2e8f0",
+              background: "#f8fafc",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
@@ -216,7 +216,7 @@ export function CashierNotificationBell() {
           >
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ fontSize: 16 }}>🔔</span>
-              <span style={{ fontWeight: 800, fontSize: 13, color: "#f8fafc" }}>
+              <span style={{ fontWeight: 800, fontSize: 13, color: "#0f172a" }}>
                 Activity &amp; Notifications
               </span>
             </div>
@@ -227,7 +227,7 @@ export function CashierNotificationBell() {
                 onClick={fetchActivity}
                 disabled={loading}
                 className="btn btn-ghost"
-                style={{ padding: "4px 8px", fontSize: 11, display: "flex", alignItems: "center", gap: 4 }}
+                style={{ padding: "4px 8px", fontSize: 11, display: "flex", alignItems: "center", gap: 4, color: "#475569" }}
                 title="Refresh logs"
               >
                 <RefreshCw style={{ width: 12, height: 12 }} className={loading ? "animate-spin" : ""} />
@@ -238,7 +238,7 @@ export function CashierNotificationBell() {
                 type="button"
                 onClick={() => setIsOpen(false)}
                 className="btn btn-ghost"
-                style={{ padding: "4px 8px", fontSize: 12 }}
+                style={{ padding: "4px 8px", fontSize: 12, color: "#64748b" }}
               >
                 ✕
               </button>
@@ -249,8 +249,8 @@ export function CashierNotificationBell() {
           <div
             style={{
               display: "flex",
-              borderBottom: "1px solid #1e293b",
-              background: "#090d16",
+              borderBottom: "1px solid #e2e8f0",
+              background: "#f1f5f9",
               padding: "4px 8px",
               gap: 6,
             }}
@@ -264,14 +264,15 @@ export function CashierNotificationBell() {
                 borderRadius: 8,
                 fontSize: 11.5,
                 fontWeight: 700,
-                border: "none",
+                border: activeTab === "NOTIFICATIONS" ? "1px solid #e2e8f0" : "1px solid transparent",
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 gap: 6,
-                background: activeTab === "NOTIFICATIONS" ? "#1e293b" : "transparent",
-                color: activeTab === "NOTIFICATIONS" ? "#38bdf8" : "#94a3b8",
+                background: activeTab === "NOTIFICATIONS" ? "#ffffff" : "transparent",
+                color: activeTab === "NOTIFICATIONS" ? "#2563eb" : "#64748b",
+                boxShadow: activeTab === "NOTIFICATIONS" ? "0 1px 3px rgba(0,0,0,0.06)" : "none",
                 transition: "all 0.15s",
               }}
             >
@@ -282,8 +283,9 @@ export function CashierNotificationBell() {
                     padding: "1px 6px",
                     borderRadius: 10,
                     fontSize: 10,
-                    background: "rgba(245, 158, 11, 0.2)",
-                    color: "#fbbf24",
+                    background: "#fef3c7",
+                    color: "#b45309",
+                    fontWeight: 800,
                   }}
                 >
                   {unreadCount}
@@ -300,14 +302,15 @@ export function CashierNotificationBell() {
                 borderRadius: 8,
                 fontSize: 11.5,
                 fontWeight: 700,
-                border: "none",
+                border: activeTab === "SIGNIN_LOGS" ? "1px solid #e2e8f0" : "1px solid transparent",
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 gap: 6,
-                background: activeTab === "SIGNIN_LOGS" ? "#1e293b" : "transparent",
-                color: activeTab === "SIGNIN_LOGS" ? "#38bdf8" : "#94a3b8",
+                background: activeTab === "SIGNIN_LOGS" ? "#ffffff" : "transparent",
+                color: activeTab === "SIGNIN_LOGS" ? "#2563eb" : "#64748b",
+                boxShadow: activeTab === "SIGNIN_LOGS" ? "0 1px 3px rgba(0,0,0,0.06)" : "none",
                 transition: "all 0.15s",
               }}
             >
@@ -317,8 +320,9 @@ export function CashierNotificationBell() {
                   padding: "1px 6px",
                   borderRadius: 10,
                   fontSize: 10,
-                  background: "rgba(56, 189, 248, 0.15)",
-                  color: "#38bdf8",
+                  background: "#eff6ff",
+                  color: "#2563eb",
+                  fontWeight: 800,
                 }}
               >
                 {signInLogs.length}
@@ -336,6 +340,7 @@ export function CashierNotificationBell() {
               flexDirection: "column",
               gap: 8,
               minHeight: 240,
+              background: "#ffffff",
             }}
           >
             {activeTab === "NOTIFICATIONS" && (
@@ -346,7 +351,7 @@ export function CashierNotificationBell() {
                       type="button"
                       onClick={markAllRead}
                       className="btn btn-ghost"
-                      style={{ fontSize: 10.5, padding: "2px 8px", color: "var(--accent-blue)" }}
+                      style={{ fontSize: 10.5, padding: "2px 8px", color: "#2563eb" }}
                     >
                       ✓ Mark all as read
                     </button>
@@ -363,7 +368,7 @@ export function CashierNotificationBell() {
                     }}
                   >
                     <CheckCircle2 style={{ width: 28, height: 28, margin: "0 auto 8px", color: "#10b981" }} />
-                    <div style={{ fontWeight: 600, color: "#94a3b8" }}>No Unread Notifications</div>
+                    <div style={{ fontWeight: 600, color: "#0f172a" }}>No Unread Notifications</div>
                     <div style={{ fontSize: 11, marginTop: 4 }}>All terminal operations are normal.</div>
                   </div>
                 ) : (
@@ -376,26 +381,26 @@ export function CashierNotificationBell() {
                         style={{
                           padding: "10px 12px",
                           borderRadius: 10,
-                          background: isRead ? "rgba(15, 23, 42, 0.5)" : "rgba(30, 41, 59, 0.7)",
+                          background: isRead ? "#ffffff" : "#f8fafc",
                           border: `1px solid ${
                             n.severity === "WARNING"
-                              ? "rgba(245, 158, 11, 0.3)"
+                              ? "#fde68a"
                               : n.severity === "SUCCESS"
-                              ? "rgba(16, 185, 129, 0.3)"
-                              : "#334155"
+                              ? "#bbf7d0"
+                              : "#e2e8f0"
                           }`,
                           cursor: "pointer",
                           transition: "all 0.15s",
                         }}
                       >
                         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
-                          <div style={{ fontWeight: 700, fontSize: 12, color: isRead ? "#94a3b8" : "#f1f5f9" }}>
+                          <div style={{ fontWeight: 700, fontSize: 12, color: isRead ? "#475569" : "#0f172a" }}>
                             {n.title}
                           </div>
                           <span
                             style={{
                               fontSize: 9.5,
-                              color: "#64748b",
+                              color: "#94a3b8",
                               whiteSpace: "nowrap",
                               fontFamily: "'JetBrains Mono', monospace",
                             }}
@@ -403,7 +408,7 @@ export function CashierNotificationBell() {
                             {timeAgo(n.timestamp)}
                           </span>
                         </div>
-                        <p style={{ margin: "4px 0 0", fontSize: 11, color: isRead ? "#64748b" : "#cbd5e1", lineHeight: 1.4 }}>
+                        <p style={{ margin: "4px 0 0", fontSize: 11, color: isRead ? "#64748b" : "#334155", lineHeight: 1.4 }}>
                           {n.message}
                         </p>
                       </div>
@@ -415,9 +420,9 @@ export function CashierNotificationBell() {
 
             {activeTab === "SIGNIN_LOGS" && (
               <>
-                <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 4, display: "flex", justifyContent: "space-between" }}>
+                <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4, display: "flex", justifyContent: "space-between" }}>
                   <span>Recent Authentication &amp; Sessions</span>
-                  <span style={{ fontSize: 10, color: "#64748b" }}>Live from Audit Trail</span>
+                  <span style={{ fontSize: 10, color: "#94a3b8" }}>Live from Audit Trail</span>
                 </div>
 
                 {signInLogs.length === 0 ? (
@@ -429,8 +434,8 @@ export function CashierNotificationBell() {
                       fontSize: 12,
                     }}
                   >
-                    <Shield style={{ width: 28, height: 28, margin: "0 auto 8px", color: "#64748b" }} />
-                    <div style={{ fontWeight: 600, color: "#94a3b8" }}>No Sign-in Logs Recorded</div>
+                    <Shield style={{ width: 28, height: 28, margin: "0 auto 8px", color: "#94a3b8" }} />
+                    <div style={{ fontWeight: 600, color: "#0f172a" }}>No Sign-in Logs Recorded</div>
                     <div style={{ fontSize: 11, marginTop: 4 }}>Login history will appear after authentication.</div>
                   </div>
                 ) : (
@@ -443,9 +448,9 @@ export function CashierNotificationBell() {
                         key={log.audit_id}
                         style={{
                           padding: "9px 12px",
-                          borderRadius: 9,
-                          background: "rgba(15, 23, 42, 0.6)",
-                          border: "1px solid #1e293b",
+                          borderRadius: 10,
+                          background: "#ffffff",
+                          border: "1px solid #e2e8f0",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "space-between",
@@ -462,11 +467,11 @@ export function CashierNotificationBell() {
                               alignItems: "center",
                               justifyContent: "center",
                               background: isLogin
-                                ? "rgba(16, 185, 129, 0.15)"
+                                ? "#ecfdf5"
                                 : isLogout
-                                ? "rgba(244, 63, 94, 0.15)"
-                                : "rgba(56, 189, 248, 0.15)",
-                              color: isLogin ? "#34d399" : isLogout ? "#fb7185" : "#38bdf8",
+                                ? "#fff1f2"
+                                : "#eff6ff",
+                              color: isLogin ? "#059669" : isLogout ? "#e11d48" : "#2563eb",
                               flexShrink: 0,
                             }}
                           >
@@ -474,7 +479,7 @@ export function CashierNotificationBell() {
                           </div>
 
                           <div style={{ minWidth: 0 }}>
-                            <div style={{ fontSize: 11.5, fontWeight: 700, color: "#f8fafc" }}>
+                            <div style={{ fontSize: 11.5, fontWeight: 700, color: "#0f172a" }}>
                               {isLogin ? "Sign In (POS Terminal)" : isLogout ? "Sign Out" : log.event}
                             </div>
                             <div
@@ -495,14 +500,14 @@ export function CashierNotificationBell() {
                           <div
                             style={{
                               fontSize: 10.5,
-                              color: "#38bdf8",
+                              color: "#2563eb",
                               fontWeight: 600,
                               fontFamily: "'JetBrains Mono', monospace",
                             }}
                           >
                             {timeAgo(log.timestamp)}
                           </div>
-                          <div style={{ fontSize: 9.5, color: "#64748b" }}>
+                          <div style={{ fontSize: 9.5, color: "#94a3b8" }}>
                             {new Date(log.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                           </div>
                         </div>
@@ -513,8 +518,8 @@ export function CashierNotificationBell() {
 
                 {/* Shift Roster Snapshot */}
                 {shiftLogs.length > 0 && (
-                  <div style={{ marginTop: 10, borderTop: "1px dashed #334155", paddingTop: 8 }}>
-                    <div style={{ fontSize: 10.5, fontWeight: 700, color: "#94a3b8", marginBottom: 6 }}>
+                  <div style={{ marginTop: 10, borderTop: "1px dashed #e2e8f0", paddingTop: 8 }}>
+                    <div style={{ fontSize: 10.5, fontWeight: 700, color: "#475569", marginBottom: 6 }}>
                       Recent Shift Attendance
                     </div>
                     {shiftLogs.slice(0, 3).map((s) => (
@@ -524,16 +529,17 @@ export function CashierNotificationBell() {
                           fontSize: 10.5,
                           padding: "6px 8px",
                           borderRadius: 6,
-                          background: "rgba(30, 41, 59, 0.4)",
+                          background: "#f8fafc",
+                          border: "1px solid #e2e8f0",
                           display: "flex",
                           justifyContent: "space-between",
                           marginBottom: 4,
                         }}
                       >
-                        <span style={{ color: "#cbd5e1" }}>
+                        <span style={{ color: "#334155" }}>
                           📅 {s.shift_date} ({s.start_time} - {s.end_time})
                         </span>
-                        <span style={{ fontWeight: 700, color: s.clock_in ? "#34d399" : "#fbbf24" }}>
+                        <span style={{ fontWeight: 700, color: s.clock_in ? "#059669" : "#d97706" }}>
                           {s.clock_in ? `Clocked in ${s.clock_in}` : s.status}
                         </span>
                       </div>
@@ -548,8 +554,8 @@ export function CashierNotificationBell() {
           <div
             style={{
               padding: "10px 14px",
-              borderTop: "1px solid #1e293b",
-              background: "#0b0f19",
+              borderTop: "1px solid #e2e8f0",
+              background: "#f8fafc",
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
@@ -563,7 +569,7 @@ export function CashierNotificationBell() {
               href="/cashier/activity"
               onClick={() => setIsOpen(false)}
               style={{
-                color: "#38bdf8",
+                color: "#2563eb",
                 fontWeight: 700,
                 textDecoration: "none",
                 display: "inline-flex",

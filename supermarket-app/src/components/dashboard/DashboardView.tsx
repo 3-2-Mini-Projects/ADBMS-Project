@@ -64,19 +64,19 @@ export function DashboardView() {
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       {/* Top Welcome & Quick Actions Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-700 via-indigo-700 to-indigo-800 p-6 md:p-8 shadow-md">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 p-6 md:p-8 shadow-xs border border-slate-800 text-white">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6 text-white">
           <div>
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-blue-200">
-              <Sparkles className="w-4 h-4 text-amber-300" />
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-300">
+              <Sparkles className="w-4 h-4 text-amber-400" />
               <span>Multi-Branch Operational Overview</span>
             </div>
-            <h1 className="text-2xl md:text-3xl font-extrabold text-white mt-1">
+            <h1 className="text-2xl md:text-3xl font-black text-white mt-1">
               Supermarket Management Hub
             </h1>
-            <p className="text-blue-100 text-sm mt-1 max-w-xl">
+            <p className="text-slate-300 text-xs md:text-sm mt-1 max-w-xl leading-relaxed">
               Active Branch:{" "}
-              <strong className="text-white font-semibold">
+              <strong className="text-white font-bold">
                 {currentBranch?.name ?? "All Branches"}
               </strong>{" "}
               ({currentBranch?.city ?? "Central"}). Real-time inventory tracking, POS checkout, and ADBMS audit logs.
@@ -87,14 +87,14 @@ export function DashboardView() {
             <button
               onClick={fetchStats}
               disabled={loading}
-              className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-all shadow-2xs"
+              className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-all shadow-xs"
               title="Refresh Stats"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin text-white" : ""}`} />
             </button>
             <Link
               href="/cashier/pos"
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-sm shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs hover:scale-[1.01] active:scale-[0.99] transition-all"
             >
               <ShoppingCart className="w-4 h-4" />
               <span>Open POS Checkout</span>

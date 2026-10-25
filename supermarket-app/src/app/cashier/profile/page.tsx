@@ -60,15 +60,6 @@ export default function CashierProfilePage() {
             Authenticated terminal operator details and security credential status
           </p>
         </div>
-
-        <Link
-          href="/cashier/pos"
-          className="btn btn-emerald"
-          style={{ padding: "8px 16px", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}
-        >
-          <ShoppingCart className="w-4 h-4" />
-          <span>Open POS Terminal</span>
-        </Link>
       </div>
 
       {/* Main Profile Card */}
@@ -215,27 +206,7 @@ export default function CashierProfilePage() {
             </div>
           </div>
         </div>
-
-        {/* POS Permissions Notice */}
-        <div
-          style={{
-            padding: "16px 18px",
-            borderRadius: 12,
-            background: "rgba(16, 185, 129, 0.08)",
-            border: "1px solid rgba(16, 185, 129, 0.25)",
-            fontSize: 12,
-            lineHeight: 1.6,
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 700, color: "var(--accent-emerald)", marginBottom: 4 }}>
-            <ShieldCheck className="w-4 h-4" />
-            <span>Cashier Desk Operational Privileges</span>
-          </div>
-          <p style={{ margin: 0, color: "var(--text-secondary)" }}>
-            Your account is authorized for POS order checkout, split-tender processing (Cash, Credit/Debit Cards, Loyalty Points), barcode scanning, and daily sales reconciliation for branch <strong>{cashier?.branch_name}</strong>. Item discounts exceeding promotion thresholds, transaction voids, and product refund approvals require shift supervisor or manager authorization PIN.
-          </p>
-        </div>
-
+        
         {/* Quick Links */}
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", borderTop: "1px solid var(--border)", paddingTop: 18 }}>
           <Link

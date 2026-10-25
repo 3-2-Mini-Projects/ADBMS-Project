@@ -75,25 +75,7 @@ export default function CashierProductsPage() {
         </div>
       </div>
 
-      {/* Permissions Banner */}
-      <div
-        style={{
-          padding: "10px 14px",
-          borderRadius: 10,
-          background: "rgba(56, 189, 248, 0.08)",
-          border: "1px solid rgba(56, 189, 248, 0.2)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          fontSize: 12,
-          color: "var(--accent-blue)",
-        }}
-      >
-        <span>
-          ℹ️ <strong>Read-Only Terminal:</strong> Cashier role can check selling prices and stock levels. Adding products and editing selling prices is restricted to Catalog Managers.
-        </span>
-        <span className="badge badge-completed">READ ONLY</span>
-      </div>
+      
 
       {/* Search & Category Filter */}
       <div

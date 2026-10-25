@@ -291,18 +291,18 @@ export default function PurchasesPage() {
   });
 
   const theme = {
-    wrapper: "space-y-6 animate-in fade-in duration-300 -m-6 p-6 sm:p-8 min-h-[calc(100vh-4rem)] text-slate-900",
+    wrapper: "space-y-6 pb-12 animate-in fade-in duration-300 text-slate-900",
     title: "text-2xl font-black text-slate-900 flex items-center gap-2.5",
     subtitle: "text-xs text-slate-500 mt-1",
-    searchBox: "w-full pl-9 pr-4 py-2.5 rounded-xl bg-white border border-slate-300 text-xs text-slate-900 placeholder:text-slate-400 font-mono shadow-sm focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-100 transition-all",
+    searchBox: "w-full pl-9 pr-4 py-2.5 rounded-xl bg-white border border-slate-300 text-xs text-slate-900 placeholder:text-slate-400 font-mono shadow-xs focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all",
     searchIcon: "text-slate-400",
-    filterBtnInactive: "bg-white border border-slate-300 text-slate-600 hover:bg-slate-50 shadow-sm",
-    filterBtnActive: "bg-teal-50 border border-teal-500 text-teal-800 font-bold shadow-sm",
-    tableCard: "bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm",
+    filterBtnInactive: "bg-white border border-slate-300 text-slate-600 hover:bg-slate-50 shadow-xs",
+    filterBtnActive: "bg-blue-50 border border-blue-500 text-blue-700 font-bold shadow-xs",
+    tableCard: "bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs",
     thead: "border-b border-slate-200 bg-slate-50 text-slate-600 uppercase text-[11px] font-semibold tracking-wider",
     tbodyDivide: "divide-y divide-slate-100",
-    rowHover: "hover:bg-teal-50/30 transition-colors",
-    poNumber: "text-teal-700 font-mono font-bold",
+    rowHover: "hover:bg-slate-50/70 transition-colors",
+    poNumber: "text-blue-600 font-mono font-bold",
     supplierName: "text-slate-900 font-semibold",
     branchText: "text-slate-600",
     dateText: "text-slate-500 font-mono",
@@ -315,7 +315,7 @@ export default function PurchasesPage() {
     fulfilledText: "text-emerald-700 font-semibold",
     cancelledText: "text-slate-400 italic",
     emptyText: "text-slate-500",
-    modalOverlay: "fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in duration-200",
+    modalOverlay: "fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4 animate-in fade-in duration-200",
     modalCardSmall: "bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4 text-slate-900",
     modalCardLarge: "bg-white border border-slate-200 rounded-2xl w-full max-w-2xl p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-slate-900",
     modalCardReceive: "bg-white border border-slate-200 rounded-2xl w-full max-w-5xl p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-slate-900",
@@ -326,11 +326,11 @@ export default function PurchasesPage() {
     modalInfoStrong: "text-slate-900 font-semibold",
     modalInfoDesc: "text-slate-500 text-[11px] pt-1",
     modalLabel: "text-xs font-semibold text-slate-700 block mb-1",
-    modalInput: "w-full px-3 py-2 rounded-xl bg-white border border-slate-300 font-mono text-xs text-slate-900 shadow-sm focus:outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100",
-    modalSelect: "w-full px-3 py-2 rounded-xl bg-white border border-slate-300 text-xs text-slate-900 shadow-sm focus:outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100",
+    modalInput: "w-full px-3 py-2 rounded-xl bg-white border border-slate-300 font-mono text-xs text-slate-900 shadow-xs focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100",
+    modalSelect: "w-full px-3 py-2 rounded-xl bg-white border border-slate-300 text-xs text-slate-900 shadow-xs focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100",
     modalItemRow: "flex items-center gap-3 bg-slate-50 p-2.5 rounded-xl border border-slate-200",
-    modalItemSelect: "flex-1 px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs text-slate-900 shadow-sm focus:outline-none focus:border-teal-600",
-    modalItemInput: "px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-mono text-slate-900 shadow-sm focus:outline-none focus:border-teal-600",
+    modalItemSelect: "flex-1 px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs text-slate-900 shadow-xs focus:outline-none focus:border-blue-600",
+    modalItemInput: "px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-mono text-slate-900 shadow-xs focus:outline-none focus:border-blue-600",
     modalItemRemoveBtn: "text-slate-400 hover:text-rose-600 p-1",
     modalFooterBorder: "border-t border-slate-100",
     modalCancelBtn: "w-1/3 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-semibold transition-colors",
@@ -339,32 +339,28 @@ export default function PurchasesPage() {
   return (
     <div className={theme.wrapper}>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
         <div>
           <h1 className={theme.title}>
-            <FileSpreadsheet className={`w-6 h-6 ${isClerk ? "text-teal-600" : "text-teal-400"}`} />
-            <span>Purchase Orders & Supplier Inflow</span>
+            <FileSpreadsheet className="w-6 h-6 text-blue-600" />
+            <span>Purchase Orders &amp; Supplier Inflow</span>
           </h1>
           <p className={theme.subtitle}>
-            Generate replenishment purchase orders and receive stock into branch inventory & product batches.
+            Generate replenishment purchase orders and receive stock into branch inventory &amp; product batches.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           <Link
             href="/inventory/transfers"
-            className={`px-3.5 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all shadow-sm ${
-              isClerk
-                ? "bg-white border border-slate-300 text-slate-700 hover:bg-slate-50"
-                : "bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700"
-            }`}
+            className="px-3.5 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all shadow-xs bg-white border border-slate-300 text-slate-700 hover:bg-slate-50"
           >
-            <ArrowLeftRight className="w-4 h-4 text-teal-500" />
+            <ArrowLeftRight className="w-4 h-4 text-blue-600" />
             <span>Stock Transfers</span>
           </Link>
           <button
             onClick={() => setCreateModalOpen(true)}
-            className="px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs shadow-lg shadow-teal-950/40 flex items-center gap-2 transition-all shrink-0"
+            className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs flex items-center gap-2 transition-all shrink-0 active:scale-95"
           >
             <Plus className="w-4 h-4" />
             <span>New Purchase Order</span>
