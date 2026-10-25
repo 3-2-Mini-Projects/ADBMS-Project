@@ -44,7 +44,8 @@ export async function POST(req: Request) {
          FROM employees
         WHERE email = ?
         LIMIT 1`,
-      [normalizedEmail]
+      [normalizedEmail],
+      "AUTH"
     );
 
     if (!employee || employee.is_active !== 1) {
