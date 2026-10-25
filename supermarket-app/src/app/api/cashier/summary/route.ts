@@ -9,7 +9,7 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const branchId = Number(searchParams.get("branchId") || "1");
     const cashierId = searchParams.get("cashierId");
-    
+
     // Default to today in YYYY-MM-DD
     const targetDate = searchParams.get("date") || new Date().toISOString().split("T")[0];
 

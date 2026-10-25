@@ -111,11 +111,11 @@ export default function CashierDashboardPage() {
           },
           customer: sale.customer_name
             ? {
-                full_name: sale.customer_name,
-                card_no: sale.customer_card,
-                tier: sale.customer_tier,
-                points_balance: sale.customer_points,
-              }
+              full_name: sale.customer_name,
+              card_no: sale.customer_card,
+              tier: sale.customer_tier,
+              points_balance: sale.customer_points,
+            }
             : null,
           items: sale.items || [],
           subtotal: sale.subtotal,
@@ -388,8 +388,8 @@ export default function CashierDashboardPage() {
                             s.status === "COMPLETED"
                               ? "badge badge-completed"
                               : s.status === "OPEN"
-                              ? "badge badge-open"
-                              : "badge badge-cancelled"
+                                ? "badge badge-open"
+                                : "badge badge-cancelled"
                           }
                         >
                           {s.status}

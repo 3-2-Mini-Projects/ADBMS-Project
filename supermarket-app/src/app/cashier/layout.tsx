@@ -1,35 +1,27 @@
-"use client";
+import React from "react";
+import { redirect } from "next/navigation";
+import { getServerSession } from "@/lib/auth";
+import { getRoleDefaultPath } from "@/lib/permissions";
 
-import React, { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useCashier } from "@/lib/cashierContext";
+export default async function CashierLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const session = await getServerSession();
 
-function CashierLayoutContent({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
-  const { cashier, isLoading } = useCashier();
+  if (!session) {
+    redirect("/login");
+  }
 
-  useEffect(() => {
-    if (!isLoading && !cashier) {
-      router.replace("/login");
-    }
-  }, [isLoading, cashier, router]);
+  // Allow CASHIER, ADMIN, and MANAGER to access cashier desk
+  const isAuthorized =
+    session.role === "CASHIER" || session.role === "ADMIN" || session.role === "MANAGER";
 
-  if (isLoading) {
-    return (
-      <div className="flex min-h-[60vh] items-center justify-center gap-3 text-slate-500 font-medium text-sm">
-        <span className="w-5 h-5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin inline-block" />
-        <span>Verifying cashier credentials...</span>
-      </div>
-    );
+  if (!isAuthorized) {
+    redirect(getRoleDefaultPath(session.role));
   }
 
   return <>{children}</>;
 }
 
-export default function CashierLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <React.Suspense fallback={<div className="p-8 text-slate-400">Loading Cashier Desk...</div>}>
-      <CashierLayoutContent>{children}</CashierLayoutContent>
-    </React.Suspense>
-  );
-}

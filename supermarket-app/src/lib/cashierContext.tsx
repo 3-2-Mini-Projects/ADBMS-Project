@@ -1,12 +1,13 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
+import { useApp } from "@/lib/context";
 
 export interface CashierUser {
   employee_id: number;
   branch_id: number;
   full_name: string;
-  role: "CASHIER";
+  role: "CASHIER" | "ADMIN" | "MANAGER" | string;
   email: string;
   branch_name: string;
   branch_code: string;
@@ -46,13 +47,14 @@ interface CashierContextType {
 const CashierContext = createContext<CashierContextType | undefined>(undefined);
 
 export function CashierProvider({ children }: { children: ReactNode }) {
+  const { authenticatedUser } = useApp();
   const [cashier, setCashierState] = useState<CashierUser | null>(null);
   const [cashiers, setCashiers] = useState<CashierUser[]>([]);
   const [managers, setManagers] = useState<ManagerUser[]>([]);
   const [branches, setBranches] = useState<BranchInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchSessionData = async () => {
+  const fetchSessionData = useCallback(async () => {
     try {
       const res = await fetch("/api/cashier/session");
       const data = await res.json();
@@ -69,7 +71,7 @@ export function CashierProvider({ children }: { children: ReactNode }) {
           if (typeof window !== "undefined") {
             localStorage.setItem("nexus_cashier_id", String(data.currentUser.employee_id));
           }
-        } else {
+        } else if (!authenticatedUser) {
           setCashierState(null);
           if (typeof window !== "undefined") {
             localStorage.removeItem("nexus_cashier_id");
@@ -81,11 +83,29 @@ export function CashierProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [authenticatedUser]);
 
   useEffect(() => {
+    if (authenticatedUser) {
+      // Immediately seed cashier from authenticatedUser so downstream components never see null while fetching
+      setCashierState((prev) => {
+        if (prev && prev.employee_id === authenticatedUser.employee_id) return prev;
+        return {
+          employee_id: authenticatedUser.employee_id,
+          branch_id: authenticatedUser.branch_id,
+          full_name: authenticatedUser.full_name,
+          role: authenticatedUser.role,
+          email: authenticatedUser.email,
+          branch_name: authenticatedUser.branch_name || "",
+          branch_code: `BR${String(authenticatedUser.branch_id).padStart(2, "0")}`,
+          city: "",
+        };
+      });
+    } else {
+      setCashierState(null);
+    }
     fetchSessionData();
-  }, []);
+  }, [authenticatedUser, fetchSessionData]);
 
   const setCashier = (_c: CashierUser) => {
     // Manual cashier switching via drop box is disabled; cashier changes only via login

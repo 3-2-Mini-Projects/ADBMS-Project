@@ -16,7 +16,7 @@ export async function GET() {
           e.employee_id, e.branch_id, e.full_name, e.role, e.email,
           b.name AS branch_name, b.branch_code, b.city
         FROM employees e
-        JOIN branches b ON e.branch_id = b.branch_id
+        LEFT JOIN branches b ON e.branch_id = b.branch_id
         WHERE e.employee_id = ? AND e.is_active = 1
         LIMIT 1
       `, [session.employee_id]);

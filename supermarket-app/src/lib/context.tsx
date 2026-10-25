@@ -45,7 +45,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           setCurrentBranchState(parsed);
         }
       }
-    } catch {}
+    } catch { }
   }, []);
 
   const setCurrentBranch = (branch: Branch) => {
@@ -53,7 +53,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (typeof window !== "undefined") {
       try {
         localStorage.setItem("adbms_current_branch", JSON.stringify(branch));
-      } catch {}
+      } catch { }
     }
   };
 

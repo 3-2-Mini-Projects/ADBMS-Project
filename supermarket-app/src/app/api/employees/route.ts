@@ -183,7 +183,7 @@ export async function POST(req: Request) {
       message: "Employee registered successfully with Pending Activation status.",
     });
   } catch (err: unknown) {
-    await connection.rollback().catch(() => {});
+    await connection.rollback().catch(() => { });
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("POST /api/employees error:", message);
     return NextResponse.json({ error: message }, { status: 500 });

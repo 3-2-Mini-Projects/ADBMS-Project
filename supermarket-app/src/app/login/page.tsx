@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/lib/context";
+import { useCashier } from "@/lib/cashierContext";
 import { getRoleDefaultPath } from "@/lib/permissions";
 import {
   Lock,
@@ -32,6 +33,7 @@ interface EmployeeLookup {
 export default function LoginPage() {
   const router = useRouter();
   const { showToast, refreshAppData, authenticatedUser } = useApp();
+  const { refreshSession } = useCashier();
 
   const [stage, setStage] = useState<LoginStage>("EMAIL");
   const [email, setEmail] = useState("");
@@ -147,7 +149,10 @@ export default function LoginPage() {
       }
 
       const targetPath = getRoleDefaultPath(data?.user?.role);
-      await refreshAppData().catch(() => {});
+      await Promise.all([
+        refreshAppData().catch(() => {}),
+        refreshSession().catch(() => {}),
+      ]);
       router.push(targetPath);
       router.refresh();
     } catch {
@@ -204,7 +209,10 @@ export default function LoginPage() {
       }
 
       const targetPath = getRoleDefaultPath(data?.user?.role);
-      await refreshAppData().catch(() => {});
+      await Promise.all([
+        refreshAppData().catch(() => {}),
+        refreshSession().catch(() => {}),
+      ]);
       router.push(targetPath);
       router.refresh();
     } catch {
