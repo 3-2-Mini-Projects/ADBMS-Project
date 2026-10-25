@@ -79,12 +79,64 @@ export interface ProductPriceHistory {
   history_id: number;
   product_id: number;
   product_name?: string;
+  barcode?: string;
+  brand?: string;
+  category_name?: string;
   old_price: number | string;
   new_price: number | string;
+  price_difference?: number | string;
+  price_variance_pct?: number;
   changed_by: number;
   changer_name?: string;
+  changed_by_name?: string;
+  changed_by_role?: string;
   changed_at: string;
   reason?: string;
+  supervisor_approval_status?: 'APPROVED' | 'PENDING_SUPERVISOR_APPROVAL' | 'REJECTED';
+  supervisor_id?: number | null;
+  supervisor_name?: string | null;
+  supervisor_comment?: string | null;
+  approved_at?: string | null;
+}
+
+export interface SlowMover {
+  slow_mover_id: number;
+  product_id: number;
+  barcode: string;
+  product_name: string;
+  brand?: string | null;
+  category_name?: string;
+  supplier_name?: string;
+  branch_id: number;
+  branch_name: string;
+  quantity_on_hand: number;
+  cost_price: number | string;
+  selling_price: number | string;
+  tied_up_capital: number | string;
+  last_sale_date?: string | null;
+  days_without_sales: number;
+  sales_velocity: number;
+  turnover_ratio?: number;
+  recommended_action: 'DISCOUNT_PRICE' | 'BUNDLE_PROMO' | 'RETURN_TO_SUPPLIER' | 'DISCONTINUE' | 'MONITOR';
+  recommended_discount_pct: number;
+  status: 'ACTIVE' | 'ACTION_TAKEN' | 'DISMISSED' | 'DISCONTINUED';
+  action_taken_notes?: string | null;
+  last_analyzed: string;
+  stagnation_level?: 'CRITICAL' | 'HIGH' | 'MODERATE' | 'LOW';
+}
+
+export interface CatalogStats {
+  total_products: number;
+  active_products: number;
+  inactive_products: number;
+  total_categories: number;
+  total_suppliers: number;
+  total_inventory_valuation: number;
+  potential_retail_revenue: number;
+  average_profit_margin_pct: number;
+  pending_price_approvals: number;
+  slow_movers_count: number;
+  tied_up_capital: number;
 }
 
 export interface InventoryItem {

@@ -6,6 +6,7 @@ import { DashboardView } from "@/components/dashboard/DashboardView";
 import { AdminDashboardView } from "@/components/dashboard/AdminDashboardView";
 import { InventoryDashboardView } from "@/components/dashboard/InventoryDashboardView";
 import { MarketingDashboardVeiw } from "@/components/dashboard/MarketingDashboardVeiw";
+import { CatalogDashboardView } from "@/components/dashboard/CatalogDashboardView";
 
 export default function DashboardPage() {
   const { currentEmployee } = useApp();
@@ -16,6 +17,10 @@ export default function DashboardPage() {
 
   if (currentEmployee?.role === "ADMIN") {
     return <AdminDashboardView />;
+  }
+
+  if (currentEmployee?.role === "CATALOG_MANAGER") {
+    return <CatalogDashboardView />;
   }
 
   if (currentEmployee?.role === "STOCK_CLERK") {

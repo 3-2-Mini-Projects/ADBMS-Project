@@ -188,18 +188,12 @@ const CATALOG_NAV_GROUPS: NavGroup[] = [
   {
     group: "CATALOG MANAGEMENT",
     items: [
+      { title: "Catalog Dashboard", href: "/catalog", icon: LayoutDashboard, badge: "Hub", highlight: true },
       { title: "Products", href: "/products", icon: Package },
+      { title: "Price History & Approvals", href: "/catalog/price-history", icon: ShieldAlert, badge: "Approvals" },
+      { title: "Slow Movers Hub", href: "/catalog/slow-movers", icon: AlertTriangle, badge: "Clearance" },
       { title: "Categories", href: "/categories", icon: Layers },
       { title: "Suppliers", href: "/suppliers", icon: Truck },
-    ],
-  },
-  {
-    group: "INVENTORY OVERVIEW",
-    items: [
-      { title: "Inventory Dashboard", href: "/inventory/dashboard", icon: LayoutGrid },
-      { title: "Inventory Stock", href: "/inventory", icon: Boxes },
-      { title: "Product Batches", href: "/inventory/batches", icon: PackagePlus },
-      { title: "Stock Alerts", href: "/inventory/stock-alerts", icon: AlertTriangle },
     ],
   },
   {
@@ -276,6 +270,10 @@ export function Sidebar() {
   // Resolve exactly one active navigation item so multiple buttons don't light up simultaneously
   const resolveActiveHref = (): string | null => {
     // Role-specific aliases & landing pages
+    if (role === "CATALOG_MANAGER" && cleanPath === "/dashboard") {
+      return "/catalog";
+    }
+
     if (role === "STOCK_CLERK" && (cleanPath === "/dashboard" || cleanPath === "/inventory/clerk")) {
       return "/inventory/dashboard";
     }
@@ -334,7 +332,9 @@ export function Sidebar() {
           {!collapsed ? (
             <Link
               href={
-                role === "MARKETING"
+                role === "CATALOG_MANAGER"
+                  ? "/catalog"
+                  : role === "MARKETING"
                   ? "/marketing/dashboard"
                   : role === "STOCK_CLERK"
                   ? "/inventory/dashboard"
