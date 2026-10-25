@@ -385,7 +385,7 @@ export function AdminDashboardView() {
 
           {/* 6. System Settings */}
           <Link
-            href="/settings"
+            href="/admin/settings"
             className="group p-5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 hover:border-indigo-400 transition-all shadow-xs"
           >
             <div className="flex items-center gap-3">

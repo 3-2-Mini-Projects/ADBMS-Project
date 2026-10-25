@@ -232,7 +232,7 @@ export default function StockAlertsPage() {
 
           <Link
             href="/inventory"
-            className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all"
+            className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-black text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all"
           >
             <Boxes className="w-3.5 h-3.5 text-slate-300" />
             <span>Inventory</span>

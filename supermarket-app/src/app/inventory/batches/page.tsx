@@ -323,7 +323,7 @@ export default function InventoryBatchesPage() {
               fetchDisposalHistory();
               setHistoryModalOpen(true);
             }}
-            className="self-start sm:self-auto inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-rose-300 hover:text-white transition-all shadow-sm"
+            className="self-start sm:self-auto inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-rose-400 hover:text-white transition-all shadow-sm"
             title="View Stock Disposal & Write-Off History"
           >
             <History className="w-3.5 h-3.5 text-rose-400" />

@@ -110,6 +110,19 @@ export default function PrintableReceipt({
     }
   }, [receipt.receiptNumber]);
 
+  // Automatic thermal receipt print trigger if enabled in Cashier Settings
+  useEffect(() => {
+    try {
+      const autoPrint = localStorage.getItem("adbms_autoprint_receipt");
+      if (autoPrint === null || autoPrint === "true") {
+        const timer = setTimeout(() => {
+          window.print();
+        }, 500);
+        return () => clearTimeout(timer);
+      }
+    } catch {}
+  }, []);
+
   return (
     <div className="modal-overlay">
       <div

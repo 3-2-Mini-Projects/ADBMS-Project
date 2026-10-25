@@ -33,7 +33,6 @@ import {
   PackagePlus,
   Settings,
   UserCircle,
-  LogOut,
   LayoutGrid,
   Award,
   Ticket,
@@ -67,14 +66,7 @@ const ADMIN_NAV_GROUPS: NavGroup[] = [
       { title: "Staff Shifts & Roster", href: "/shifts", icon: Clock },
     ],
   },
-  {
-    group: "INVENTORY & PURCHASING",
-    items: [
-      { title: "Inventory", href: "/inventory", icon: Boxes },
-      { title: "Stock Transfers", href: "/inventory/transfers", icon: ArrowLeftRight, badge: "Live" },
-      { title: "Purchase Orders", href: "/purchases", icon: FileSpreadsheet },
-    ],
-  },
+
   {
     group: "SECURITY & AUDIT",
     items: [
@@ -87,7 +79,6 @@ const ADMIN_NAV_GROUPS: NavGroup[] = [
     items: [
       { title: "System Settings", href: "/admin/settings", icon: Settings },
       { title: "Admin Profile", href: "/profile", icon: UserCircle },
-      { title: "Logout", href: "/logout", icon: LogOut },
     ],
   },
 ];
@@ -159,8 +150,6 @@ const CLERK_NAV_GROUPS: NavGroup[] = [
     group: "ACCOUNT",
     items: [
       { title: "My Profile", href: "/profile", icon: UserCircle },
-      { title: "Settings", href: "/settings", icon: Settings },
-      { title: "Logout", href: "/logout", icon: LogOut },
     ],
   },
 ];
@@ -180,8 +169,6 @@ const MARKETING_NAV_GROUPS: NavGroup[] = [
     group: "ACCOUNT",
     items: [
       { title: "My Profile", href: "/profile", icon: UserCircle },
-      { title: "Settings", href: "/settings", icon: Settings },
-      { title: "Logout", href: "/logout", icon: LogOut },
     ],
   },
 ];
@@ -192,8 +179,8 @@ const CATALOG_NAV_GROUPS: NavGroup[] = [
     items: [
       { title: "Catalog Dashboard", href: "/catalog", icon: LayoutDashboard, badge: "Hub", highlight: true },
       { title: "Products", href: "/products", icon: Package },
-      { title: "Price History & Approvals", href: "/catalog/price-history", icon: ShieldAlert, badge: "Approvals" },
-      { title: "Slow Movers Hub", href: "/catalog/slow-movers", icon: AlertTriangle, badge: "Clearance" },
+      { title: "Price History & Approvals", href: "/catalog/price-history", icon: ShieldAlert },
+      { title: "Slow Movers Hub", href: "/catalog/slow-movers", icon: AlertTriangle },
       { title: "Categories", href: "/categories", icon: Layers },
       { title: "Suppliers", href: "/suppliers", icon: Truck },
     ],
@@ -202,8 +189,6 @@ const CATALOG_NAV_GROUPS: NavGroup[] = [
     group: "ACCOUNT",
     items: [
       { title: "My Profile", href: "/profile", icon: UserCircle },
-      { title: "Settings", href: "/settings", icon: Settings },
-      { title: "Logout", href: "/logout", icon: LogOut },
     ],
   },
 ];
@@ -231,8 +216,6 @@ const CASHIER_NAV_GROUPS: NavGroup[] = [
     group: "ACCOUNT",
     items: [
       { title: "My Profile", href: "/cashier/profile", icon: UserCircle },
-      { title: "Settings", href: "/cashier/settings", icon: Settings },
-      { title: "Sign Out", href: "/cashier/logout", icon: LogOut },
     ],
   },
 ];

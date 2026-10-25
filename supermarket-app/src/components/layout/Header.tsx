@@ -12,8 +12,8 @@ import {
   Building2,
   ShieldCheck,
   ShieldAlert,
-  LogOut,
   Lock,
+  LogOut,
 } from "lucide-react";
 import { StockAlertBell } from "./StockAlertBell";
 import { CashierNotificationBell } from "@/components/CashierNotificationBell";

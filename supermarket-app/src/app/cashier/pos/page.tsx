@@ -8,6 +8,7 @@ import CameraBarcodeScannerModal from "@/components/CameraBarcodeScannerModal";
 import BarcodeGeneratorModal from "@/components/BarcodeGeneratorModal";
 import QuantityEntryModal, { QuantityModalProduct } from "@/components/QuantityEntryModal";
 import RegisterCustomerModal from "@/components/RegisterCustomerModal";
+import { playScanBeep, playErrorBeep, playCheckoutChime } from "@/lib/posAudio";
 
 interface Product {
   product_id: number;
@@ -200,24 +201,32 @@ export default function POSBillingPage() {
         `/api/cashier/products?branchId=${cashier.branch_id}&barcode=${encodeURIComponent(code)}`
       );
       const json = await res.json();
+      let prod: Product | undefined;
       if (json.products && json.products.length > 0) {
-        const prod = json.products[0];
-        openQuantityModal(prod, "add", multiplier);
-        setBarcodeInput("");
+        prod = json.products[0];
       } else {
         // Fallback: search by query
-        const found = products.find(
+        prod = products.find(
           (p) => p.barcode === code || p.barcode.toLowerCase() === code.toLowerCase()
         );
-        if (found) {
-          openQuantityModal(found, "add", multiplier);
-          setBarcodeInput("");
+      }
+
+      if (prod) {
+        const autoAdd = typeof window !== "undefined" ? localStorage.getItem("adbms_auto_add_scan") !== "false" : true;
+        if (autoAdd) {
+          addProductToCart(prod, multiplier);
+          playScanBeep();
         } else {
-          setErrorMsg(`No active product found with barcode: "${code}"`);
-          setTimeout(() => setErrorMsg(""), 3500);
+          openQuantityModal(prod, "add", multiplier);
         }
+        setBarcodeInput("");
+      } else {
+        playErrorBeep();
+        setErrorMsg(`No active product found with barcode: "${code}"`);
+        setTimeout(() => setErrorMsg(""), 3500);
       }
     } catch {
+      playErrorBeep();
       setErrorMsg("Error searching barcode");
     }
   };
@@ -239,21 +248,30 @@ export default function POSBillingPage() {
         `/api/cashier/products?branchId=${cashier.branch_id}&barcode=${encodeURIComponent(trimmed)}`
       );
       const json = await res.json();
+      let prod: Product | undefined;
       if (json.products && json.products.length > 0) {
-        const prod = json.products[0];
-        openQuantityModal(prod, "add", 1);
+        prod = json.products[0];
       } else {
-        const found = products.find(
+        prod = products.find(
           (p) => p.barcode === trimmed || p.barcode.toLowerCase() === trimmed.toLowerCase()
         );
-        if (found) {
-          openQuantityModal(found, "add", 1);
+      }
+
+      if (prod) {
+        const autoAdd = typeof window !== "undefined" ? localStorage.getItem("adbms_auto_add_scan") !== "false" : true;
+        if (autoAdd) {
+          addProductToCart(prod, 1);
+          playScanBeep();
         } else {
-          setErrorMsg(`Scanned barcode "${trimmed}" not found in branch catalog.`);
-          setTimeout(() => setErrorMsg(""), 4000);
+          openQuantityModal(prod, "add", 1);
         }
+      } else {
+        playErrorBeep();
+        setErrorMsg(`Scanned barcode "${trimmed}" not found in branch catalog.`);
+        setTimeout(() => setErrorMsg(""), 4000);
       }
     } catch {
+      playErrorBeep();
       setErrorMsg("Failed to query scanned barcode.");
     }
   };
@@ -261,10 +279,12 @@ export default function POSBillingPage() {
   // Add Product to Temporary Cart
   const addProductToCart = (prod: Product, qtyToAdd: number = 1) => {
     if (prod.is_active === 0) {
+      playErrorBeep();
       alert(`Product "${prod.name}" is inactive and cannot be sold.`);
       return;
     }
     if (prod.available_stock <= 0) {
+      playErrorBeep();
       alert(`Product "${prod.name}" is out of stock at this branch.`);
       return;
     }
@@ -428,7 +448,10 @@ export default function POSBillingPage() {
       alert("Cart is empty! Add products before proceeding to checkout.");
       return;
     }
-    setPaymentLines([{ method: "CASH", amount: finalTotal }]);
+    const defaultMethod =
+      (typeof window !== "undefined" && (localStorage.getItem("adbms_pos_default_payment") as any)) || "CASH";
+    const validMethod = defaultMethod === "CARD" ? "CARD" : "CASH";
+    setPaymentLines([{ method: validMethod, amount: finalTotal }]);
     setCustomPointsInput("");
     setCashTendered(String(finalTotal));
     setShowCheckout(true);
@@ -510,6 +533,7 @@ export default function POSBillingPage() {
       const data = await res.json();
 
       if (data.success && data.receipt) {
+        playCheckoutChime();
         setCompletedReceipt(data.receipt);
         setShowCheckout(false);
         setCart([]);
@@ -1647,6 +1671,28 @@ export default function POSBillingPage() {
                       onChange={(e) => setCashTendered(e.target.value)}
                       placeholder={`e.g. ${cashAmount.toFixed(2)}`}
                     />
+                    {/* Quick Tender Shortcuts */}
+                    <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 8 }}>
+                      <button
+                        type="button"
+                        onClick={() => setCashTendered(cashAmount.toFixed(2))}
+                        className="btn btn-ghost"
+                        style={{ padding: "2px 6px", fontSize: 10.5, fontWeight: 700, border: "1px solid var(--border)" }}
+                      >
+                        Exact
+                      </button>
+                      {[500, 1000, 2000, 5000].map((amt) => (
+                        <button
+                          key={amt}
+                          type="button"
+                          onClick={() => setCashTendered(String(amt))}
+                          className="btn btn-secondary"
+                          style={{ padding: "2px 6px", fontSize: 10.5, fontWeight: 700 }}
+                        >
+                          Rs. {amt}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
                   <div
