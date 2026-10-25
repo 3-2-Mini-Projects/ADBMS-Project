@@ -157,15 +157,18 @@ export function MarketingDashboardVeiw() {
         <div className="absolute top-0 right-0 -mr-16 -mt-16 w-80 h-80 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-blue-200 text-xs font-semibold uppercase tracking-wider mb-3">
-              <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 !text-white text-xs font-semibold uppercase tracking-wider mb-3">
+              <Sparkles className="w-3.5 h-3.5 !text-white" />
               <span>Marketing &amp; Loyalty Intelligence</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight !text-white">
               Customer Loyalty &amp; Campaigns
             </h1>
-            <p className="text-slate-300 text-xs sm:text-sm mt-1.5 max-w-2xl leading-relaxed">
-              Real-time customer loyalty analytics, membership tier progression, voucher redemptions, and active promotional campaigns.
+
+            <p className="!text-white text-xs sm:text-sm mt-1.5 max-w-2xl leading-relaxed">
+              Real-time customer loyalty analytics, membership tier progression,
+              voucher redemptions, and active promotional campaigns.
             </p>
           </div>
           <div className="flex items-center gap-3 flex-wrap">

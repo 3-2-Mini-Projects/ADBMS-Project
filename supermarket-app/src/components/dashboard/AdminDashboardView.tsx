@@ -79,19 +79,30 @@ export function AdminDashboardView() {
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 p-6 md:p-8 shadow-xs border border-slate-800 text-white">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6 text-white">
           <div>
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-300">
-              <ShieldCheck className="w-4 h-4 text-amber-400" />
+            <div className="flex items-center gap-2 !text-white text-xs font-bold uppercase tracking-wider">
+              <ShieldCheck className="w-4 h-4 !text-white" />
               <span>Super Administrator Governance Console</span>
             </div>
-            <h1 className="text-2xl md:text-3xl font-black text-white mt-1.5 flex items-center gap-3">
+
+            <h1 className="text-2xl md:text-3xl font-black !text-white mt-1.5 flex items-center gap-3">
               <span>Admin Management Hub</span>
-              <span className="px-2.5 py-0.5 text-xs font-mono font-bold bg-white/10 text-white border border-white/20 rounded-full">
+
+              <span className="px-2.5 py-0.5 text-xs font-mono font-bold bg-white/10 !text-white border border-white/20 rounded-full">
                 ADMIN ACCESS
               </span>
             </h1>
-            <p className="text-slate-300 text-xs md:text-sm mt-1.5 max-w-2xl leading-relaxed">
-              Enterprise administration for <strong className="text-white font-bold">{branches.length} Supermarket Branches</strong> and{" "}
-              <strong className="text-white font-bold">{employees.length} Staff Members</strong>. Full authority over branch allocations, system permissions, audit trails, and SQL analytics.
+
+            <p className="!text-white text-xs md:text-sm mt-1.5 max-w-2xl leading-relaxed">
+              Enterprise administration for{" "}
+              <strong className="!text-white font-bold">
+                {branches.length} Supermarket Branches
+              </strong>{" "}
+              and{" "}
+              <strong className="!text-white font-bold">
+                {employees.length} Staff Members
+              </strong>
+              . Full authority over branch allocations, system permissions,
+              audit trails, and SQL analytics.
             </p>
           </div>
 

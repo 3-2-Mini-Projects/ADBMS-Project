@@ -94,22 +94,27 @@ export function InventoryDashboardView() {
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 text-white p-6 sm:p-8 shadow-xs border border-slate-800">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
-              <Boxes className="w-4 h-4 text-blue-400" />
-              <span>Inventory Intelligence & Control Hub</span>
+            <div className="flex items-center gap-2 !text-white text-xs font-bold uppercase tracking-wider mb-1.5">
+              <Boxes className="w-4 h-4 !text-white" />
+
+              <span>Inventory Intelligence &amp; Control Hub</span>
+
               {isClerk && (
-                <span className="px-2 py-0.5 rounded-full bg-white/10 text-white text-[10px] font-mono border border-white/20">
+                <span className="px-2 py-0.5 rounded-full bg-white/10 !text-white text-[10px] font-mono border border-white/20">
                   Stock Clerk Mode
                 </span>
               )}
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+
+            <h1 className="text-2xl sm:text-3xl font-black !text-white tracking-tight">
               Inventory Dashboard
             </h1>
-            <p className="text-slate-300 text-xs sm:text-sm mt-1 max-w-xl">
-              Active Branch:{" "}
-              <strong className="text-white font-bold">{currentBranch?.name ?? "All Branches"}</strong>
-              {" "}— Real-time stock levels, batch health, expiry risk & dispatch telemetry.
+
+            <p className="!text-white text-xs sm:text-sm mt-1 max-w-xl">
+              Branch:{" "}
+              <strong className="!text-white font-bold">
+                {currentBranch?.name ?? "All Branches"}
+              </strong>
             </p>
           </div>
           <div className="flex items-center gap-3 shrink-0">

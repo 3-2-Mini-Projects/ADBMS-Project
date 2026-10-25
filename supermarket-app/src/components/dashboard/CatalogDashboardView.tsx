@@ -176,20 +176,26 @@ export function CatalogDashboardView() {
         <div className="relative z-10 flex flex-col justify-between gap-6 md:flex-row md:items-center">
           <div>
             <div className="mb-3 flex items-center gap-2.5">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 backdrop-blur-md px-3 py-1 text-xs font-semibold tracking-wider text-blue-200 uppercase">
-                <Sparkles className="h-3.5 w-3.5 text-blue-400" /> Catalog Command Center
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 backdrop-blur-md px-3 py-1 text-xs font-semibold tracking-wider !text-white uppercase">
+                <Sparkles className="h-3.5 w-3.5 !text-white" />
+                Catalog Command Center
               </span>
+
               {currentBranch && (
-                <span className="rounded-full border border-white/10 bg-white/10 px-2.5 py-0.5 text-xs text-slate-200 font-medium">
+                <span className="rounded-full border border-white/10 bg-white/10 px-2.5 py-0.5 text-xs !text-white font-medium">
                   📍 {currentBranch.name}
                 </span>
               )}
             </div>
-            <h1 className="text-2xl font-black tracking-tight text-white md:text-3xl">
+
+            <h1 className="text-2xl font-black tracking-tight !text-white md:text-3xl">
               Product Merchandising &amp; Pricing Intelligence
             </h1>
-            <p className="mt-1.5 max-w-2xl text-xs sm:text-sm text-slate-300 leading-relaxed">
-              Manage product master records, category hierarchy, vendor pricing, supervisor review gates, and identify stagnant slow-moving inventory across all branch locations.
+
+            <p className="mt-1.5 max-w-2xl text-xs sm:text-sm !text-white leading-relaxed">
+              Manage product master records, category hierarchy, vendor pricing,
+              supervisor review gates, and identify stagnant slow-moving inventory
+              across all branch locations.
             </p>
           </div>
 

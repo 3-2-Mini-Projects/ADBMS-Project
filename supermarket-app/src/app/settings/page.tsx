@@ -132,13 +132,6 @@ export default function UserSettingsPage() {
             Manage your account security, POS hardware preferences, and audio notifications.
           </p>
         </div>
-        <Link
-          href={isCashier ? "/cashier/dashboard" : "/dashboard"}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 hover:text-slate-900 transition-all border border-slate-200"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span>{isCashier ? "Cashier Desk" : "Dashboard"}</span>
-        </Link>
       </div>
 
       {/* Account Identity Card */}
@@ -166,14 +159,6 @@ export default function UserSettingsPage() {
             </div>
           </div>
         </div>
-
-        <Link
-          href="/profile"
-          className="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 hover:text-slate-900 transition-all flex items-center gap-1.5 border border-slate-200"
-        >
-          <User className="w-3.5 h-3.5 text-slate-500" />
-          <span>View Full Profile</span>
-        </Link>
       </div>
 
       {/* Grid: Preferences & Security */}
