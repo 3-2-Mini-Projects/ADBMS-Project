@@ -45,7 +45,6 @@ function formatDate(value: string | null | undefined): string {
 function StatusBadge({
   status,
   daysToExpiry,
-  isClerk,
 }: {
   status: string | undefined;
   daysToExpiry?: number;
@@ -53,13 +52,7 @@ function StatusBadge({
 }) {
   if (status === "EXPIRED" || (daysToExpiry !== undefined && daysToExpiry < 0)) {
     return (
-      <span
-        className={`inline-flex items-center gap-1 text-[10px] font-mono px-2.5 py-1 rounded-full font-bold ${
-          isClerk
-            ? "bg-rose-50 text-rose-700 border border-rose-200"
-            : "bg-rose-950/70 text-rose-400 border border-rose-800/60"
-        }`}
-      >
+      <span className="inline-flex items-center gap-1 text-[10px] font-mono px-2.5 py-1 rounded-full font-bold bg-rose-50 text-rose-700 border border-rose-200">
         <X className="w-2.5 h-2.5" />
         EXPIRED
       </span>
@@ -67,13 +60,7 @@ function StatusBadge({
   }
   if (daysToExpiry === 0) {
     return (
-      <span
-        className={`inline-flex items-center gap-1 text-[10px] font-mono px-2.5 py-1 rounded-full font-bold ${
-          isClerk
-            ? "bg-amber-100 text-amber-800 border border-amber-300"
-            : "bg-amber-900/70 text-amber-300 border border-amber-700/60 animate-pulse"
-        }`}
-      >
+      <span className="inline-flex items-center gap-1 text-[10px] font-mono px-2.5 py-1 rounded-full font-bold bg-amber-100 text-amber-900 border border-amber-300">
         <AlertTriangle className="w-2.5 h-2.5" />
         EXPIRING TODAY
       </span>
@@ -85,26 +72,14 @@ function StatusBadge({
     (daysToExpiry !== undefined && daysToExpiry <= 30)
   ) {
     return (
-      <span
-        className={`inline-flex items-center gap-1 text-[10px] font-mono px-2.5 py-1 rounded-full font-bold ${
-          isClerk
-            ? "bg-amber-50 text-amber-700 border border-amber-200"
-            : "bg-amber-950/70 text-amber-400 border border-amber-800/60"
-        }`}
-      >
+      <span className="inline-flex items-center gap-1 text-[10px] font-mono px-2.5 py-1 rounded-full font-bold bg-amber-50 text-amber-800 border border-amber-200">
         <AlertTriangle className="w-2.5 h-2.5" />
         {daysToExpiry !== undefined ? `EXPIRING IN ${daysToExpiry}d` : "NEAR EXPIRY"}
       </span>
     );
   }
   return (
-    <span
-      className={`inline-flex items-center gap-1 text-[10px] font-mono px-2.5 py-1 rounded-full font-bold ${
-        isClerk
-          ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-          : "bg-emerald-950/70 text-emerald-400 border border-emerald-800/60"
-      }`}
-    >
+    <span className="inline-flex items-center gap-1 text-[10px] font-mono px-2.5 py-1 rounded-full font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
       <CheckCircle2 className="w-2.5 h-2.5" />
       FRESH / GOOD
     </span>
@@ -266,58 +241,34 @@ export default function InventoryBatchesPage() {
   };
 
   const theme = {
-    wrapper: isClerk
-      ? "space-y-6 animate-in fade-in duration-300 bg-slate-50/90 -m-6 p-6 sm:p-8 min-h-[calc(100vh-4rem)] text-slate-800"
-      : "space-y-6 animate-in fade-in duration-300 text-slate-100",
-    title: isClerk ? "text-2xl font-black text-slate-900 flex items-center gap-2.5" : "text-2xl font-black text-white flex items-center gap-2.5",
-    subtitle: isClerk ? "mt-1 text-sm text-slate-500 font-medium" : "mt-1 text-sm text-slate-400 font-normal",
-    refreshBtn: isClerk
-      ? "self-start sm:self-auto inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700 hover:text-slate-900 shadow-sm transition-all"
-      : "self-start sm:self-auto inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-300 hover:text-white transition-all",
-    card: isClerk
-      ? "bg-white rounded-2xl border border-slate-200/90 p-4 shadow-sm hover:shadow transition-shadow"
-      : "glass-card rounded-2xl border border-slate-800 p-4",
-    cardValue: isClerk ? "text-2xl font-black text-slate-900" : "text-2xl font-black text-white",
-    cardLabel: isClerk ? "text-xs text-slate-500 mt-0.5 font-medium" : "text-[11px] text-slate-400 mt-0.5 font-medium",
-    cardIconBg: (bg: string) => isClerk ? bg : "bg-slate-800/80",
-    searchInput: isClerk
-      ? "w-full pl-9 pr-9 py-2.5 rounded-xl bg-white border border-slate-300 text-xs text-slate-900 placeholder-slate-400 font-mono focus:border-indigo-500 focus:outline-none shadow-sm transition-colors"
-      : "w-full pl-9 pr-9 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white placeholder-slate-500 font-mono focus:border-indigo-500 focus:outline-none transition-colors",
-    select: isClerk
-      ? "appearance-none pl-9 pr-8 py-2.5 rounded-xl bg-white border border-slate-300 text-xs text-slate-800 focus:border-indigo-500 focus:outline-none shadow-sm transition-colors cursor-pointer"
-      : "appearance-none pl-9 pr-8 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:border-indigo-500 focus:outline-none transition-colors cursor-pointer",
-    tableCard: isClerk
-      ? "bg-white rounded-2xl border border-slate-200/90 overflow-hidden shadow-sm"
-      : "glass-card rounded-2xl border border-slate-800 overflow-hidden shadow-2xl",
-    tableMeta: isClerk
-      ? "flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50/70"
-      : "flex items-center justify-between px-4 py-3 border-b border-slate-800 bg-slate-950/60",
-    tableThead: isClerk
-      ? "border-b border-slate-200 bg-slate-50 text-slate-600 uppercase tracking-wider text-[11px] font-bold"
-      : "border-b border-slate-800 bg-slate-950/40 text-slate-400 uppercase tracking-wider text-[11px] font-semibold",
-    tableDivide: isClerk ? "divide-y divide-slate-100" : "divide-y divide-slate-800/60",
+    wrapper: "space-y-6 animate-in fade-in duration-300 text-slate-800",
+    title: "text-2xl font-black text-slate-900 flex items-center gap-2.5",
+    subtitle: "mt-1 text-sm text-slate-500 font-medium",
+    refreshBtn: "self-start sm:self-auto inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700 hover:text-slate-900 shadow-2xs transition-all",
+    card: "bg-white rounded-2xl border border-slate-200 p-4 shadow-xs hover:shadow transition-shadow",
+    cardValue: "text-2xl font-black text-slate-900",
+    cardLabel: "text-xs text-slate-500 mt-0.5 font-medium",
+    cardIconBg: (bg: string) => bg,
+    searchInput: "w-full pl-9 pr-9 py-2.5 rounded-xl bg-white border border-slate-300 text-xs text-slate-900 placeholder-slate-400 font-mono focus:border-indigo-500 focus:outline-none shadow-2xs transition-colors",
+    select: "appearance-none pl-9 pr-8 py-2.5 rounded-xl bg-white border border-slate-300 text-xs text-slate-800 focus:border-indigo-500 focus:outline-none shadow-2xs transition-colors cursor-pointer",
+    tableCard: "bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs",
+    tableMeta: "flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50",
+    tableThead: "border-b border-slate-200 bg-slate-50 text-slate-600 uppercase tracking-wider text-[11px] font-bold",
+    tableDivide: "divide-y divide-slate-100",
     rowHighlight: (expiryStatus?: string) => {
       const isExp = expiryStatus === "EXPIRED";
       const isNear = expiryStatus === "NEAR_EXPIRY" || expiryStatus === "EXPIRING_SOON";
-      if (isClerk) {
-        if (isExp) return "bg-rose-50/50 hover:bg-rose-50";
-        if (isNear) return "bg-amber-50/50 hover:bg-amber-50";
-        return "hover:bg-slate-50";
-      } else {
-        if (isExp) return "bg-rose-950/10 hover:bg-rose-950/20";
-        if (isNear) return "bg-amber-950/10 hover:bg-amber-950/20";
-        return "hover:bg-slate-800/40";
-      }
+      if (isExp) return "bg-rose-50/50 hover:bg-rose-50";
+      if (isNear) return "bg-amber-50/50 hover:bg-amber-50";
+      return "hover:bg-slate-50";
     },
-    batchNo: isClerk ? "py-3 px-4 font-mono font-bold text-indigo-600" : "py-3 px-4 font-mono font-bold text-indigo-400",
-    prodName: isClerk ? "font-semibold text-slate-900" : "font-medium text-white",
-    branchName: isClerk ? "py-3 px-4 text-slate-600 font-medium" : "py-3 px-4 text-slate-300",
-    qty: isClerk ? "py-3 px-4 text-right font-mono font-bold text-slate-900" : "py-3 px-4 text-right font-mono font-bold text-white",
-    receivedDate: isClerk ? "py-3 px-4 font-mono text-slate-500" : "py-3 px-4 font-mono text-slate-400",
-    expiryDate: isClerk ? "py-3 px-4 font-mono text-slate-700" : "py-3 px-4 font-mono text-slate-300",
-    tableFooter: isClerk
-      ? "px-4 py-2.5 border-t border-slate-100 bg-slate-50/70 flex flex-wrap items-center gap-4 text-[10px] text-slate-500 font-mono"
-      : "px-4 py-2.5 border-t border-slate-800/60 bg-slate-950/40 flex flex-wrap items-center gap-4 text-[10px] text-slate-500 font-mono",
+    batchNo: "py-3 px-4 font-mono font-bold text-indigo-600",
+    prodName: "font-semibold text-slate-900",
+    branchName: "py-3 px-4 text-slate-600 font-medium",
+    qty: "py-3 px-4 text-right font-mono font-bold text-slate-900",
+    receivedDate: "py-3 px-4 font-mono text-slate-500",
+    expiryDate: "py-3 px-4 font-mono text-slate-700",
+    tableFooter: "px-4 py-2.5 border-t border-slate-100 bg-slate-50 flex flex-wrap items-center gap-4 text-[10px] text-slate-500 font-mono",
   };
 
   // ─── Summary Card Data ────────────────────────────────────────────────────

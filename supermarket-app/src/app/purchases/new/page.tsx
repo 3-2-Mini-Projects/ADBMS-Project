@@ -146,33 +146,23 @@ export default function NewPurchasePage() {
   };
 
   const theme = {
-    wrapper: isClerk
-      ? "space-y-6 animate-in fade-in duration-300 bg-slate-50/90 -m-6 p-6 sm:p-8 min-h-[calc(100vh-4rem)] text-slate-800"
-      : "space-y-6 animate-in fade-in duration-300 text-slate-100",
-    title: isClerk
-      ? "text-2xl font-black text-slate-900 flex items-center gap-2.5"
-      : "text-2xl font-black text-white flex items-center gap-2.5",
-    subtitle: isClerk ? "text-xs text-slate-500 mt-1" : "text-xs text-slate-400 mt-1",
-    card: isClerk
-      ? "bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6"
-      : "glass-card rounded-2xl border border-slate-800 p-6 sm:p-8 shadow-2xl space-y-6",
-    label: isClerk ? "text-xs font-semibold text-slate-700 block mb-1.5" : "text-xs text-slate-300 block mb-1.5",
-    input: isClerk
-      ? "w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-300 text-xs text-slate-900 shadow-sm focus:outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100 transition-all"
-      : "w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-teal-500 transition-colors",
-    itemRow: isClerk
-      ? "p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row items-center gap-3"
-      : "p-4 rounded-xl bg-slate-950 border border-slate-800 flex flex-col sm:flex-row items-center gap-3",
-    tableHeader: isClerk ? "text-xs font-bold text-slate-800" : "text-xs font-bold text-slate-200",
-    summaryBox: isClerk
-      ? "p-4 rounded-xl bg-teal-50/60 border border-teal-200 flex flex-col sm:flex-row items-center justify-between gap-4"
-      : "p-4 rounded-xl bg-teal-950/30 border border-teal-800/50 flex flex-col sm:flex-row items-center justify-between gap-4",
-    summaryText: isClerk ? "text-xs text-teal-900 font-medium" : "text-xs text-teal-300 font-medium",
-    totalAmount: isClerk ? "text-xl font-bold font-mono text-teal-950" : "text-xl font-bold font-mono text-teal-300",
-    cancelBtn: isClerk
-      ? "px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-semibold transition-colors"
-      : "px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors",
-    deleteBtn: isClerk ? "text-slate-400 hover:text-rose-600 p-2" : "text-slate-500 hover:text-rose-400 p-2",
+    wrapper: "space-y-6 animate-in fade-in duration-300 -m-6 p-6 sm:p-8 min-h-[calc(100vh-4rem)] text-slate-900",
+    title: "text-2xl font-black text-slate-900 flex items-center gap-2.5",
+    subtitle: "text-xs text-slate-500 mt-1",
+    card: "bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6",
+    label: "text-xs font-semibold text-slate-700 block mb-1.5",
+    input:
+      "w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-300 text-xs text-slate-900 shadow-sm focus:outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100 transition-all",
+    itemRow:
+      "p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row items-center gap-3",
+    tableHeader: "text-xs font-bold text-slate-800",
+    summaryBox:
+      "p-4 rounded-xl bg-teal-50/60 border border-teal-200 flex flex-col sm:flex-row items-center justify-between gap-4",
+    summaryText: "text-xs text-teal-900 font-medium",
+    totalAmount: "text-xl font-bold font-mono text-teal-950",
+    cancelBtn:
+      "px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-semibold transition-colors",
+    deleteBtn: "text-slate-400 hover:text-rose-600 p-2",
   };
 
   return (
@@ -183,16 +173,14 @@ export default function NewPurchasePage() {
           <div className="flex items-center gap-2 mb-2">
             <Link
               href="/purchases"
-              className={`inline-flex items-center gap-1.5 text-xs font-semibold ${
-                isClerk ? "text-slate-500 hover:text-slate-900" : "text-slate-400 hover:text-white"
-              } transition-colors`}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Back to Purchase Orders</span>
             </Link>
           </div>
           <h1 className={theme.title}>
-            <FileSpreadsheet className={`w-6 h-6 ${isClerk ? "text-teal-600" : "text-teal-400"}`} />
+            <FileSpreadsheet className="w-6 h-6 text-teal-600" />
             <span>Create New Purchase Order</span>
           </h1>
           <p className={theme.subtitle}>
@@ -206,9 +194,7 @@ export default function NewPurchasePage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           <div>
             <label className={theme.label}>Branch</label>
-            <div className={`px-3.5 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 ${
-              isClerk ? "bg-slate-100 text-slate-800 border border-slate-200" : "bg-slate-900 text-slate-200 border border-slate-800"
-            }`}>
+            <div className="px-3.5 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 bg-slate-100 text-slate-800 border border-slate-200">
               <Building2 className="w-4 h-4 text-teal-500" />
               <span>{currentBranch?.name || "Branch not selected"}</span>
             </div>
@@ -302,10 +288,8 @@ export default function NewPurchasePage() {
                 </div>
 
                 <div className="w-full sm:w-32 text-right">
-                  <label className="text-[11px] text-slate-400 mb-1 block">Line Total</label>
-                  <div className={`py-2.5 font-mono font-bold text-xs ${
-                    isClerk ? "text-slate-900" : "text-emerald-400"
-                  }`}>
+                  <label className="text-[11px] text-slate-500 mb-1 block">Line Total</label>
+                  <div className="py-2.5 font-mono font-bold text-xs text-slate-900">
                     Rs. {(Number(item.quantity || 0) * Number(item.unit_cost || 0)).toFixed(2)}
                   </div>
                 </div>

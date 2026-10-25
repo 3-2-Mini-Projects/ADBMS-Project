@@ -50,21 +50,21 @@ export default function AuditPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-white flex items-center gap-2.5">
-            <ShieldAlert className="w-6 h-6 text-rose-400" />
+          <h1 className="text-2xl font-black text-slate-900 flex items-center gap-2.5">
+            <ShieldAlert className="w-6 h-6 text-rose-600" />
             <span>Audit Trail & Security Logs</span>
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-slate-500 mt-1">
             ACID transaction mutation logs, price changes, stock adjustments, and operational database errors.
           </p>
         </div>
 
         {/* Tab switch */}
-        <div className="flex items-center gap-2 bg-slate-900 p-1 rounded-xl border border-slate-800">
+        <div className="flex items-center gap-1.5 bg-white p-1 rounded-xl border border-slate-200 shadow-xs">
           <button
             onClick={() => setActiveTab("audit")}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-              activeTab === "audit" ? "bg-blue-600 text-white" : "text-slate-400 hover:text-white"
+              activeTab === "audit" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
             }`}
           >
             Audit Log ({auditLogs.length})
@@ -72,7 +72,7 @@ export default function AuditPage() {
           <button
             onClick={() => setActiveTab("error")}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-              activeTab === "error" ? "bg-rose-600 text-white" : "text-slate-400 hover:text-white"
+              activeTab === "error" ? "bg-rose-600 text-white shadow-xs" : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
             }`}
           >
             Error Log ({errorLogs.length})
@@ -87,7 +87,7 @@ export default function AuditPage() {
             <select
               value={tableFilter}
               onChange={(e) => setTableFilter(e.target.value)}
-              className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-200"
+              className="px-3 py-2 rounded-xl bg-white border border-slate-300 text-xs text-slate-800 shadow-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             >
               <option value="">All Tables</option>
               <option value="sales">sales</option>
@@ -101,7 +101,7 @@ export default function AuditPage() {
             <select
               value={actionFilter}
               onChange={(e) => setActionFilter(e.target.value)}
-              className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-200"
+              className="px-3 py-2 rounded-xl bg-white border border-slate-300 text-xs text-slate-800 shadow-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             >
               <option value="">All Actions</option>
               <option value="INSERT">INSERT</option>
@@ -114,7 +114,7 @@ export default function AuditPage() {
           <div className="space-y-3">
             {loading ? (
               <div className="py-12 text-center text-slate-500">
-                <Sparkles className="w-5 h-5 animate-spin mx-auto text-blue-400 mb-2" />
+                <Sparkles className="w-5 h-5 animate-spin mx-auto text-blue-600 mb-2" />
                 Loading audit trails...
               </div>
             ) : auditLogs.length === 0 ? (
@@ -140,31 +140,31 @@ export default function AuditPage() {
                 return (
                   <div
                     key={log.audit_id}
-                    className="glass-card rounded-2xl p-4 border border-slate-800 hover:border-slate-700 transition-all space-y-3"
+                    className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs hover:border-slate-300 transition-all space-y-3"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2.5">
                         <span
-                          className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold ${
+                          className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold ${
                             log.action === "INSERT"
-                              ? "bg-emerald-950/60 text-emerald-400 border border-emerald-800/60"
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                               : log.action === "UPDATE"
-                              ? "bg-blue-950/60 text-blue-400 border border-blue-800/60"
-                              : "bg-rose-950/60 text-rose-400 border border-rose-800/60"
+                              ? "bg-blue-50 text-blue-700 border border-blue-200"
+                              : "bg-rose-50 text-rose-700 border border-rose-200"
                           }`}
                         >
                           {log.action}
                         </span>
 
-                        <span className="font-mono text-xs font-bold text-white">
-                          Table: <span className="text-blue-400">{log.table_name}</span> (Record #{log.record_id})
+                        <span className="font-mono text-xs font-bold text-slate-900">
+                          Table: <span className="text-blue-600">{log.table_name}</span> (Record #{log.record_id})
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-3 text-[11px] text-slate-400">
+                      <div className="flex items-center gap-3 text-[11px] text-slate-500">
                         <span className="flex items-center gap-1">
-                          <User className="w-3.5 h-3.5 text-slate-500" />
-                          <span className="font-mono">{log.changed_by || "system"}</span>
+                          <User className="w-3.5 h-3.5 text-slate-400" />
+                          <span className="font-mono text-slate-700 font-medium">{log.changed_by || "system"}</span>
                         </span>
                         <span>•</span>
                         <span className="font-mono">{new Date(log.changed_at).toLocaleString()}</span>
@@ -174,22 +174,22 @@ export default function AuditPage() {
                     {/* JSON Diff Box */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
                       {parsedOld && (
-                        <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800/80 font-mono text-[11px]">
-                          <div className="text-[10px] text-rose-400 font-bold mb-1 uppercase tracking-wider">
+                        <div className="p-3 rounded-xl bg-rose-50/50 border border-rose-200 font-mono text-[11px]">
+                          <div className="text-[10px] text-rose-700 font-bold mb-1 uppercase tracking-wider">
                             Before (Old Value)
                           </div>
-                          <pre className="text-slate-300 overflow-x-auto whitespace-pre-wrap">
+                          <pre className="text-slate-800 overflow-x-auto whitespace-pre-wrap">
                             {typeof parsedOld === "object" ? JSON.stringify(parsedOld, null, 2) : String(parsedOld)}
                           </pre>
                         </div>
                       )}
 
                       {parsedNew && (
-                        <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800/80 font-mono text-[11px]">
-                          <div className="text-[10px] text-emerald-400 font-bold mb-1 uppercase tracking-wider">
+                        <div className="p-3 rounded-xl bg-emerald-50/50 border border-emerald-200 font-mono text-[11px]">
+                          <div className="text-[10px] text-emerald-700 font-bold mb-1 uppercase tracking-wider">
                             After (New Value)
                           </div>
-                          <pre className="text-slate-300 overflow-x-auto whitespace-pre-wrap">
+                          <pre className="text-slate-800 overflow-x-auto whitespace-pre-wrap">
                             {typeof parsedNew === "object" ? JSON.stringify(parsedNew, null, 2) : String(parsedNew)}
                           </pre>
                         </div>
@@ -203,18 +203,18 @@ export default function AuditPage() {
         </div>
       ) : (
         /* Error Log Tab */
-        <div className="glass-card rounded-2xl border border-slate-800 overflow-hidden shadow-2xl">
+        <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-xs">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-slate-800 bg-slate-950/60 text-slate-400">
+                <tr className="border-b border-slate-200 bg-slate-50 text-slate-600">
                   <th className="py-3 px-4 font-semibold">Error ID</th>
                   <th className="py-3 px-4 font-semibold">Code</th>
                   <th className="py-3 px-4 font-semibold">Message</th>
                   <th className="py-3 px-4 font-semibold">Occurred At</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60">
+              <tbody className="divide-y divide-slate-100">
                 {errorLogs.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="py-12 text-center text-slate-500">
@@ -223,11 +223,11 @@ export default function AuditPage() {
                   </tr>
                 ) : (
                   errorLogs.map((err) => (
-                    <tr key={err.error_id} className="hover:bg-slate-800/30 transition-colors">
-                      <td className="py-3 px-4 font-mono font-bold text-rose-400">#{err.error_id}</td>
-                      <td className="py-3 px-4 font-mono text-amber-400">{err.error_code || "SQL_ERR"}</td>
-                      <td className="py-3 px-4 text-slate-200">{err.message}</td>
-                      <td className="py-3 px-4 font-mono text-slate-400 text-[11px]">
+                    <tr key={err.error_id} className="hover:bg-slate-50 transition-colors">
+                      <td className="py-3 px-4 font-mono font-bold text-rose-600">#{err.error_id}</td>
+                      <td className="py-3 px-4 font-mono text-amber-700 font-bold">{err.error_code || "SQL_ERR"}</td>
+                      <td className="py-3 px-4 text-slate-800">{err.message}</td>
+                      <td className="py-3 px-4 font-mono text-slate-500 text-[11px]">
                         {new Date(err.occurred_at).toLocaleString()}
                       </td>
                     </tr>

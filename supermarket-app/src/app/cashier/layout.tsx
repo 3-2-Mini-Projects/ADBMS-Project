@@ -100,8 +100,8 @@ function CashierLayoutContent({ children }: { children: React.ReactNode }) {
         height: "100vh",
         width: "100%",
         overflow: "hidden",
-        background: "var(--bg-base, #07090f)",
-        color: "var(--text-primary, #e6edf3)",
+        background: "var(--bg-base, #f8fafc)",
+        color: "var(--text-primary, #0f172a)",
       }}
     >
       {/* Left Sidebar */}
@@ -115,8 +115,8 @@ function CashierLayoutContent({ children }: { children: React.ReactNode }) {
           flexShrink: 0,
           display: "flex",
           flexDirection: "column",
-          background: "var(--bg-surface, #0d1117)",
-          borderRight: "1px solid var(--border, #1e2d3d)",
+          background: "var(--bg-surface, #ffffff)",
+          borderRight: "1px solid var(--border, #e2e8f0)",
           overflow: "hidden",
         }}
       >
@@ -278,29 +278,6 @@ function CashierLayoutContent({ children }: { children: React.ReactNode }) {
             );
           })}
 
-          {/* Switch to Management / Admin Dashboard */}
-          <div style={{ marginTop: 20, paddingTop: 12, borderTop: "1px solid var(--border)" }}>
-            <Link
-              href="/dashboard"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                padding: "9px 12px",
-                borderRadius: 8,
-                fontSize: 12.5,
-                fontWeight: 600,
-                color: "var(--accent-blue, #60a5fa)",
-                background: "rgba(59, 130, 246, 0.08)",
-                textDecoration: "none",
-                border: "1px solid rgba(59, 130, 246, 0.25)",
-                transition: "all 0.15s ease",
-              }}
-            >
-              <span style={{ fontSize: 16 }}>🏛️</span>
-              <span>Admin Dashboard</span>
-            </Link>
-          </div>
         </nav>
       </aside>
 
@@ -343,31 +320,6 @@ function CashierLayoutContent({ children }: { children: React.ReactNode }) {
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <Link
-              href="/dashboard"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "4px 10px",
-                borderRadius: 7,
-                fontSize: 11.5,
-                fontWeight: 600,
-                color: "var(--accent-blue, #60a5fa)",
-                background: "rgba(59, 130, 246, 0.12)",
-                border: "1px solid rgba(59, 130, 246, 0.28)",
-                textDecoration: "none",
-              }}
-              title="Return to Admin / Manager Dashboard"
-            >
-              <span>🏛️</span>
-              <span>Admin Panel</span>
-            </Link>
-
-            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--text-secondary)" }}>
-              <span className="pulse-live" />
-              Live Online
-            </div>
 
             <div
               style={{

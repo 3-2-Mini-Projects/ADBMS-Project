@@ -9,7 +9,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isStandalone =
     pathname === "/login" ||
-    pathname === "/activate-account" ||
     pathname.startsWith("/cashier") ||
     pathname.startsWith("/sales");
 
@@ -22,7 +21,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0">
         <Header />
-        <main className="flex-1 overflow-y-auto p-6 md:p-8 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
+        <main className="flex-1 overflow-y-auto p-6 md:p-8 bg-slate-100/70 text-slate-900">
           {children}
         </main>
       </div>

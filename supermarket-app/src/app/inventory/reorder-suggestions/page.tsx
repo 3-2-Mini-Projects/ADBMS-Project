@@ -122,65 +122,37 @@ export default function ReorderSuggestionsPage() {
   const manualEditsCount = Object.keys(customQuantities).length;
 
   const theme = {
-    wrapper: isClerk
-      ? "space-y-6 animate-in fade-in duration-300 bg-slate-50/90 -m-6 p-6 sm:p-8 min-h-[calc(100vh-4rem)] text-slate-800"
-      : "space-y-6 animate-in fade-in duration-300 text-slate-100",
-    title: isClerk
-      ? "text-2xl font-black text-slate-900 flex items-center gap-2.5"
-      : "text-2xl font-black text-white flex items-center gap-2.5",
-    subtitle: isClerk ? "mt-1 text-sm text-slate-500 font-medium" : "mt-1 text-sm text-slate-400",
-    recalcBtn: isClerk
-      ? "px-3 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold flex items-center gap-1.5 border border-slate-200 shadow-sm transition-all"
-      : "px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1.5 border border-slate-700/50 transition-all",
-    kpiCard: isClerk
-      ? "rounded-2xl p-4 bg-white border border-slate-200 shadow-sm"
-      : "rounded-2xl p-4 bg-slate-900/60 border border-slate-800 text-white",
-    kpiCardTeal: isClerk
-      ? "rounded-2xl p-4 bg-white border border-teal-200 shadow-sm"
-      : "rounded-2xl p-4 bg-slate-900/60 border border-teal-500/20 text-white",
-    kpiCardEmerald: isClerk
-      ? "rounded-2xl p-4 bg-white border border-emerald-200 shadow-sm"
-      : "rounded-2xl p-4 bg-slate-900/60 border border-emerald-500/20 text-white",
-    kpiLabel: isClerk ? "text-slate-500 text-xs font-semibold" : "text-slate-400 text-xs",
-    kpiValue: isClerk ? "text-2xl font-black mt-2 font-mono text-slate-900" : "text-2xl font-black mt-2 font-mono text-white",
-    kpiValueTeal: isClerk ? "text-2xl font-black mt-2 font-mono text-teal-700" : "text-2xl font-black mt-2 font-mono text-teal-400",
-    kpiValueEmerald: isClerk ? "text-2xl font-black mt-2 font-mono text-emerald-700" : "text-2xl font-black mt-2 font-mono text-emerald-400",
-    kpiSubtext: isClerk ? "text-[10px] text-slate-400 font-mono mt-1" : "text-[10px] text-slate-500 font-mono mt-1",
-    tabBorder: isClerk ? "border-slate-200" : "border-slate-800",
-    tabInactive: isClerk
-      ? "bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 shadow-sm"
-      : "text-slate-400 hover:text-white",
-    resetEditsBtn: isClerk
-      ? "sm:ml-auto inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 transition-all shadow-sm"
-      : "sm:ml-auto inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 transition-all shadow-sm",
-    tableCard: isClerk
-      ? "bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm"
-      : "bg-slate-900/60 border border-slate-800 rounded-2xl overflow-hidden shadow-sm",
-    thead: isClerk
-      ? "border-b border-slate-200 bg-slate-50 text-slate-600 font-semibold"
-      : "border-b border-slate-800 bg-slate-950/40 text-slate-400 font-semibold",
-    tbodyDivide: isClerk ? "divide-y divide-slate-100" : "divide-y divide-slate-800/60",
-    rowHover: isClerk ? "hover:bg-slate-50 transition-colors" : "hover:bg-slate-800/30 transition-colors",
-    prodName: isClerk ? "font-semibold text-slate-900" : "font-semibold text-white",
-    prodMeta: isClerk ? "text-[10px] font-mono text-slate-500" : "text-[10px] font-mono text-slate-500",
-    supplierText: isClerk ? "py-3.5 px-4 text-slate-600" : "py-3.5 px-4 text-slate-400",
-    stockQty: isClerk ? "py-3.5 px-4 text-right font-mono font-bold text-slate-900" : "py-3.5 px-4 text-right font-mono font-bold text-white",
-    reorderLevel: isClerk ? "py-3.5 px-4 text-right font-mono text-slate-600" : "py-3.5 px-4 text-right font-mono text-slate-400",
-    velocity: isClerk ? "py-3.5 px-4 text-right font-mono text-teal-700 font-bold" : "py-3.5 px-4 text-right font-mono text-teal-400 font-semibold",
-    qtyControlBox: isClerk
-      ? "inline-flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-xl p-1 shadow-sm"
-      : "inline-flex items-center gap-1 bg-slate-950/80 border border-slate-700/80 rounded-xl p-1 shadow-inner",
-    qtyBtn: isClerk
-      ? "w-6 h-6 rounded-lg bg-white hover:bg-slate-100 text-slate-700 font-mono font-bold text-xs flex items-center justify-center transition-colors border border-slate-200 shadow-xs"
-      : "w-6 h-6 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono font-bold text-xs flex items-center justify-center transition-colors",
-    qtyInput: isClerk
-      ? "w-14 px-1 py-0.5 text-center bg-transparent font-mono font-bold text-xs text-amber-700 focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
-      : "w-14 px-1 py-0.5 text-center bg-transparent font-mono font-bold text-xs text-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-500 rounded",
-    qtyResetBtn: isClerk
-      ? "text-[10px] text-amber-700 hover:text-amber-900 p-1 rounded bg-amber-100 hover:bg-amber-200 transition-colors"
-      : "text-[10px] text-amber-400 hover:text-white p-1 rounded bg-amber-500/20 hover:bg-amber-500/40 transition-colors",
-    costTotal: isClerk ? "text-slate-900 font-bold" : "text-white font-bold",
-    costPerUnit: isClerk ? "text-[10px] text-slate-500" : "text-[10px] text-slate-500",
+    wrapper: "space-y-6 animate-in fade-in duration-300 text-slate-800",
+    title: "text-2xl font-black text-slate-900 flex items-center gap-2.5",
+    subtitle: "mt-1 text-sm text-slate-500 font-medium",
+    recalcBtn: "px-3 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold flex items-center gap-1.5 border border-slate-200 shadow-2xs transition-all",
+    kpiCard: "rounded-2xl p-4 bg-white border border-slate-200 shadow-xs",
+    kpiCardTeal: "rounded-2xl p-4 bg-white border border-teal-200 shadow-xs",
+    kpiCardEmerald: "rounded-2xl p-4 bg-white border border-emerald-200 shadow-xs",
+    kpiLabel: "text-slate-500 text-xs font-semibold",
+    kpiValue: "text-2xl font-black mt-2 font-mono text-slate-900",
+    kpiValueTeal: "text-2xl font-black mt-2 font-mono text-teal-700",
+    kpiValueEmerald: "text-2xl font-black mt-2 font-mono text-emerald-700",
+    kpiSubtext: "text-[10px] text-slate-500 font-mono mt-1",
+    tabBorder: "border-slate-200",
+    tabInactive: "bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 shadow-2xs",
+    resetEditsBtn: "sm:ml-auto inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 transition-all shadow-2xs",
+    tableCard: "bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs",
+    thead: "border-b border-slate-200 bg-slate-50 text-slate-600 font-semibold",
+    tbodyDivide: "divide-y divide-slate-100",
+    rowHover: "hover:bg-slate-50 transition-colors",
+    prodName: "font-semibold text-slate-900",
+    prodMeta: "text-[10px] font-mono text-slate-500",
+    supplierText: "py-3.5 px-4 text-slate-600",
+    stockQty: "py-3.5 px-4 text-right font-mono font-bold text-slate-900",
+    reorderLevel: "py-3.5 px-4 text-right font-mono text-slate-600",
+    velocity: "py-3.5 px-4 text-right font-mono text-teal-700 font-bold",
+    qtyControlBox: "inline-flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-xl p-1 shadow-2xs",
+    qtyBtn: "w-6 h-6 rounded-lg bg-white hover:bg-slate-100 text-slate-700 font-mono font-bold text-xs flex items-center justify-center transition-colors border border-slate-200 shadow-2xs",
+    qtyInput: "w-14 px-1 py-0.5 text-center bg-transparent font-mono font-bold text-xs text-amber-700 focus:outline-none focus:ring-1 focus:ring-amber-500 rounded",
+    qtyResetBtn: "text-[10px] text-amber-700 hover:text-amber-900 p-1 rounded bg-amber-100 hover:bg-amber-200 transition-colors",
+    costTotal: "text-slate-900 font-bold",
+    costPerUnit: "text-[10px] text-slate-500",
   };
 
   return (

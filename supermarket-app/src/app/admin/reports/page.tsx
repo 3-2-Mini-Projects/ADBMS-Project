@@ -291,8 +291,8 @@ export default function ReportsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-white flex items-center gap-2.5">
-            <BarChart3 className="w-6 h-6 text-blue-400" />
+          <h1 className="text-2xl font-black text-slate-900 flex items-center gap-2.5">
+            <BarChart3 className="w-6 h-6 text-blue-600" />
             <span>Analytics & Reporting Hub</span>
           </h1>
         </div>
@@ -301,17 +301,17 @@ export default function ReportsPage() {
           <button
             type="button"
             onClick={handleExportCsv}
-            className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-colors border border-slate-700"
+            className="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors border border-slate-200 shadow-xs"
             title="Export data as CSV file"
           >
-            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
+            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
             <span>Export CSV</span>
           </button>
 
           <button
             type="button"
             onClick={handlePrintReport}
-            className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-md shadow-blue-900/30"
+            className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs"
             title="Print or Save as PDF"
           >
             <Printer className="w-3.5 h-3.5" />
@@ -321,13 +321,13 @@ export default function ReportsPage() {
       </div>
 
       {/* Report Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-800 no-print">
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-200 no-print">
         <button
           onClick={() => setActiveReport("daily_sales")}
           className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
             activeReport === "daily_sales"
-              ? "bg-blue-600 text-white shadow-lg shadow-blue-900/30"
-              : "bg-slate-900/80 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800"
+              ? "bg-blue-600 text-white shadow-xs"
+              : "bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-slate-200 shadow-xs"
           }`}
         >
           <Calendar className="w-3.5 h-3.5" />
@@ -338,8 +338,8 @@ export default function ReportsPage() {
           onClick={() => setActiveReport("branch_sales")}
           className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
             activeReport === "branch_sales"
-              ? "bg-blue-600 text-white shadow-lg shadow-blue-900/30"
-              : "bg-slate-900/80 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800"
+              ? "bg-blue-600 text-white shadow-xs"
+              : "bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-slate-200 shadow-xs"
           }`}
         >
           <Building2 className="w-3.5 h-3.5" />
@@ -350,8 +350,8 @@ export default function ReportsPage() {
           onClick={() => setActiveReport("cashier_sales")}
           className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
             activeReport === "cashier_sales"
-              ? "bg-blue-600 text-white shadow-lg shadow-blue-900/30"
-              : "bg-slate-900/80 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800"
+              ? "bg-blue-600 text-white shadow-xs"
+              : "bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-slate-200 shadow-xs"
           }`}
         >
           <User className="w-3.5 h-3.5" />
@@ -362,8 +362,8 @@ export default function ReportsPage() {
           onClick={() => setActiveReport("payment_summary")}
           className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
             activeReport === "payment_summary"
-              ? "bg-blue-600 text-white shadow-lg shadow-blue-900/30"
-              : "bg-slate-900/80 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800"
+              ? "bg-blue-600 text-white shadow-xs"
+              : "bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-slate-200 shadow-xs"
           }`}
         >
           <CreditCard className="w-3.5 h-3.5" />
@@ -374,8 +374,8 @@ export default function ReportsPage() {
           onClick={() => setActiveReport("returns")}
           className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
             activeReport === "returns"
-              ? "bg-blue-600 text-white shadow-lg shadow-blue-900/30"
-              : "bg-slate-900/80 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800"
+              ? "bg-blue-600 text-white shadow-xs"
+              : "bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-slate-200 shadow-xs"
           }`}
         >
           <RotateCcw className="w-3.5 h-3.5" />
@@ -386,8 +386,8 @@ export default function ReportsPage() {
           onClick={() => setActiveReport("daily_summary")}
           className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
             activeReport === "daily_summary"
-              ? "bg-blue-600 text-white shadow-lg shadow-blue-900/30"
-              : "bg-slate-900/80 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800"
+              ? "bg-blue-600 text-white shadow-xs"
+              : "bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-slate-200 shadow-xs"
           }`}
         >
           <Receipt className="w-3.5 h-3.5" />
@@ -398,11 +398,11 @@ export default function ReportsPage() {
       {/* REPORT CONTENT */}
       {loading ? (
         <div className="py-20 text-center text-slate-500">
-          <Sparkles className="w-6 h-6 animate-spin mx-auto text-blue-400 mb-2" />
+          <Sparkles className="w-6 h-6 animate-spin mx-auto text-blue-600 mb-2" />
           Querying SQL views from database...
         </div>
       ) : (
-        <div id="printable-report" className="glass-card rounded-2xl border border-slate-800 overflow-hidden shadow-2xl">
+        <div id="printable-report" className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-xs">
           {/* Report Print Header (visible only when printing) */}
           <div className="hidden print:block p-4 border-b-2 border-slate-900 mb-2">
             <div className="flex items-center justify-between">
@@ -423,23 +423,23 @@ export default function ReportsPage() {
           {/* TAB 1: DAILY SALES VIEW */}
           {activeReport === "daily_sales" && (
             <div>
-              <div className="p-4 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between">
+              <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
                 <div>
-                  <h2 className="text-sm font-bold text-white flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-blue-400" />
+                  <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-blue-600" />
                     <span>VIEW: daily_sales_vw</span>
                   </h2>
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-[11px] text-slate-500">
                     Aggregated daily transactions, gross subtotal, discounts, and net sales per branch.
                   </p>
                 </div>
-                <span className="font-mono text-xs text-slate-400">{dailySales.length} days recorded</span>
+                <span className="font-mono text-xs text-slate-500">{dailySales.length} days recorded</span>
               </div>
 
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
-                    <tr className="border-b border-slate-800 bg-slate-950/40 text-slate-400">
+                    <tr className="border-b border-slate-200 bg-slate-50/70 text-slate-600">
                       <th className="py-3 px-4 font-semibold">Sale Date</th>
                       <th className="py-3 px-4 font-semibold">Branch</th>
                       <th className="py-3 px-4 font-semibold text-center">Transactions</th>
@@ -449,26 +449,26 @@ export default function ReportsPage() {
                       <th className="py-3 px-4 font-semibold text-right">Total Sales</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/60">
+                  <tbody className="divide-y divide-slate-100">
                     {dailySales.map((r: any, idx: number) => (
-                      <tr key={idx} className="hover:bg-slate-800/30 transition-colors">
-                        <td className="py-3 px-4 font-mono font-bold text-blue-400">
+                      <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                        <td className="py-3 px-4 font-mono font-bold text-blue-600">
                           {new Date(r.sale_date).toLocaleDateString()}
                         </td>
-                        <td className="py-3 px-4 text-slate-200">{r.branch_name || `Branch #${r.branch_id}`}</td>
-                        <td className="py-3 px-4 text-center font-mono font-bold text-white">
+                        <td className="py-3 px-4 text-slate-800">{r.branch_name || `Branch #${r.branch_id}`}</td>
+                        <td className="py-3 px-4 text-center font-mono font-bold text-slate-900">
                           {r.transaction_count}
                         </td>
-                        <td className="py-3 px-4 text-right font-mono text-slate-300">
+                        <td className="py-3 px-4 text-right font-mono text-slate-700">
                           Rs. {Number(r.subtotal).toFixed(2)}
                         </td>
-                        <td className="py-3 px-4 text-right font-mono text-rose-400">
+                        <td className="py-3 px-4 text-right font-mono text-rose-600">
                           {Number(r.total_discount) > 0 ? `-Rs. ${Number(r.total_discount).toFixed(2)}` : "—"}
                         </td>
-                        <td className="py-3 px-4 text-right font-mono text-slate-400">
+                        <td className="py-3 px-4 text-right font-mono text-slate-500">
                           Rs. {Number(r.total_tax).toFixed(2)}
                         </td>
-                        <td className="py-3 px-4 text-right font-mono font-bold text-emerald-400 text-sm">
+                        <td className="py-3 px-4 text-right font-mono font-bold text-emerald-700 text-sm">
                           Rs. {Number(r.total_sales).toFixed(2)}
                         </td>
                       </tr>
@@ -482,13 +482,13 @@ export default function ReportsPage() {
           {/* TAB 2: BRANCH SALES VIEW */}
           {activeReport === "branch_sales" && (
             <div>
-              <div className="p-4 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between">
+              <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
                 <div>
-                  <h2 className="text-sm font-bold text-white flex items-center gap-2">
-                    <Building2 className="w-4 h-4 text-blue-400" />
+                  <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <Building2 className="w-4 h-4 text-blue-600" />
                     <span>VIEW: branch_sales_vw</span>
                   </h2>
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-[11px] text-slate-500">
                     Comparative branch revenue performance across all historical transactions.
                   </p>
                 </div>
@@ -497,7 +497,7 @@ export default function ReportsPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
-                    <tr className="border-b border-slate-800 bg-slate-950/40 text-slate-400">
+                    <tr className="border-b border-slate-200 bg-slate-50/70 text-slate-600">
                       <th className="py-3 px-4 font-semibold">Branch</th>
                       <th className="py-3 px-4 font-semibold">Location</th>
                       <th className="py-3 px-4 font-semibold text-center">Transactions</th>
@@ -507,22 +507,22 @@ export default function ReportsPage() {
                       <th className="py-3 px-4 font-semibold text-right">Total Sales</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/60">
+                  <tbody className="divide-y divide-slate-100">
                     {branchSales.map((r: any) => (
-                      <tr key={r.branch_id} className="hover:bg-slate-800/30 transition-colors">
-                        <td className="py-3 px-4 font-bold text-white">{r.branch_name}</td>
-                        <td className="py-3 px-4 text-slate-400">{r.city}, {r.region}</td>
-                        <td className="py-3 px-4 text-center font-mono font-bold text-white">{r.transactions}</td>
-                        <td className="py-3 px-4 text-right font-mono text-slate-300">
+                      <tr key={r.branch_id} className="hover:bg-slate-50 transition-colors">
+                        <td className="py-3 px-4 font-bold text-slate-900">{r.branch_name}</td>
+                        <td className="py-3 px-4 text-slate-600">{r.city}, {r.region}</td>
+                        <td className="py-3 px-4 text-center font-mono font-bold text-slate-900">{r.transactions}</td>
+                        <td className="py-3 px-4 text-right font-mono text-slate-700">
                           Rs. {Number(r.subtotal).toFixed(2)}
                         </td>
-                        <td className="py-3 px-4 text-right font-mono text-rose-400">
+                        <td className="py-3 px-4 text-right font-mono text-rose-600">
                           -Rs. {Number(r.total_discount).toFixed(2)}
                         </td>
-                        <td className="py-3 px-4 text-right font-mono text-slate-400">
+                        <td className="py-3 px-4 text-right font-mono text-slate-500">
                           Rs. {Number(r.total_tax).toFixed(2)}
                         </td>
-                        <td className="py-3 px-4 text-right font-mono font-bold text-emerald-400 text-sm">
+                        <td className="py-3 px-4 text-right font-mono font-bold text-emerald-700 text-sm">
                           Rs. {Number(r.total_sales).toFixed(2)}
                         </td>
                       </tr>
@@ -536,13 +536,13 @@ export default function ReportsPage() {
           {/* TAB 3: CASHIER SALES VIEW */}
           {activeReport === "cashier_sales" && (
             <div>
-              <div className="p-4 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between">
+              <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
                 <div>
-                  <h2 className="text-sm font-bold text-white flex items-center gap-2">
-                    <User className="w-4 h-4 text-blue-400" />
+                  <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <User className="w-4 h-4 text-blue-600" />
                     <span>VIEW: cashier_sales_vw</span>
                   </h2>
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-[11px] text-slate-500">
                     Cashier checkout volume, receipts generated, and total cashier cash register totals.
                   </p>
                 </div>
@@ -551,7 +551,7 @@ export default function ReportsPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
-                    <tr className="border-b border-slate-800 bg-slate-950/40 text-slate-400">
+                    <tr className="border-b border-slate-200 bg-slate-50/70 text-slate-600">
                       <th className="py-3 px-4 font-semibold">Cashier</th>
                       <th className="py-3 px-4 font-semibold">Email</th>
                       <th className="py-3 px-4 font-semibold">Branch</th>
@@ -561,20 +561,20 @@ export default function ReportsPage() {
                       <th className="py-3 px-4 font-semibold text-right">Total Net Sales</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/60">
+                  <tbody className="divide-y divide-slate-100">
                     {cashierSales.map((r: any) => (
-                      <tr key={r.cashier_id} className="hover:bg-slate-800/30 transition-colors">
-                        <td className="py-3 px-4 font-bold text-white">{r.cashier_name}</td>
-                        <td className="py-3 px-4 text-slate-400 font-mono text-[11px]">{r.email}</td>
-                        <td className="py-3 px-4 text-slate-300">{r.branch_name}</td>
-                        <td className="py-3 px-4 text-center font-mono font-bold text-white">{r.transaction_count}</td>
-                        <td className="py-3 px-4 text-right font-mono text-slate-300">
+                      <tr key={r.cashier_id} className="hover:bg-slate-50 transition-colors">
+                        <td className="py-3 px-4 font-bold text-slate-900">{r.cashier_name}</td>
+                        <td className="py-3 px-4 text-slate-600 font-mono text-[11px]">{r.email}</td>
+                        <td className="py-3 px-4 text-slate-700">{r.branch_name}</td>
+                        <td className="py-3 px-4 text-center font-mono font-bold text-slate-900">{r.transaction_count}</td>
+                        <td className="py-3 px-4 text-right font-mono text-slate-700">
                           Rs. {Number(r.subtotal).toFixed(2)}
                         </td>
-                        <td className="py-3 px-4 text-right font-mono text-rose-400">
+                        <td className="py-3 px-4 text-right font-mono text-rose-600">
                           -Rs. {Number(r.total_discount).toFixed(2)}
                         </td>
-                        <td className="py-3 px-4 text-right font-mono font-bold text-emerald-400 text-sm">
+                        <td className="py-3 px-4 text-right font-mono font-bold text-emerald-700 text-sm">
                           Rs. {Number(r.total_sales).toFixed(2)}
                         </td>
                       </tr>
@@ -588,13 +588,13 @@ export default function ReportsPage() {
           {/* TAB 4: PAYMENT SUMMARY VIEW */}
           {activeReport === "payment_summary" && (
             <div>
-              <div className="p-4 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between">
+              <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
                 <div>
-                  <h2 className="text-sm font-bold text-white flex items-center gap-2">
-                    <CreditCard className="w-4 h-4 text-blue-400" />
+                  <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <CreditCard className="w-4 h-4 text-blue-600" />
                     <span>VIEW: payment_summary_vw</span>
                   </h2>
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-[11px] text-slate-500">
                     Aggregated payment methods (CASH, CARD, MOBILE, POINTS) and payment transaction counts.
                   </p>
                 </div>
@@ -603,18 +603,18 @@ export default function ReportsPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
-                    <tr className="border-b border-slate-800 bg-slate-950/40 text-slate-400">
+                    <tr className="border-b border-slate-200 bg-slate-50/70 text-slate-600">
                       <th className="py-3 px-4 font-semibold">Payment Method</th>
                       <th className="py-3 px-4 font-semibold text-center">Payment Count</th>
                       <th className="py-3 px-4 font-semibold text-right">Total Collected Amount</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/60">
+                  <tbody className="divide-y divide-slate-100">
                     {paymentSummary.map((r: any) => (
-                      <tr key={r.method} className="hover:bg-slate-800/30 transition-colors">
-                        <td className="py-3 px-4 font-bold text-white font-mono">{r.method}</td>
-                        <td className="py-3 px-4 text-center font-mono font-bold text-white">{r.payment_count}</td>
-                        <td className="py-3 px-4 text-right font-mono font-bold text-emerald-400 text-sm">
+                      <tr key={r.method} className="hover:bg-slate-50 transition-colors">
+                        <td className="py-3 px-4 font-bold text-slate-900 font-mono">{r.method}</td>
+                        <td className="py-3 px-4 text-center font-mono font-bold text-slate-900">{r.payment_count}</td>
+                        <td className="py-3 px-4 text-right font-mono font-bold text-emerald-700 text-sm">
                           Rs. {Number(r.total_amount).toFixed(2)}
                         </td>
                       </tr>
@@ -628,13 +628,13 @@ export default function ReportsPage() {
           {/* TAB 5: RETURNS REPORT VIEW */}
           {activeReport === "returns" && (
             <div>
-              <div className="p-4 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between">
+              <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
                 <div>
-                  <h2 className="text-sm font-bold text-white flex items-center gap-2">
-                    <RotateCcw className="w-4 h-4 text-rose-400" />
+                  <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <RotateCcw className="w-4 h-4 text-rose-600" />
                     <span>VIEW: return_report_vw</span>
                   </h2>
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-[11px] text-slate-500">
                     Returns report view matching items, reasons, processing managers, and refund amounts.
                   </p>
                 </div>
@@ -643,7 +643,7 @@ export default function ReportsPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
-                    <tr className="border-b border-slate-800 bg-slate-950/40 text-slate-400">
+                    <tr className="border-b border-slate-200 bg-slate-50/70 text-slate-600">
                       <th className="py-3 px-4 font-semibold">Return ID</th>
                       <th className="py-3 px-4 font-semibold">Date</th>
                       <th className="py-3 px-4 font-semibold">Sale Ref</th>
@@ -654,19 +654,19 @@ export default function ReportsPage() {
                       <th className="py-3 px-4 font-semibold text-right">Refund Amount</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/60">
+                  <tbody className="divide-y divide-slate-100">
                     {returnReport.map((r: any) => (
-                      <tr key={r.return_id} className="hover:bg-slate-800/30 transition-colors">
-                        <td className="py-3 px-4 font-mono font-bold text-rose-400">#RET-{r.return_id}</td>
-                        <td className="py-3 px-4 font-mono text-[11px] text-slate-400">
+                      <tr key={r.return_id} className="hover:bg-slate-50 transition-colors">
+                        <td className="py-3 px-4 font-mono font-bold text-rose-600">#RET-{r.return_id}</td>
+                        <td className="py-3 px-4 font-mono text-[11px] text-slate-500">
                           {new Date(r.return_date).toLocaleDateString()}
                         </td>
-                        <td className="py-3 px-4 font-mono text-blue-400">#SALE-{r.sale_id}</td>
-                        <td className="py-3 px-4 text-white font-medium">{r.product_name}</td>
-                        <td className="py-3 px-4 text-center font-mono font-bold">{r.quantity}</td>
-                        <td className="py-3 px-4 text-slate-300">{r.reason}</td>
-                        <td className="py-3 px-4 text-slate-400">{r.processor_name || "Manager"}</td>
-                        <td className="py-3 px-4 text-right font-mono font-bold text-rose-400">
+                        <td className="py-3 px-4 font-mono text-blue-600">#SALE-{r.sale_id}</td>
+                        <td className="py-3 px-4 text-slate-900 font-medium">{r.product_name}</td>
+                        <td className="py-3 px-4 text-center font-mono font-bold text-slate-900">{r.quantity}</td>
+                        <td className="py-3 px-4 text-slate-700">{r.reason}</td>
+                        <td className="py-3 px-4 text-slate-600">{r.processor_name || "Manager"}</td>
+                        <td className="py-3 px-4 text-right font-mono font-bold text-rose-600">
                           Rs. {Number(r.refund_amount).toFixed(2)}
                         </td>
                       </tr>
@@ -680,13 +680,13 @@ export default function ReportsPage() {
           {/* TAB 6: DAILY SALES SUMMARY TABLE */}
           {activeReport === "daily_summary" && (
             <div>
-              <div className="p-4 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between">
+              <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
                 <div>
-                  <h2 className="text-sm font-bold text-white flex items-center gap-2">
-                    <Receipt className="w-4 h-4 text-blue-400" />
+                  <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <Receipt className="w-4 h-4 text-blue-600" />
                     <span>BASE TABLE: daily_sales_summary (Populated by Event)</span>
                   </h2>
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-[11px] text-slate-500">
                     Persistent summary snapshot table updated by scheduled MySQL event GenerateDailySalesSummary.
                   </p>
                 </div>
@@ -695,7 +695,7 @@ export default function ReportsPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
-                    <tr className="border-b border-slate-800 bg-slate-950/40 text-slate-400">
+                    <tr className="border-b border-slate-200 bg-slate-50/70 text-slate-600">
                       <th className="py-3 px-4 font-semibold">Summary Date</th>
                       <th className="py-3 px-4 font-semibold">Branch</th>
                       <th className="py-3 px-4 font-semibold text-center">Transactions Count</th>
@@ -703,20 +703,20 @@ export default function ReportsPage() {
                       <th className="py-3 px-4 font-semibold text-right">Total Tax</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/60">
+                  <tbody className="divide-y divide-slate-100">
                     {dailySummaryTable.map((r: any, idx: number) => (
-                      <tr key={idx} className="hover:bg-slate-800/30 transition-colors">
-                        <td className="py-3 px-4 font-mono font-bold text-blue-400">
+                      <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                        <td className="py-3 px-4 font-mono font-bold text-blue-600">
                           {new Date(r.summary_date).toLocaleDateString()}
                         </td>
-                        <td className="py-3 px-4 text-slate-200">{r.branch_name || `Branch #${r.branch_id}`}</td>
-                        <td className="py-3 px-4 text-center font-mono font-bold text-white">
+                        <td className="py-3 px-4 text-slate-800">{r.branch_name || `Branch #${r.branch_id}`}</td>
+                        <td className="py-3 px-4 text-center font-mono font-bold text-slate-900">
                           {r.transactions_count}
                         </td>
-                        <td className="py-3 px-4 text-right font-mono font-bold text-emerald-400 text-sm">
+                        <td className="py-3 px-4 text-right font-mono font-bold text-emerald-700 text-sm">
                           Rs. {Number(r.total_sales).toFixed(2)}
                         </td>
-                        <td className="py-3 px-4 text-right font-mono text-slate-400">
+                        <td className="py-3 px-4 text-right font-mono text-slate-500">
                           Rs. {Number(r.total_tax).toFixed(2)}
                         </td>
                       </tr>

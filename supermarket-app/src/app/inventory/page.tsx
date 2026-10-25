@@ -212,71 +212,39 @@ export default function InventoryPage() {
   };
 
   const theme = {
-    wrapper: isClerk
-      ? "space-y-6 animate-in fade-in duration-300 bg-slate-50/90 -m-6 p-6 sm:p-8 min-h-[calc(100vh-4rem)] text-slate-800"
-      : "space-y-6 animate-in fade-in duration-300 text-slate-100",
-    title: isClerk ? "text-2xl font-black text-slate-900 flex items-center gap-2.5" : "text-2xl font-black text-white flex items-center gap-2.5",
-    subtitle: isClerk ? "text-xs text-slate-500 mt-1" : "text-xs text-slate-400 mt-1",
-    tabBorder: isClerk ? "border-slate-200" : "border-slate-800",
-    tabInactive: isClerk
-      ? "bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-100 shadow-sm"
-      : "bg-slate-900/60 border border-slate-800 text-slate-400 hover:text-white",
-    searchBox: isClerk
-      ? "w-full pl-9 pr-4 py-2.5 rounded-xl bg-white border border-slate-300 text-xs text-slate-900 placeholder:text-slate-400 font-mono shadow-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all"
-      : "w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white placeholder:text-slate-500 font-mono focus:border-blue-500 focus:outline-none transition-colors",
-    searchIcon: isClerk ? "text-slate-400" : "text-slate-500",
-    filterBtnInactive: isClerk
-      ? "bg-white border-slate-300 text-slate-700 hover:bg-slate-50 shadow-sm"
-      : "bg-slate-900/80 border-slate-800 text-slate-400 hover:text-white",
-    filterBtnActive: isClerk
-      ? "bg-amber-100 border-amber-400 text-amber-900 shadow-sm"
-      : "bg-amber-500/20 border-amber-500/50 text-amber-300",
-    tableCard: isClerk
-      ? "bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm"
-      : "glass-card rounded-2xl border border-slate-800 overflow-hidden shadow-2xl",
-    thead: isClerk
-      ? "border-b border-slate-200 bg-slate-50/80 text-slate-600 uppercase text-[11px] font-semibold tracking-wider"
-      : "border-b border-slate-800 bg-slate-950/40 text-slate-400 uppercase text-[11px] font-semibold tracking-wider",
-    tbodyDivide: isClerk ? "divide-y divide-slate-100" : "divide-y divide-slate-800/60",
-    rowHover: isClerk ? "hover:bg-blue-50/30 transition-colors" : "hover:bg-slate-800/40 transition-colors",
-    barcode: isClerk ? "text-blue-600 font-bold" : "text-blue-400 font-bold",
-    productName: isClerk ? "font-semibold text-slate-900" : "font-semibold text-white",
-    branchText: isClerk ? "text-slate-600" : "text-slate-300",
-    categoryText: isClerk ? "text-slate-500" : "text-slate-400",
-    qtyText: isClerk ? "text-slate-900" : "text-white",
-    reorderText: isClerk ? "text-slate-500 font-semibold" : "text-slate-400 font-semibold",
-    priceText: isClerk ? "text-emerald-700 font-bold" : "text-emerald-400 font-bold",
-    actionBtn: isClerk
-      ? "p-1.5 rounded-lg bg-slate-100 hover:bg-blue-600 text-slate-600 hover:text-white border border-slate-200 transition-colors"
-      : "p-1.5 rounded-lg bg-slate-800 hover:bg-blue-600 text-slate-400 hover:text-white transition-colors",
-    badgeInStock: isClerk
-      ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-      : "bg-emerald-950/70 text-emerald-400 border border-emerald-800/60",
-    badgeLowStock: isClerk
-      ? "bg-amber-50 text-amber-700 border border-amber-200 animate-pulse"
-      : "bg-amber-950/70 text-amber-400 border border-amber-800/60 animate-pulse",
-    badgeOutOfStock: isClerk
-      ? "bg-rose-50 text-rose-700 border border-rose-200"
-      : "bg-rose-950/70 text-rose-400 border border-rose-800/60",
-    batchNo: isClerk ? "text-indigo-600 font-bold" : "text-indigo-400 font-bold",
-    modalOverlay: isClerk
-      ? "fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200"
-      : "fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200",
-    modalCard: isClerk
-      ? "bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4 text-slate-900"
-      : "bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4 text-white",
-    modalHeaderBorder: isClerk ? "border-slate-100" : "border-slate-800",
-    modalTitle: isClerk ? "text-slate-900 font-bold text-sm flex items-center gap-2" : "text-white font-bold text-sm flex items-center gap-2",
-    modalInfoBox: isClerk
-      ? "bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-1.5"
-      : "bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-1.5",
-    modalLabel: isClerk ? "text-xs font-semibold text-slate-700 block mb-1" : "text-xs text-slate-300 block mb-1",
-    modalInput: isClerk
-      ? "w-full px-3 py-2 rounded-xl bg-white border border-slate-300 text-slate-900 font-mono text-sm font-bold placeholder:text-slate-400 shadow-sm focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all"
-      : "w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white font-mono text-sm font-bold focus:outline-none focus:border-blue-500",
-    modalCancelBtn: isClerk
-      ? "w-1/3 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-semibold transition-colors"
-      : "w-1/3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold",
+    wrapper: "space-y-6 animate-in fade-in duration-300 text-slate-800",
+    title: "text-2xl font-black text-slate-900 flex items-center gap-2.5",
+    subtitle: "text-xs text-slate-500 mt-1",
+    tabBorder: "border-slate-200",
+    tabInactive: "bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-100 shadow-2xs",
+    searchBox: "w-full pl-9 pr-4 py-2.5 rounded-xl bg-white border border-slate-300 text-xs text-slate-900 placeholder:text-slate-400 font-mono shadow-2xs focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all",
+    searchIcon: "text-slate-400",
+    filterBtnInactive: "bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 shadow-2xs",
+    filterBtnActive: "bg-amber-100 border border-amber-400 text-amber-900 shadow-2xs font-semibold",
+    tableCard: "bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs",
+    thead: "border-b border-slate-200 bg-slate-50 text-slate-600 uppercase text-[11px] font-semibold tracking-wider",
+    tbodyDivide: "divide-y divide-slate-100",
+    rowHover: "hover:bg-slate-50/80 transition-colors",
+    barcode: "text-blue-600 font-bold",
+    productName: "font-semibold text-slate-900",
+    branchText: "text-slate-600",
+    categoryText: "text-slate-500",
+    qtyText: "text-slate-900",
+    reorderText: "text-slate-500 font-semibold",
+    priceText: "text-emerald-700 font-bold",
+    actionBtn: "p-1.5 rounded-lg bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-600 border border-slate-200 transition-colors",
+    badgeInStock: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+    badgeLowStock: "bg-amber-50 text-amber-800 border border-amber-200 font-semibold animate-pulse",
+    badgeOutOfStock: "bg-rose-50 text-rose-700 border border-rose-200 font-semibold",
+    batchNo: "text-indigo-600 font-bold",
+    modalOverlay: "fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4 animate-in fade-in duration-200",
+    modalCard: "bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4 text-slate-900",
+    modalHeaderBorder: "border-slate-200",
+    modalTitle: "text-slate-900 font-bold text-sm flex items-center gap-2",
+    modalInfoBox: "bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-1.5",
+    modalLabel: "text-xs font-semibold text-slate-700 block mb-1",
+    modalInput: "w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 font-mono text-sm font-bold placeholder:text-slate-400 focus:outline-none focus:border-blue-600 focus:bg-white transition-all",
+    modalCancelBtn: "w-1/3 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-semibold transition-colors",
   };
 
   return (

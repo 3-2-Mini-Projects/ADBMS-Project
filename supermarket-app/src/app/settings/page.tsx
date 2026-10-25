@@ -121,20 +121,20 @@ export default function UserSettingsPage() {
   return (
     <div className="space-y-6 max-w-4xl mx-auto animate-in fade-in duration-300 pb-12">
       {/* Top Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+      <div className="flex items-center justify-between pb-4 border-b border-slate-200">
         <div>
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-400">
-            <Settings className="w-4 h-4 text-emerald-400" />
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-700">
+            <Settings className="w-4 h-4 text-emerald-700" />
             <span>Staff Account &amp; System Preferences</span>
           </div>
-          <h1 className="text-2xl font-black text-white mt-1">Application &amp; Terminal Settings</h1>
-          <p className="text-xs text-slate-400 mt-1">
+          <h1 className="text-2xl font-black text-slate-900 mt-1">Application &amp; Terminal Settings</h1>
+          <p className="text-xs text-slate-500 mt-1">
             Manage your account security, POS hardware preferences, and audio notifications.
           </p>
         </div>
         <Link
           href={isCashier ? "/cashier/dashboard" : "/dashboard"}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 hover:text-white transition-all"
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 hover:text-slate-900 transition-all border border-slate-200"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           <span>{isCashier ? "Cashier Desk" : "Dashboard"}</span>
@@ -142,25 +142,25 @@ export default function UserSettingsPage() {
       </div>
 
       {/* Account Identity Card */}
-      <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between flex-wrap gap-4 shadow-lg">
+      <div className="p-5 rounded-2xl bg-white border border-slate-200 flex items-center justify-between flex-wrap gap-4 shadow-xs">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white font-extrabold text-lg shadow-md">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white font-extrabold text-lg shadow-sm">
             {currentEmployee?.full_name ? currentEmployee.full_name[0] : "U"}
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-base font-bold text-white">
+              <h2 className="text-base font-bold text-slate-900">
                 {currentEmployee?.full_name ?? "Staff Member"}
               </h2>
-              <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-950/80 text-emerald-300 border border-emerald-800/60">
+              <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
                 {currentEmployee?.role ?? "CASHIER"}
               </span>
             </div>
-            <div className="flex items-center gap-3 text-xs text-slate-400 mt-1">
+            <div className="flex items-center gap-3 text-xs text-slate-500 mt-1">
               <span>Emp ID: #{currentEmployee?.employee_id ?? "N/A"}</span>
               <span>•</span>
               <span className="flex items-center gap-1">
-                <Store className="w-3 h-3 text-emerald-400" />
+                <Store className="w-3 h-3 text-emerald-600" />
                 {currentBranch?.name ?? "Assigned Branch"} ({currentBranch?.branch_code ?? "HQ"})
               </span>
             </div>
@@ -169,9 +169,9 @@ export default function UserSettingsPage() {
 
         <Link
           href="/profile"
-          className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 hover:text-white transition-all flex items-center gap-1.5 border border-slate-700"
+          className="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 hover:text-slate-900 transition-all flex items-center gap-1.5 border border-slate-200"
         >
-          <User className="w-3.5 h-3.5 text-slate-400" />
+          <User className="w-3.5 h-3.5 text-slate-500" />
           <span>View Full Profile</span>
         </Link>
       </div>
@@ -179,20 +179,20 @@ export default function UserSettingsPage() {
       {/* Grid: Preferences & Security */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Card 1: Terminal & POS Preferences */}
-        <div className="rounded-2xl bg-slate-900/80 border border-slate-800 p-5 space-y-4 shadow-xl">
-          <div className="flex items-center gap-2 pb-3 border-b border-slate-800">
-            <Sliders className="w-4 h-4 text-emerald-400" />
-            <h3 className="text-sm font-bold text-white">POS Terminal Preferences</h3>
+        <div className="rounded-2xl bg-white border border-slate-200 p-5 space-y-4 shadow-xs">
+          <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+            <Sliders className="w-4 h-4 text-emerald-600" />
+            <h3 className="text-sm font-bold text-slate-900">POS Terminal Preferences</h3>
           </div>
 
           <div className="space-y-3.5">
             {/* Preference: Scanner Beep */}
-            <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
+            <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200">
               <div className="flex items-start gap-3">
-                <Volume2 className="w-4 h-4 text-emerald-400 mt-0.5" />
+                <Volume2 className="w-4 h-4 text-emerald-600 mt-0.5" />
                 <div>
-                  <div className="text-xs font-semibold text-slate-200">Audio Feedback on Scan</div>
-                  <div className="text-[11px] text-slate-400 mt-0.5">
+                  <div className="text-xs font-semibold text-slate-900">Audio Feedback on Scan</div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">
                     Play confirmation chime when barcodes are scanned
                   </div>
                 </div>
@@ -201,7 +201,7 @@ export default function UserSettingsPage() {
                 type="button"
                 onClick={handleToggleSound}
                 className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
-                  soundEnabled ? "bg-emerald-500" : "bg-slate-700"
+                  soundEnabled ? "bg-emerald-600" : "bg-slate-300"
                 }`}
               >
                 <span
@@ -213,12 +213,12 @@ export default function UserSettingsPage() {
             </div>
 
             {/* Preference: Receipt Auto-Print */}
-            <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
+            <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200">
               <div className="flex items-start gap-3">
-                <Printer className="w-4 h-4 text-blue-400 mt-0.5" />
+                <Printer className="w-4 h-4 text-blue-600 mt-0.5" />
                 <div>
-                  <div className="text-xs font-semibold text-slate-200">Auto-Print Checkout Receipt</div>
-                  <div className="text-[11px] text-slate-400 mt-0.5">
+                  <div className="text-xs font-semibold text-slate-900">Auto-Print Checkout Receipt</div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">
                     Automatically open receipt print dialog on sale completion
                   </div>
                 </div>
@@ -227,7 +227,7 @@ export default function UserSettingsPage() {
                 type="button"
                 onClick={handleToggleAutoPrint}
                 className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
-                  autoPrintReceipt ? "bg-emerald-500" : "bg-slate-700"
+                  autoPrintReceipt ? "bg-emerald-600" : "bg-slate-300"
                 }`}
               >
                 <span
@@ -239,12 +239,12 @@ export default function UserSettingsPage() {
             </div>
 
             {/* Preference: Auto-focus Barcode Input */}
-            <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
+            <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200">
               <div className="flex items-start gap-3">
-                <Sparkles className="w-4 h-4 text-amber-400 mt-0.5" />
+                <Sparkles className="w-4 h-4 text-amber-600 mt-0.5" />
                 <div>
-                  <div className="text-xs font-semibold text-slate-200">Auto-Focus Barcode Input</div>
-                  <div className="text-[11px] text-slate-400 mt-0.5">
+                  <div className="text-xs font-semibold text-slate-900">Auto-Focus Barcode Input</div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">
                     Keep cursor focused on barcode field ready for rapid scanner inputs
                   </div>
                 </div>
@@ -253,7 +253,7 @@ export default function UserSettingsPage() {
                 type="button"
                 onClick={handleToggleAutoFocus}
                 className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
-                  autoFocusBarcode ? "bg-emerald-500" : "bg-slate-700"
+                  autoFocusBarcode ? "bg-emerald-600" : "bg-slate-300"
                 }`}
               >
                 <span
@@ -265,12 +265,12 @@ export default function UserSettingsPage() {
             </div>
 
             {/* Preference: High Contrast Mode */}
-            <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
+            <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200">
               <div className="flex items-start gap-3">
-                <Moon className="w-4 h-4 text-purple-400 mt-0.5" />
+                <Moon className="w-4 h-4 text-purple-600 mt-0.5" />
                 <div>
-                  <div className="text-xs font-semibold text-slate-200">High-Contrast POS Lines</div>
-                  <div className="text-[11px] text-slate-400 mt-0.5">
+                  <div className="text-xs font-semibold text-slate-900">High-Contrast POS Lines</div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">
                     Crisp item row borders for bright retail environments
                   </div>
                 </div>
@@ -279,7 +279,7 @@ export default function UserSettingsPage() {
                 type="button"
                 onClick={handleToggleContrast}
                 className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
-                  highContrastMode ? "bg-emerald-500" : "bg-slate-700"
+                  highContrastMode ? "bg-emerald-600" : "bg-slate-300"
                 }`}
               >
                 <span
@@ -293,22 +293,22 @@ export default function UserSettingsPage() {
         </div>
 
         {/* Card 2: Security & Password Update */}
-        <div className="rounded-2xl bg-slate-900/80 border border-slate-800 p-5 space-y-4 shadow-xl">
-          <div className="flex items-center gap-2 pb-3 border-b border-slate-800">
-            <KeyRound className="w-4 h-4 text-purple-400" />
-            <h3 className="text-sm font-bold text-white">Security &amp; Password</h3>
+        <div className="rounded-2xl bg-white border border-slate-200 p-5 space-y-4 shadow-xs">
+          <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+            <KeyRound className="w-4 h-4 text-purple-600" />
+            <h3 className="text-sm font-bold text-slate-900">Security &amp; Password</h3>
           </div>
 
           {passwordSuccess && (
-            <div className="p-3 rounded-xl bg-emerald-950/60 border border-emerald-800 text-emerald-400 text-xs flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 shrink-0" />
+            <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2 font-medium">
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
               <span>Password successfully updated for your staff account!</span>
             </div>
           )}
 
           <form onSubmit={handleChangePassword} className="space-y-3.5">
             <div>
-              <label className="text-xs text-slate-300 block mb-1 font-medium">
+              <label className="text-xs text-slate-700 block mb-1 font-semibold">
                 Current Password
               </label>
               <input
@@ -317,12 +317,12 @@ export default function UserSettingsPage() {
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 placeholder="Enter current password"
-                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                className="w-full px-3 py-2 rounded-xl bg-white border border-slate-300 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
               />
             </div>
 
             <div>
-              <label className="text-xs text-slate-300 block mb-1 font-medium">
+              <label className="text-xs text-slate-700 block mb-1 font-semibold">
                 New Password
               </label>
               <input
@@ -332,12 +332,12 @@ export default function UserSettingsPage() {
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="Minimum 6 characters"
-                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                className="w-full px-3 py-2 rounded-xl bg-white border border-slate-300 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
               />
             </div>
 
             <div>
-              <label className="text-xs text-slate-300 block mb-1 font-medium">
+              <label className="text-xs text-slate-700 block mb-1 font-semibold">
                 Confirm New Password
               </label>
               <input
@@ -347,14 +347,14 @@ export default function UserSettingsPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Re-enter new password"
-                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                className="w-full px-3 py-2 rounded-xl bg-white border border-slate-300 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
               />
             </div>
 
             <button
               type="submit"
               disabled={isUpdatingPassword}
-              className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white text-xs font-bold transition-all disabled:opacity-50"
+              className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-bold transition-all disabled:opacity-50 shadow-xs"
             >
               {isUpdatingPassword ? "Updating..." : "Update Password"}
             </button>
@@ -364,19 +364,19 @@ export default function UserSettingsPage() {
 
       {/* Admin / Manager Governance Section (only if authorized) */}
       {isAdminOrManager && (
-        <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-950/40 to-indigo-950/40 border border-purple-800/40 flex items-center justify-between flex-wrap gap-4 shadow-lg">
+        <div className="p-4 rounded-2xl bg-purple-50/70 border border-purple-200 flex items-center justify-between flex-wrap gap-4 shadow-xs">
           <div className="flex items-center gap-3">
-            <ShieldCheck className="w-6 h-6 text-purple-400 shrink-0" />
+            <ShieldCheck className="w-6 h-6 text-purple-600 shrink-0" />
             <div>
-              <div className="text-xs font-bold text-white">Administrator Database &amp; System Settings</div>
-              <div className="text-[11px] text-purple-200/70 mt-0.5">
+              <div className="text-xs font-bold text-slate-900">Administrator Database &amp; System Settings</div>
+              <div className="text-[11px] text-slate-600 mt-0.5">
                 Configure MySQL connection pools, audit log verbosity, and multi-branch inventory sync policies.
               </div>
             </div>
           </div>
           <Link
             href="/admin/settings"
-            className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition-all shadow-md"
+            className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition-all shadow-xs"
           >
             Open Admin Console ↗
           </Link>

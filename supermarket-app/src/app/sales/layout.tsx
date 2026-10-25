@@ -37,8 +37,8 @@ export default function SalesLayout({ children }: { children: React.ReactNode })
         height: "100vh",
         width: "100%",
         overflow: "hidden",
-        background: "var(--bg-base, #07090f)",
-        color: "var(--text-primary, #e6edf3)",
+        background: "var(--bg-base, #f8fafc)",
+        color: "var(--text-primary, #0f172a)",
       }}
     >
       {/* Left Sidebar */}
@@ -52,8 +52,8 @@ export default function SalesLayout({ children }: { children: React.ReactNode })
           flexShrink: 0,
           display: "flex",
           flexDirection: "column",
-          background: "var(--bg-surface, #0d1117)",
-          borderRight: "1px solid var(--border, #1e2d3d)",
+          background: "var(--bg-surface, #ffffff)",
+          borderRight: "1px solid var(--border, #e2e8f0)",
           overflow: "hidden",
         }}
       >
@@ -98,7 +98,7 @@ export default function SalesLayout({ children }: { children: React.ReactNode })
             Sales Module
           </div>
           {SALES_TABS.map((tab) => {
-            const isActive = pathname === tab.href || (pathname === "/sales" && tab.href === "/sales/history");
+            const isActive = pathname === tab.href;
             return (
               <Link
                 key={tab.href}
@@ -151,10 +151,9 @@ export default function SalesLayout({ children }: { children: React.ReactNode })
                 { label: "Customers", href: "/customers", icon: "👥" },
               ]
             : [
-                { label: "Cashier Portal", href: "/cashier/dashboard", icon: "🛒" },
                 { label: "Inventory", href: "/inventory", icon: "📦" },
                 { label: "Customers", href: "/customers", icon: "👥" },
-                { label: "Admin Reports", href: "/admin/reports", icon: "📈" },
+                { label: "Reports", href: "/admin/reports", icon: "📈" },
               ]
           ).map((item) => (
             <Link
@@ -193,10 +192,10 @@ export default function SalesLayout({ children }: { children: React.ReactNode })
             background: "linear-gradient(135deg, #1d4ed8, #7c3aed)",
             display: "flex", alignItems: "center", justifyContent: "center",
             color: "#fff", fontWeight: 800, fontSize: 13, flexShrink: 0,
-          }}>S</div>
+          }}>{currentEmployee?.full_name?.[0] ?? "S"}</div>
           <div style={{ overflow: "hidden" }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Sandeepa</div>
-            <div style={{ fontSize: 10, color: "var(--accent-emerald)", fontFamily: "'JetBrains Mono', monospace" }}>ADMIN</div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{currentEmployee?.full_name ?? "Staff"}</div>
+            <div style={{ fontSize: 10, color: "var(--accent-emerald)", fontFamily: "'JetBrains Mono', monospace" }}>{currentEmployee?.role ?? "STAFF"}</div>
           </div>
         </div>
       </aside>

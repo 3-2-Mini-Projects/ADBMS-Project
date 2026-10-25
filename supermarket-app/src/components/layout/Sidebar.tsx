@@ -325,12 +325,12 @@ export function Sidebar() {
 
   return (
     <aside
-      className={`relative z-40 bg-slate-950 border-r border-slate-800 transition-all duration-300 flex flex-col justify-between select-none ${collapsed ? "w-20" : "w-64"
+      className={`relative z-40 bg-white border-r border-slate-200 shadow-sm transition-all duration-300 flex flex-col justify-between select-none ${collapsed ? "w-20" : "w-64"
         }`}
     >
       {/* Brand Header */}
       <div>
-        <div className="h-16 flex items-center justify-between px-4 border-b border-slate-800">
+        <div className="h-16 flex items-center justify-between px-4 border-b border-slate-200">
           {!collapsed ? (
             <Link
               href={
@@ -347,16 +347,16 @@ export function Sidebar() {
               <img
                 src="/logo.png"
                 alt="Nexus Supermarket Logo"
-                className="w-9 h-9 rounded-xl bg-white p-1 object-contain shadow-md shadow-blue-500/20 shrink-0"
+                className="w-9 h-9 rounded-xl bg-white p-1 object-contain shadow-md shadow-blue-500/10 border border-slate-100 shrink-0"
               />
               <div>
-                <div className="font-bold text-sm tracking-tight text-white flex items-center gap-1.5">
+                <div className="font-bold text-sm tracking-tight text-slate-900 flex items-center gap-1.5">
                   <span>NEXUS</span>
-                  <span className={isAdmin ? "text-purple-400 font-extrabold" : "text-blue-400 font-extrabold"}>
+                  <span className={isAdmin ? "text-purple-600 font-extrabold" : "text-blue-600 font-extrabold"}>
                     {isAdmin ? "ADMIN" : "SUPER"}
                   </span>
                 </div>
-                <div className="text-[10px] text-slate-400 font-mono tracking-wider">
+                <div className="text-[10px] text-slate-500 font-mono tracking-wider">
                   {isAdmin ? "ADMIN PORTAL v2.0" : "ADBMS OLTP v2.0"}
                 </div>
               </div>
@@ -365,13 +365,13 @@ export function Sidebar() {
             <img
               src="/logo.png"
               alt="Nexus Supermarket Logo"
-              className="mx-auto w-9 h-9 rounded-xl bg-white p-1 object-contain shadow-md shadow-blue-500/20"
+              className="mx-auto w-9 h-9 rounded-xl bg-white p-1 object-contain shadow-md shadow-blue-500/10 border border-slate-100"
             />
           )}
 
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
@@ -380,12 +380,12 @@ export function Sidebar() {
 
         {/* Current Branch Pill if expanded */}
         {!collapsed && currentBranch && (
-          <div className="mx-3 mt-3 px-3 py-2 rounded-lg bg-slate-900/90 border border-slate-800/80 flex items-center justify-between text-xs">
+          <div className="mx-3 mt-3 px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
             <div className="flex items-center gap-2">
-              <Store className={`w-3.5 h-3.5 ${isAdmin ? "text-purple-400" : "text-blue-400"}`} />
-              <span className="text-slate-300 font-medium truncate max-w-[130px]">{currentBranch.name}</span>
+              <Store className={`w-3.5 h-3.5 ${isAdmin ? "text-purple-600" : "text-blue-600"}`} />
+              <span className="text-slate-700 font-medium truncate max-w-[130px]">{currentBranch.name}</span>
             </div>
-            <span className="font-mono text-[10px] text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded">
+            <span className="font-mono text-[10px] text-slate-600 bg-slate-200 px-1.5 py-0.5 rounded">
               {currentBranch.branch_code}
             </span>
           </div>
@@ -419,16 +419,16 @@ export function Sidebar() {
                       className={`group relative flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all ${active
                           ? isAdmin
                             ? item.highlight
-                              ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-900/40 font-semibold"
-                              : "bg-purple-600 text-white shadow-lg shadow-purple-900/30 font-semibold"
+                              ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-900/20 font-semibold"
+                              : "bg-purple-600 text-white shadow-md font-semibold"
                             : item.highlight
-                              ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-900/30 font-semibold"
-                              : "bg-blue-600 text-white shadow-lg shadow-blue-900/30 font-semibold"
+                              ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-900/20 font-semibold"
+                              : "bg-blue-600 text-white shadow-md font-semibold"
                           : item.highlight
                             ? isAdmin
-                              ? "bg-purple-950/40 text-purple-300 border border-purple-800/50 hover:bg-purple-900/40"
-                              : "bg-emerald-950/30 text-emerald-300 border border-emerald-800/40 hover:bg-emerald-900/40"
-                            : "text-slate-400 hover:text-slate-100 hover:bg-slate-900"
+                              ? "bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100"
+                              : "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
+                            : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
                         } ${!allowed ? "opacity-60" : ""}`}
                     >
                       <Icon
@@ -438,7 +438,7 @@ export function Sidebar() {
                               ? isAdmin
                                 ? "text-purple-400"
                                 : "text-emerald-400"
-                              : "text-slate-400 group-hover:text-slate-200"
+                              : "text-slate-400 group-hover:text-slate-800"
                           }`}
                       />
                       {!collapsed && (
@@ -450,11 +450,11 @@ export function Sidebar() {
                               <span
                                 className={`text-[10px] px-1.5 py-0.2 rounded font-mono font-bold ${isAdmin
                                     ? item.highlight
-                                      ? "bg-purple-300 text-purple-950"
-                                      : "bg-purple-400/20 text-purple-300 border border-purple-500/30"
+                                      ? "bg-purple-200 text-purple-950"
+                                      : "bg-purple-100 text-purple-700 border border-purple-200"
                                     : item.highlight
-                                      ? "bg-emerald-400 text-emerald-950"
-                                      : "bg-blue-400/20 text-blue-300"
+                                      ? "bg-emerald-200 text-emerald-950"
+                                      : "bg-blue-100 text-blue-700 border border-blue-200"
                                   }`}
                               >
                                 {item.badge}
@@ -474,7 +474,7 @@ export function Sidebar() {
 
       {/* User Footer */}
       {!collapsed ? (
-        <div className="p-3 border-t border-slate-800 bg-slate-900/50">
+        <div className="p-3 border-t border-slate-200 bg-slate-50/80">
           <div className="flex items-center gap-2.5">
             <div
               className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ${isAdmin
@@ -485,11 +485,11 @@ export function Sidebar() {
               {currentEmployee?.full_name ? currentEmployee.full_name[0] : "A"}
             </div>
             <div className="overflow-hidden">
-              <div className="text-xs font-semibold text-slate-200 truncate">
+              <div className="text-xs font-semibold text-slate-800 truncate">
                 {currentEmployee?.full_name ?? "Administrator"}
               </div>
               <div
-                className={`text-[10px] font-mono font-semibold ${isAdmin ? "text-purple-400" : "text-emerald-400"
+                className={`text-[10px] font-mono font-semibold ${isAdmin ? "text-purple-600" : "text-emerald-600"
                   }`}
               >
                 {isAdmin ? "SUPER ADMIN" : currentEmployee?.role ?? "STAFF"}
@@ -498,7 +498,7 @@ export function Sidebar() {
           </div>
         </div>
       ) : (
-        <div className="p-3 border-t border-slate-800 flex justify-center">
+        <div className="p-3 border-t border-slate-200 flex justify-center">
           <div
             className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ${isAdmin ? "bg-purple-600" : "bg-blue-600"
               }`}

@@ -218,81 +218,37 @@ export default function StockTransfersPage() {
 
   // Theme configuration: supports light theme for Stock Clerk while keeping dark theme for Admin
   const theme = {
-    wrapper: isClerk
-      ? "space-y-6 max-w-7xl mx-auto pb-14 animate-in fade-in duration-300 bg-slate-50/90 -m-6 p-6 sm:p-8 min-h-[calc(100vh-4rem)] text-slate-800"
-      : "space-y-6 max-w-7xl mx-auto pb-14 animate-in fade-in duration-300 text-slate-100",
-    headerBorder: isClerk ? "border-slate-200" : "border-slate-800/80",
-    title: isClerk
-      ? "text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 flex items-center gap-3"
-      : "text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-3",
-    subtitle: isClerk ? "text-xs sm:text-sm text-slate-500 mt-1 max-w-2xl font-medium" : "text-xs sm:text-sm text-slate-400 mt-1 max-w-2xl",
-    navLink: isClerk
-      ? "px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold transition-all flex items-center gap-2 shadow-sm"
-      : "px-3.5 py-2 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-xs font-semibold transition-all flex items-center gap-2 shadow-sm hover:border-slate-700",
-    alertLink: isClerk
-      ? "px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 text-amber-700 border border-amber-200 text-xs font-semibold transition-all flex items-center gap-2 shadow-sm"
-      : "px-3.5 py-2 rounded-xl bg-amber-950/40 hover:bg-amber-900/50 text-amber-300 border border-amber-800/40 text-xs font-semibold transition-all flex items-center gap-2 shadow-sm hover:border-amber-700/60",
-    card: isClerk
-      ? "bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-5"
-      : "bg-slate-900/70 border border-slate-800 rounded-2xl p-6 backdrop-blur-md shadow-lg space-y-5",
-    kpiCard: isClerk
-      ? "bg-white border border-slate-200 rounded-2xl p-4.5 shadow-sm hover:border-slate-300 transition-colors"
-      : "bg-slate-900/60 border border-slate-800 rounded-2xl p-4.5 backdrop-blur-md shadow-sm hover:border-slate-700 transition-colors",
-    cardHeaderBorder: isClerk ? "border-slate-100" : "border-slate-800/80",
-    cardTitle: isClerk ? "text-sm font-bold text-slate-900" : "text-sm font-bold text-white",
-    cardSubtext: isClerk ? "text-[11px] text-slate-500" : "text-[11px] text-slate-400",
-    corridorBox: isClerk
-      ? "grid grid-cols-2 gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200"
-      : "grid grid-cols-2 gap-3 p-3 rounded-xl bg-slate-950/70 border border-slate-800/80",
-    select: isClerk
-      ? "w-full px-2.5 py-2 rounded-lg bg-white border border-slate-300 text-xs text-slate-900 font-medium focus:outline-none focus:border-teal-600 disabled:opacity-75 disabled:cursor-not-allowed shadow-sm"
-      : "w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700/80 text-xs text-white font-medium focus:outline-none focus:border-teal-500 disabled:opacity-75 disabled:cursor-not-allowed",
-    prodSelect: isClerk
-      ? "w-full px-3 py-2.5 rounded-xl bg-white border border-slate-300 text-xs text-slate-900 focus:outline-none focus:border-teal-600 font-medium shadow-sm"
-      : "w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700/80 text-xs text-white focus:outline-none focus:border-teal-500 font-medium",
-    searchInput: isClerk
-      ? "w-full pl-8 pr-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-teal-600 shadow-sm"
-      : "w-full pl-8 pr-3 py-1.5 rounded-lg bg-slate-950/70 border border-slate-800 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-teal-500",
-    snapshotBox: isClerk
-      ? "p-4 rounded-xl bg-teal-50/60 border border-teal-200 space-y-3.5 animate-in fade-in duration-200"
-      : "p-4 rounded-xl bg-slate-950/90 border border-teal-500/30 space-y-3.5 animate-in fade-in duration-200",
-    presetBtn: isClerk
-      ? "flex-1 py-1 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-white text-[11px] font-mono font-bold text-slate-700 hover:text-slate-900 transition-colors shadow-sm"
-      : "flex-1 py-1 rounded-lg bg-slate-900 border border-slate-700/80 hover:bg-slate-800 disabled:opacity-40 disabled:hover:bg-slate-900 text-[11px] font-mono font-bold text-slate-200 hover:text-white transition-colors",
-    presetMaxBtn: isClerk
-      ? "px-2.5 py-1 rounded-lg bg-teal-600 hover:bg-teal-700 text-[11px] font-mono font-bold text-white transition-colors shadow-sm"
-      : "px-2.5 py-1 rounded-lg bg-teal-500/20 border border-teal-500/40 hover:bg-teal-500/30 text-[11px] font-mono font-bold text-teal-300 transition-colors",
-    calcBox: isClerk
-      ? "p-2.5 rounded-lg bg-white border border-teal-100 text-[11px] space-y-1 shadow-xs"
-      : "p-2.5 rounded-lg bg-slate-900/90 border border-slate-800 text-[11px] space-y-1",
-    input: isClerk
-      ? "w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-300 text-xs font-mono text-slate-900 placeholder-slate-400 focus:outline-none focus:border-teal-600 shadow-sm"
-      : "w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700/80 text-xs font-mono text-white placeholder-slate-600 focus:outline-none focus:border-teal-500",
-    acidBox: isClerk
-      ? "pt-3 border-t border-slate-100 text-[11px] text-slate-600 flex items-start gap-2.5 bg-slate-50 p-3 rounded-xl border border-slate-200/80"
-      : "pt-3 border-t border-slate-800/80 text-[11px] text-slate-400 flex items-start gap-2.5 bg-slate-950/40 p-3 rounded-xl",
-    historyCard: isClerk
-      ? "lg:col-span-7 bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm flex flex-col"
-      : "lg:col-span-7 bg-slate-900/70 border border-slate-800 rounded-2xl overflow-hidden backdrop-blur-md shadow-lg flex flex-col",
-    historyHeaderBg: isClerk ? "p-4 sm:p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/60" : "p-4 sm:p-5 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900/40",
-    historySearchInput: isClerk
-      ? "pl-7 pr-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-teal-600 w-36 sm:w-44 shadow-sm"
-      : "pl-7 pr-2.5 py-1.5 rounded-lg bg-slate-950/80 border border-slate-800 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-teal-500 w-36 sm:w-44",
-    historyRefreshBtn: isClerk
-      ? "p-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 transition-all text-xs flex items-center gap-1.5 shadow-sm"
-      : "p-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/80 transition-all text-xs flex items-center gap-1.5 shadow-sm",
-    thead: isClerk
-      ? "border-b border-slate-200 bg-slate-50 text-slate-600 font-semibold uppercase text-[10px] tracking-wider"
-      : "border-b border-slate-800 bg-slate-950/60 text-slate-400 font-semibold uppercase text-[10px] tracking-wider",
-    tbodyDivide: isClerk ? "divide-y divide-slate-100" : "divide-y divide-slate-800/60",
-    rowHover: isClerk ? "hover:bg-slate-50 transition-colors" : "hover:bg-slate-800/30 transition-colors",
-    itemText: isClerk ? "font-semibold text-slate-900 truncate max-w-[170px]" : "font-semibold text-white truncate max-w-[170px]",
-    operatorPill: isClerk
-      ? "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-[11px] font-mono text-slate-700 font-medium"
-      : "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-800 border border-slate-700/80 text-[11px] font-mono text-slate-300",
-    qtyBadge: isClerk
-      ? "inline-flex items-center px-2 py-0.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200 font-mono font-bold text-xs"
-      : "inline-flex items-center px-2 py-0.5 rounded-full bg-teal-500/15 text-teal-400 border border-teal-500/30 font-mono font-bold text-xs",
+    wrapper: "space-y-6 max-w-7xl mx-auto pb-14 animate-in fade-in duration-300 text-slate-800",
+    headerBorder: "border-slate-200",
+    title: "text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 flex items-center gap-3",
+    subtitle: "text-xs sm:text-sm text-slate-500 mt-1 max-w-2xl font-medium",
+    navLink: "px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold transition-all flex items-center gap-2 shadow-2xs",
+    alertLink: "px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 text-amber-800 border border-amber-200 text-xs font-semibold transition-all flex items-center gap-2 shadow-2xs",
+    card: "bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-5",
+    kpiCard: "bg-white border border-slate-200 rounded-2xl p-4.5 shadow-xs hover:border-slate-300 transition-colors",
+    cardHeaderBorder: "border-slate-100",
+    cardTitle: "text-sm font-bold text-slate-900",
+    cardSubtext: "text-[11px] text-slate-500",
+    corridorBox: "grid grid-cols-2 gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200",
+    select: "w-full px-2.5 py-2 rounded-lg bg-white border border-slate-300 text-xs text-slate-900 font-medium focus:outline-none focus:border-teal-600 disabled:opacity-75 disabled:cursor-not-allowed shadow-2xs",
+    prodSelect: "w-full px-3 py-2.5 rounded-xl bg-white border border-slate-300 text-xs text-slate-900 focus:outline-none focus:border-teal-600 font-medium shadow-2xs",
+    searchInput: "w-full pl-8 pr-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-teal-600 shadow-2xs",
+    snapshotBox: "p-4 rounded-xl bg-teal-50/60 border border-teal-200 space-y-3.5 animate-in fade-in duration-200",
+    presetBtn: "flex-1 py-1 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-white text-[11px] font-mono font-bold text-slate-700 hover:text-slate-900 transition-colors shadow-2xs",
+    presetMaxBtn: "px-2.5 py-1 rounded-lg bg-teal-600 hover:bg-teal-700 text-[11px] font-mono font-bold text-white transition-colors shadow-2xs",
+    calcBox: "p-2.5 rounded-lg bg-white border border-teal-100 text-[11px] space-y-1 shadow-2xs",
+    input: "w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-300 text-xs font-mono text-slate-900 placeholder-slate-400 focus:outline-none focus:border-teal-600 shadow-2xs",
+    acidBox: "pt-3 border-t border-slate-100 text-[11px] text-slate-600 flex items-start gap-2.5 bg-slate-50 p-3 rounded-xl border border-slate-200/80",
+    historyCard: "lg:col-span-7 bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs flex flex-col",
+    historyHeaderBg: "p-4 sm:p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50",
+    historySearchInput: "pl-7 pr-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-teal-600 w-36 sm:w-44 shadow-2xs",
+    historyRefreshBtn: "p-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 transition-all text-xs flex items-center gap-1.5 shadow-2xs",
+    thead: "border-b border-slate-200 bg-slate-50 text-slate-600 font-semibold uppercase text-[10px] tracking-wider",
+    tbodyDivide: "divide-y divide-slate-100",
+    rowHover: "hover:bg-slate-50 transition-colors",
+    itemText: "font-semibold text-slate-900 truncate max-w-[170px]",
+    operatorPill: "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-[11px] font-mono text-slate-700 font-medium",
+    qtyBadge: "inline-flex items-center px-2 py-0.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200 font-mono font-bold text-xs",
   };
 
   return (

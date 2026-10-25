@@ -187,11 +187,11 @@ export default function CustomersPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-white flex items-center gap-2.5">
-            <Users className="w-6 h-6 text-amber-400" />
+          <h1 className="text-2xl font-black text-slate-900 flex items-center gap-2.5">
+            <Users className="w-6 h-6 text-amber-600" />
             <span>Customers & Loyalty Management</span>
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-slate-500 mt-1">
             Enroll loyalty members, track point ledgers, and process rewards across all branches
           </p>
         </div>
@@ -200,7 +200,7 @@ export default function CustomersPage() {
         {!isMarketing && (
           <button
             onClick={() => setRegisterModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-lg shadow-emerald-950/40 transition-all hover:scale-[1.02] active:scale-[0.98] self-start sm:self-auto"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-all hover:scale-[1.02] active:scale-[0.98] self-start sm:self-auto"
           >
             <Plus className="w-4 h-4" />
             <span>+ Register New Customer</span>
@@ -230,7 +230,7 @@ export default function CustomersPage() {
               }
             }}
             placeholder="Search customer by name, card number, or phone..."
-            className="w-full pl-9 pr-9 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white placeholder-slate-500 font-mono focus:border-blue-500"
+            className="w-full pl-9 pr-9 py-2.5 rounded-xl bg-white border border-slate-300 text-xs text-slate-900 placeholder:text-slate-400 font-mono shadow-xs focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
           />
           {search && (
             <button
@@ -239,7 +239,7 @@ export default function CustomersPage() {
                 setSearch("");
                 fetchCustomers("", selectedBranchId);
               }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-0.5 rounded transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-0.5 rounded transition-colors"
               title="Clear search and show all customers"
             >
               <X className="w-4 h-4" />
@@ -249,10 +249,10 @@ export default function CustomersPage() {
 
         {/* Branch-Wise Filter Dropdown */}
         <div className="relative min-w-[220px] sm:min-w-[260px]">
-          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 hover:border-slate-600 transition-colors">
-            <Store className="w-4 h-4 text-amber-400 shrink-0" />
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-slate-300 shadow-xs hover:border-slate-400 transition-colors">
+            <Store className="w-4 h-4 text-amber-600 shrink-0" />
             <div className="flex-1 min-w-0">
-              <div className="text-[10px] text-slate-400 font-medium uppercase tracking-wider leading-none mb-0.5">
+              <div className="text-[10px] text-slate-500 font-medium uppercase tracking-wider leading-none mb-0.5">
                 Branch Wise
               </div>
               <select
@@ -262,13 +262,13 @@ export default function CustomersPage() {
                   setSelectedBranchId(bId);
                   fetchCustomers(search, bId);
                 }}
-                className="w-full bg-transparent text-xs text-white font-bold focus:outline-none cursor-pointer truncate"
+                className="w-full bg-transparent text-xs text-slate-900 font-bold focus:outline-none cursor-pointer truncate"
               >
-                <option value="ALL" className="bg-slate-900 text-slate-200">
+                <option value="ALL" className="bg-white text-slate-900">
                   All Branches (All Customers)
                 </option>
                 {branches.map((b) => (
-                  <option key={b.branch_id} value={String(b.branch_id)} className="bg-slate-900 text-slate-200">
+                  <option key={b.branch_id} value={String(b.branch_id)} className="bg-white text-slate-900">
                     {b.name} ({b.city})
                   </option>
                 ))}
@@ -280,11 +280,11 @@ export default function CustomersPage() {
       </div>
 
       {/* Customers Cards / Table */}
-      <div className="glass-card rounded-2xl border border-slate-800 overflow-hidden shadow-2xl">
+      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="border-b border-slate-800 bg-slate-950/60 text-slate-400">
+              <tr className="border-b border-slate-200 bg-slate-50 text-slate-600 uppercase text-[11px] font-semibold tracking-wider">
                 <th className="py-3.5 px-4 font-semibold">Card Number</th>
                 <th className="py-3.5 px-4 font-semibold">Customer Name</th>
                 <th className="py-3.5 px-4 font-semibold">Phone</th>
@@ -295,11 +295,11 @@ export default function CustomersPage() {
                 <th className="py-3.5 px-4 font-semibold text-center">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
                   <td colSpan={8} className="py-12 text-center text-slate-500">
-                    <Sparkles className="w-5 h-5 animate-spin mx-auto text-amber-400 mb-2" />
+                    <Sparkles className="w-5 h-5 animate-spin mx-auto text-amber-500 mb-2" />
                     Loading customers...
                   </td>
                 </tr>
@@ -311,33 +311,33 @@ export default function CustomersPage() {
                 </tr>
               ) : (
                 customers.map((c) => (
-                  <tr key={c.customer_id} className="hover:bg-slate-800/40 transition-colors">
-                    <td className="py-3 px-4 font-mono font-bold text-amber-400">{c.card_no}</td>
-                    <td className="py-3 px-4 font-medium text-white">
+                  <tr key={c.customer_id} className="hover:bg-slate-50/70 transition-colors">
+                    <td className="py-3 px-4 font-mono font-bold text-amber-700">{c.card_no}</td>
+                    <td className="py-3 px-4 font-medium text-slate-900">
                       <div>{c.full_name}</div>
-                      {c.email && <div className="text-[10px] text-slate-500">{c.email}</div>}
+                      {c.email && <div className="text-[10px] text-slate-400">{c.email}</div>}
                     </td>
-                    <td className="py-3 px-4 font-mono text-slate-300">{c.phone}</td>
-                    <td className="py-3 px-4 text-slate-400">{c.city || "Colombo"}</td>
+                    <td className="py-3 px-4 font-mono text-slate-600">{c.phone}</td>
+                    <td className="py-3 px-4 text-slate-600">{c.city || "Colombo"}</td>
                     <td className="py-3 px-4 text-center">
                       <span
-                        className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold ${
+                        className={`text-[10px] font-mono px-2.5 py-0.5 rounded-full font-bold ${
                           c.tier === "PLATINUM"
-                            ? "bg-purple-950/60 text-purple-300 border border-purple-800/60"
+                            ? "bg-purple-50 text-purple-700 border border-purple-200"
                             : c.tier === "GOLD"
-                            ? "bg-amber-950/60 text-amber-300 border border-amber-800/60"
+                            ? "bg-amber-50 text-amber-700 border border-amber-200"
                             : c.tier === "SILVER"
-                            ? "bg-slate-800 text-slate-300 border border-slate-700"
-                            : "bg-orange-950/60 text-orange-300 border border-orange-800/60"
+                            ? "bg-slate-100 text-slate-700 border border-slate-200"
+                            : "bg-orange-50 text-orange-700 border border-orange-200"
                         }`}
                       >
                         {c.tier}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-right font-mono font-bold text-emerald-400 text-sm">
+                    <td className="py-3 px-4 text-right font-mono font-bold text-emerald-700 text-sm">
                       {c.points_balance || 0} pts
                     </td>
-                    <td className="py-3 px-4 font-mono text-slate-400 text-[11px]">
+                    <td className="py-3 px-4 font-mono text-slate-500 text-[11px]">
                       {c.join_date ? new Date(c.join_date).toLocaleDateString() : "—"}
                     </td>
                     <td className="py-3 px-4">
@@ -346,7 +346,7 @@ export default function CustomersPage() {
                         {/* View Loyalty Ledger Button */}
                         <button
                           onClick={() => openCustomerLedger(c)}
-                          className="px-2.5 py-1 rounded-lg bg-amber-600/20 hover:bg-amber-600/30 text-amber-400 hover:text-amber-300 border border-amber-500/30 transition-all flex items-center gap-1 text-[11px] font-semibold"
+                          className="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 shadow-xs transition-all flex items-center gap-1 text-[11px] font-semibold"
                           title="View Points Ledger & Tier History"
                         >
                           <History className="w-3.5 h-3.5" />
@@ -356,7 +356,7 @@ export default function CustomersPage() {
                         {/* Edit Customer Button */}
                         <button
                           onClick={() => openCustomerEdit(c)}
-                          className="px-2 py-1 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 hover:text-blue-300 border border-blue-500/30 transition-all flex items-center gap-1 text-[11px] font-semibold"
+                          className="px-2 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 shadow-xs transition-all flex items-center gap-1 text-[11px] font-semibold"
                           title="Edit Customer"
                         >
                           <Pencil className="w-3.5 h-3.5" />
@@ -374,16 +374,16 @@ export default function CustomersPage() {
 
       {/* MODAL: Customer Loyalty Ledger */}
       {ledgerModalOpen && selectedCustomer && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-4xl p-6 shadow-2xl space-y-5 max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <h3 className="font-bold text-base text-white flex items-center gap-2">
-                <Star className="w-4 h-4 text-amber-400" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-4xl p-6 shadow-2xl space-y-5 max-h-[90vh] flex flex-col text-slate-900">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="font-bold text-base text-slate-900 flex items-center gap-2">
+                <Star className="w-4 h-4 text-amber-600" />
                 <span>Loyalty Ledger: {selectedCustomer.full_name}</span>
               </h3>
               <button
                 onClick={() => setLedgerModalOpen(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -395,15 +395,15 @@ export default function CustomersPage() {
                 {loadingLedger ? (
                   <div className="py-6 text-center text-slate-500 text-xs">Loading ledger records...</div>
                 ) : loyaltyHistory.length === 0 ? (
-                  <div className="py-6 text-center text-slate-500 text-xs bg-slate-950/60 rounded-xl border border-slate-800">
+                  <div className="py-6 text-center text-slate-500 text-xs bg-slate-50 rounded-xl border border-slate-200">
                     No points transactions recorded yet.
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/40">
+                    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
                       <table className="w-full text-left text-xs">
                         <thead>
-                          <tr className="border-b border-slate-800 text-slate-300 bg-slate-950/80 font-semibold font-sans">
+                          <tr className="border-b border-slate-200 text-slate-600 bg-slate-50 font-semibold uppercase text-[11px] tracking-wider font-sans">
                             <th className="py-3 px-4">Date & Time</th>
                             <th className="py-3 px-4">Sale Amount</th>
                             <th className="py-3 px-4">Store Branch</th>
@@ -412,42 +412,42 @@ export default function CustomersPage() {
                             <th className="py-3 px-4 text-right">Earned Points</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-800/60 font-mono">
+                        <tbody className="divide-y divide-slate-100 font-mono">
                           {loyaltyHistory.map((lt: LoyaltyLedgerItem) => {
                             const isEarn = lt.type === "EARN" || lt.transaction_type === "EARNED" || Number(lt.points_change || lt.points) > 0;
                             const ptsVal = Math.abs(Number(lt.points || lt.points_change || 0));
                             return (
-                              <tr key={lt.loyalty_id} className="text-slate-300 hover:bg-slate-800/30 transition-colors">
-                                <td className="py-3 px-4 text-slate-400 whitespace-nowrap text-[11px]">
+                              <tr key={lt.loyalty_id} className="text-slate-700 hover:bg-slate-50/70 transition-colors">
+                                <td className="py-3 px-4 text-slate-500 whitespace-nowrap text-[11px]">
                                   {new Date(lt.created_at).toLocaleString()}
                                 </td>
-                                <td className="py-3 px-4 font-mono text-white font-medium">
+                                <td className="py-3 px-4 font-mono text-slate-900 font-medium">
                                   {lt.sale_total ? (
                                     <span>Rs. {Number(lt.sale_total).toFixed(2)}</span>
                                   ) : (
-                                    <span className="text-slate-500">—</span>
+                                    <span className="text-slate-400">—</span>
                                   )}
                                 </td>
-                                <td className="py-3 px-4 font-sans text-slate-300">
+                                <td className="py-3 px-4 font-sans text-slate-700">
                                   {lt.branch_name || "—"}
                                 </td>
                                 <td className="py-3 px-4 text-center">
                                   <span
                                     className={`text-[9px] px-2 py-0.5 rounded-full font-bold ${
                                       isEarn
-                                        ? "bg-emerald-950 text-emerald-300 border border-emerald-800/50"
-                                        : "bg-rose-950 text-rose-300 border border-rose-800/50"
+                                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                        : "bg-rose-50 text-rose-700 border border-rose-200"
                                     }`}
                                   >
                                     {isEarn ? "EARNED" : "REDEEMED"}
                                   </span>
                                 </td>
-                                <td className="py-3 px-4 text-xs font-sans text-slate-300">
+                                <td className="py-3 px-4 text-xs font-sans text-slate-700">
                                   {lt.note || "Points updated"}
                                 </td>
                                 <td
                                   className={`py-3 px-4 text-right font-bold text-sm ${
-                                    isEarn ? "text-emerald-400" : "text-rose-400"
+                                    isEarn ? "text-emerald-700" : "text-rose-700"
                                   }`}
                                 >
                                   {isEarn ? `+${ptsVal}` : `-${ptsVal}`} pts
@@ -458,9 +458,9 @@ export default function CustomersPage() {
                         </tbody>
                       </table>
                     </div>
-                    <div className="flex items-center justify-between text-xs px-1 text-slate-400 font-mono">
-                      <span>Total Transactions: <strong className="text-white">{loyaltyHistory.length}</strong></span>
-                      <span className="text-emerald-400 font-bold text-sm">
+                    <div className="flex items-center justify-between text-xs px-1 text-slate-500 font-mono">
+                      <span>Total Transactions: <strong className="text-slate-900">{loyaltyHistory.length}</strong></span>
+                      <span className="text-emerald-700 font-bold text-sm">
                         Total Points Earned: +{loyaltyHistory.filter((lt: LoyaltyLedgerItem) => lt.type === 'EARN' || lt.transaction_type === 'EARNED' || Number(lt.points || lt.points_change) > 0).reduce((sum: number, lt: LoyaltyLedgerItem) => sum + Math.abs(Number(lt.points || lt.points_change || 0)), 0)} pts
                       </span>
                     </div>
@@ -470,10 +470,10 @@ export default function CustomersPage() {
 
             </div>
 
-            <div className="pt-3 border-t border-slate-800 flex justify-end">
+            <div className="pt-3 border-t border-slate-100 flex justify-end">
               <button
                 onClick={() => setLedgerModalOpen(false)}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-semibold"
               >
                 Close
               </button>
@@ -493,12 +493,12 @@ export default function CustomersPage() {
 
       {/* MODAL: Edit Customer Details */}
       {editModalOpen && editingCustomer && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4 text-slate-900">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div>
-                <h3 className="font-bold text-sm text-white flex items-center gap-2">
-                  <Pencil className="w-4 h-4 text-blue-400" />
+                <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                  <Pencil className="w-4 h-4 text-blue-600" />
                   <span>Edit Customer Details</span>
                 </h3>
               </div>
@@ -507,7 +507,7 @@ export default function CustomersPage() {
                   setEditModalOpen(false);
                   setEditingCustomer(null);
                 }}
-                className="p-1 rounded-lg text-slate-400 hover:text-white"
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -517,9 +517,9 @@ export default function CustomersPage() {
               {/* Row 1: Card Number & Full Name */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs text-slate-300 block mb-1 flex items-center justify-between">
+                  <label className="text-xs font-semibold text-slate-700 block mb-1 flex items-center justify-between">
                     <span>Card Number</span>
-                    <span className="text-[10px] text-amber-400 font-mono flex items-center gap-1">
+                    <span className="text-[10px] text-amber-700 font-mono flex items-center gap-1 font-bold">
                       <Lock className="w-2.5 h-2.5" />
                       Locked
                     </span>
@@ -530,21 +530,21 @@ export default function CustomersPage() {
                       readOnly
                       disabled
                       value={editingCustomer.card_no}
-                      className="w-full px-3 py-2 pr-8 rounded-xl bg-slate-950/70 border border-slate-800 font-mono text-xs text-amber-300/80 font-bold cursor-not-allowed select-none opacity-90"
+                      className="w-full px-3 py-2 pr-8 rounded-xl bg-slate-100 border border-slate-300 font-mono text-xs text-amber-800 font-bold cursor-not-allowed select-none shadow-xs"
                       title="Card Number is permanently assigned and cannot be changed"
                     />
-                    <Lock className="w-3.5 h-3.5 text-slate-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <Lock className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-xs text-slate-300 block mb-1">Full Name</label>
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">Full Name</label>
                   <input
                     type="text"
                     required
                     value={editingCustomer.full_name}
                     onChange={(e) => setEditingCustomer({ ...editingCustomer, full_name: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus:border-blue-500"
+                    className="w-full px-3 py-2 rounded-xl bg-white border border-slate-300 text-xs text-slate-900 shadow-xs focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                   />
                 </div>
               </div>
@@ -552,23 +552,23 @@ export default function CustomersPage() {
               {/* Row 2: Phone Number & Joining Date */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs text-slate-300 block mb-1">Phone Number</label>
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">Phone Number</label>
                   <input
                     type="text"
                     required
                     value={editingCustomer.phone}
                     onChange={(e) => setEditingCustomer({ ...editingCustomer, phone: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 font-mono text-xs text-white focus:border-blue-500"
+                    className="w-full px-3 py-2 rounded-xl bg-white border border-slate-300 font-mono text-xs text-slate-900 shadow-xs focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                   />
                 </div>
 
                 <div>
-                  <label className="text-xs text-slate-300 block mb-1 flex items-center justify-between">
+                  <label className="text-xs font-semibold text-slate-700 block mb-1 flex items-center justify-between">
                     <span className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3 text-blue-400" />
+                      <Calendar className="w-3 h-3 text-blue-600" />
                       <span>Joining Date</span>
                     </span>
-                    <span className="text-[10px] text-amber-400 font-mono flex items-center gap-1">
+                    <span className="text-[10px] text-amber-700 font-mono flex items-center gap-1 font-bold">
                       <Lock className="w-2.5 h-2.5" />
                       Locked
                     </span>
@@ -579,10 +579,10 @@ export default function CustomersPage() {
                       readOnly
                       disabled
                       value={editingCustomer.join_date}
-                      className="w-full px-3 py-2 pr-8 rounded-xl bg-slate-950/70 border border-slate-800 font-mono text-xs text-slate-300 font-bold cursor-not-allowed select-none opacity-90"
+                      className="w-full px-3 py-2 pr-8 rounded-xl bg-slate-100 border border-slate-300 font-mono text-xs text-slate-700 font-bold cursor-not-allowed select-none shadow-xs"
                       title="Joining Date is permanent and cannot be changed"
                     />
-                    <Lock className="w-3.5 h-3.5 text-slate-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <Lock className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                   </div>
                 </div>
               </div>
@@ -590,27 +590,27 @@ export default function CustomersPage() {
               {/* Row 3: Email & City */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs text-slate-300 block mb-1 flex items-center justify-between">
-                    <span>Email <span className="text-rose-400">*</span></span>
-                    <span className="text-[10px] text-emerald-400 font-mono">Required</span>
+                  <label className="text-xs font-semibold text-slate-700 block mb-1 flex items-center justify-between">
+                    <span>Email <span className="text-rose-500">*</span></span>
+                    <span className="text-[10px] text-emerald-700 font-mono font-bold">Required</span>
                   </label>
                   <input
                     type="email"
                     required
                     value={editingCustomer.email}
                     onChange={(e) => setEditingCustomer({ ...editingCustomer, email: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus:border-blue-500"
+                    className="w-full px-3 py-2 rounded-xl bg-white border border-slate-300 text-xs text-slate-900 shadow-xs focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                     placeholder="customer@example.com"
                   />
                 </div>
 
                 <div>
-                  <label className="text-xs text-slate-300 block mb-1">City</label>
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">City</label>
                   <input
                     type="text"
                     value={editingCustomer.city}
                     onChange={(e) => setEditingCustomer({ ...editingCustomer, city: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus:border-blue-500"
+                    className="w-full px-3 py-2 rounded-xl bg-white border border-slate-300 text-xs text-slate-900 shadow-xs focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                   />
                 </div>
               </div>
@@ -618,11 +618,11 @@ export default function CustomersPage() {
               {/* Row 4: Membership Tier & Points Balance */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs text-slate-300 block mb-1">Membership Tier</label>
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">Membership Tier</label>
                   <select
                     value={editingCustomer.tier}
                     onChange={(e) => setEditingCustomer({ ...editingCustomer, tier: e.target.value as any })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus:border-blue-500"
+                    className="w-full px-3 py-2 rounded-xl bg-white border border-slate-300 text-xs text-slate-900 shadow-xs focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                   >
                     <option value="BRONZE">BRONZE</option>
                     <option value="SILVER">SILVER</option>
@@ -632,18 +632,18 @@ export default function CustomersPage() {
                 </div>
 
                 <div>
-                  <label className="text-xs text-slate-300 block mb-1">Points Balance</label>
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">Points Balance</label>
                   <input
                     type="number"
                     min="0"
                     value={editingCustomer.points_balance}
                     onChange={(e) => setEditingCustomer({ ...editingCustomer, points_balance: Number(e.target.value) })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 font-mono text-xs text-white focus:border-blue-500"
+                    className="w-full px-3 py-2 rounded-xl bg-white border border-slate-300 font-mono text-xs text-slate-900 shadow-xs focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                   />
                 </div>
               </div>
 
-              <div className="flex items-center justify-between pt-3 border-t border-slate-800">
+              <div className="flex items-center justify-between pt-3 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => {
@@ -653,7 +653,7 @@ export default function CustomersPage() {
                       openCustomerLedger(cust);
                     }
                   }}
-                  className="text-xs text-slate-400 hover:text-slate-200 flex items-center gap-1.5 transition-colors"
+                  className="text-xs text-slate-500 hover:text-slate-800 flex items-center gap-1.5 transition-colors font-semibold"
                 >
                   <History className="w-3.5 h-3.5" />
                   <span>View Points Ledger</span>
@@ -666,14 +666,14 @@ export default function CustomersPage() {
                       setEditModalOpen(false);
                       setEditingCustomer(null);
                     }}
-                    className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
+                    className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-semibold"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={isUpdating}
-                    className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold disabled:opacity-50 transition-colors"
+                    className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold disabled:opacity-50 transition-colors shadow-xs"
                   >
                     {isUpdating ? "Saving..." : "Save Changes"}
                   </button>

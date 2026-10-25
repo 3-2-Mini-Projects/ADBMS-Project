@@ -147,54 +147,54 @@ export function MarketingPredictiveAnalytics({
     <div className="space-y-6">
       {/* 2 Forecast Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-between">
+        <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center justify-between">
           <div>
-            <div className="text-xs text-slate-400">Daily Sales Velocity</div>
-            <div className="text-2xl font-bold font-mono text-amber-400 mt-1">
-              Rs. {forecast.avgDailySales.toLocaleString(undefined, { maximumFractionDigits: 0 })}/day
+            <div className="text-xs text-slate-500 font-medium">Daily Sales Velocity</div>
+            <div className="text-2xl font-black font-mono text-slate-900 mt-1">
+              Rs. {forecast.avgDailySales.toLocaleString(undefined, { maximumFractionDigits: 0 })}<span className="text-sm font-sans font-normal text-slate-500">/day</span>
             </div>
           </div>
-          <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400">
+          <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-700">
             <TrendingUp className="w-5 h-5" />
           </div>
         </div>
 
-        <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-between">
+        <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center justify-between">
           <div>
-            <div className="text-xs text-slate-400">Predicted Monthly Run-Rate</div>
-            <div className="text-2xl font-bold font-mono text-emerald-400 mt-1">
+            <div className="text-xs text-slate-500 font-medium">Predicted Monthly Run-Rate</div>
+            <div className="text-2xl font-black font-mono text-emerald-700 mt-1">
               Rs. {forecast.projectedMonthlySales.toLocaleString(undefined, { maximumFractionDigits: 0 })}
             </div>
           </div>
-          <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+          <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700">
             <Sparkles className="w-5 h-5" />
           </div>
         </div>
       </div>
 
       {/* Marketing Performance & Growth Projection Chart */}
-      <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4 shadow-xl">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/60 pb-3">
+      <div className="p-5 rounded-2xl bg-white border border-slate-200 space-y-4 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-3">
             <div>
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-amber-400" />
+              <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-amber-600" />
                 <span>Marketing Performance vs Past & Future Growth Projection</span>
               </h3>
             </div>
 
             {/* Graph Legend */}
-            <div className="flex items-center gap-3 text-[10px] font-mono text-slate-400">
+            <div className="flex items-center gap-3 text-[10px] font-mono text-slate-500">
               <span className="flex items-center gap-1">
-                <span className="w-2.5 h-2.5 rounded bg-blue-500 inline-block" />
-                <span>Sales Revenue</span>
+                <span className="w-2.5 h-2.5 rounded bg-blue-600 inline-block" />
+                <span className="font-sans font-medium text-slate-700">Sales Revenue</span>
               </span>
               <span className="flex items-center gap-1">
                 <span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block" />
-                <span>Discounts Given</span>
+                <span className="font-sans font-medium text-slate-700">Discounts Given</span>
               </span>
               <span className="flex items-center gap-1">
-                <span className="w-3 border-b-2 border-dashed border-amber-400 inline-block" />
-                <span>Forecast Line</span>
+                <span className="w-3 border-b-2 border-dashed border-amber-500 inline-block" />
+                <span className="font-sans font-medium text-slate-700">Forecast Line</span>
               </span>
             </div>
           </div>
@@ -208,7 +208,7 @@ export function MarketingPredictiveAnalytics({
               <defs>
                 <linearGradient id="salesBarGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.9" />
-                  <stop offset="100%" stopColor="#1d4ed8" stopOpacity="0.4" />
+                  <stop offset="100%" stopColor="#2563eb" stopOpacity="0.6" />
                 </linearGradient>
                 <linearGradient id="projGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.4" />
@@ -227,9 +227,8 @@ export function MarketingPredictiveAnalytics({
                       y1={y}
                       x2={svgGraph.width - 20}
                       y2={y}
-                      stroke="#334155"
+                      stroke="#e2e8f0"
                       strokeDasharray="2 3"
-                      strokeOpacity={0.5}
                     />
                     <text x={35} y={y + 3} fill="#64748b" fontSize={9} textAnchor="end">
                       {labelVal >= 1000 ? `${(labelVal / 1000).toFixed(1)}k` : labelVal}
@@ -244,7 +243,7 @@ export function MarketingPredictiveAnalytics({
                 y1={svgGraph.heightMinusBottom}
                 x2={svgGraph.width - 20}
                 y2={svgGraph.heightMinusBottom}
-                stroke="#475569"
+                stroke="#cbd5e1"
                 strokeWidth={1.5}
               />
 
@@ -264,7 +263,7 @@ export function MarketingPredictiveAnalytics({
                   <text
                     x={bar.x}
                     y={bar.y - 4}
-                    fill="#93c5fd"
+                    fill="#1d4ed8"
                     fontSize={8.5}
                     textAnchor="middle"
                     fontWeight="bold"
@@ -275,7 +274,7 @@ export function MarketingPredictiveAnalytics({
                   <text
                     x={bar.x}
                     y={svgGraph.heightMinusBottom + 14}
-                    fill="#94a3b8"
+                    fill="#64748b"
                     fontSize={8.5}
                     textAnchor="middle"
                   >
@@ -287,7 +286,7 @@ export function MarketingPredictiveAnalytics({
                       cx={bar.x}
                       cy={bar.discY}
                       r={3.5}
-                      fill="#f43f5e"
+                      fill="#e11d48"
                       stroke="#ffffff"
                       strokeWidth={1}
                     />
@@ -300,7 +299,7 @@ export function MarketingPredictiveAnalytics({
                 <path
                   d={svgGraph.projectionPath}
                   fill="none"
-                  stroke="#f59e0b"
+                  stroke="#d97706"
                   strokeWidth={2}
                   strokeDasharray="4 4"
                 />
@@ -313,14 +312,14 @@ export function MarketingPredictiveAnalytics({
                     cx={pt.x}
                     cy={pt.y}
                     r={4}
-                    fill="#fbbf24"
-                    stroke="#78350f"
+                    fill="#f59e0b"
+                    stroke="#b45309"
                     strokeWidth={1.5}
                   />
                   <text
                     x={pt.x}
                     y={pt.y - 6}
-                    fill="#fde047"
+                    fill="#b45309"
                     fontSize={8.5}
                     textAnchor="middle"
                     fontWeight="bold"
@@ -330,7 +329,7 @@ export function MarketingPredictiveAnalytics({
                   <text
                     x={pt.x}
                     y={svgGraph.heightMinusBottom + 14}
-                    fill="#fbbf24"
+                    fill="#b45309"
                     fontSize={8}
                     textAnchor="middle"
                   >
