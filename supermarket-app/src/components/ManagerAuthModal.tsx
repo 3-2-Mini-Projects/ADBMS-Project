@@ -8,7 +8,7 @@ interface ManagerAuthModalProps {
   title?: string;
   description?: string;
   onClose: () => void;
-  onSuccess: (manager: ManagerUser) => void;
+  onSuccess: (manager: ManagerUser, pin: string) => void;
 }
 
 export default function ManagerAuthModal({
@@ -18,13 +18,28 @@ export default function ManagerAuthModal({
   onClose,
   onSuccess,
 }: ManagerAuthModalProps) {
-  const { managers, verifyManagerPin } = useCashier();
-  const [selectedManagerId, setSelectedManagerId] = useState<number>(
-    managers.length > 0 ? managers[0].employee_id : 1
-  );
+  const { cashier, managers, verifyManagerPin } = useCashier();
+  const [selectedManagerId, setSelectedManagerId] = useState<number>(() => {
+    if (cashier && managers.length > 0) {
+      const match = managers.find((m) => m.branch_id === cashier.branch_id);
+      if (match) return match.employee_id;
+    }
+    return managers.length > 0 ? managers[0].employee_id : 1;
+  });
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Auto-sync selectedManagerId when managers or cashier changes
+  React.useEffect(() => {
+    if (managers.length > 0) {
+      const currentExists = managers.some((m) => m.employee_id === selectedManagerId);
+      if (!currentExists) {
+        const branchMatch = cashier ? managers.find((m) => m.branch_id === cashier.branch_id) : null;
+        setSelectedManagerId(branchMatch ? branchMatch.employee_id : managers[0].employee_id);
+      }
+    }
+  }, [managers, cashier, selectedManagerId]);
 
   if (!isOpen) return null;
 
@@ -45,8 +60,9 @@ export default function ManagerAuthModal({
           branch_name: "",
           branch_code: "",
         };
+        const usedPin = pin;
         setPin("");
-        onSuccess(mgr);
+        onSuccess(mgr, usedPin);
         onClose();
       } else {
         setError(res.error || "Authorization failed");

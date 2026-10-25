@@ -78,7 +78,7 @@ export async function GET(req: Request) {
         ORDER BY total_amount DESC
       `, [numCashierId, targetDate]);
 
-      // Returns/refunds processed on sales made by this cashier on targetDate
+      // Returns/refunds processed by or attributed to this cashier on targetDate
       const [cRet]: any = await query(`
         SELECT 
           COUNT(*) AS returns_count,
@@ -86,9 +86,9 @@ export async function GET(req: Request) {
         FROM returns r
         JOIN sale_items si ON r.sale_item_id = si.sale_item_id
         JOIN sales s ON si.sale_id = s.sale_id
-        WHERE s.cashier_id = ? 
+        WHERE (r.processed_by = ? OR s.cashier_id = ?)
           AND DATE(r.return_date) = ?
-      `, [numCashierId, targetDate]);
+      `, [numCashierId, numCashierId, targetDate]);
 
       cashierReturns = {
         returns_count: Number(cRet?.returns_count || 0),

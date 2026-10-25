@@ -38,13 +38,24 @@ export async function GET(req: Request) {
 
     if (search) {
       // Support searching by sale ID, formatted receipt number, customer name, or card
-      const cleanNum = search.replace(/\D/g, "");
-      if (cleanNum && (search.startsWith("REC-") || !isNaN(Number(search)))) {
-        whereClause += " AND (s.sale_id = ? OR c.full_name LIKE ? OR c.card_no LIKE ?)";
-        params.push(Number(cleanNum), `%${search}%`, `%${search}%`);
+      const trailingMatch = search.match(/(\d+)$/);
+      const trailingNum = trailingMatch ? Number(trailingMatch[1]) : (!isNaN(Number(search)) ? Number(search) : null);
+
+      if (trailingNum !== null) {
+        whereClause += ` AND (
+          s.sale_id = ? 
+          OR CONCAT('REC-', COALESCE(b.branch_code, 'BR'), '-', LPAD(s.sale_id, 6, '0')) LIKE ?
+          OR c.full_name LIKE ? 
+          OR c.card_no LIKE ?
+        )`;
+        params.push(trailingNum, `%${search}%`, `%${search}%`, `%${search}%`);
       } else {
-        whereClause += " AND (c.full_name LIKE ? OR c.card_no LIKE ?)";
-        params.push(`%${search}%`, `%${search}%`);
+        whereClause += ` AND (
+          CONCAT('REC-', COALESCE(b.branch_code, 'BR'), '-', LPAD(s.sale_id, 6, '0')) LIKE ?
+          OR c.full_name LIKE ? 
+          OR c.card_no LIKE ?
+        )`;
+        params.push(`%${search}%`, `%${search}%`, `%${search}%`);
       }
     }
 

@@ -41,8 +41,8 @@ export async function GET() {
         b.name AS branch_name, b.branch_code
       FROM employees e
       JOIN branches b ON e.branch_id = b.branch_id
-      WHERE e.role = 'MANAGER' AND e.is_active = 1
-      ORDER BY e.employee_id ASC
+      WHERE e.role IN ('MANAGER', 'ADMIN') AND e.is_active = 1
+      ORDER BY e.branch_id ASC, e.employee_id ASC
     `);
 
     const branches = await query<any>(`
@@ -76,7 +76,7 @@ export async function POST(req: Request) {
     const [mgr] = await query<any>(`
       SELECT employee_id, full_name, role, branch_id
       FROM employees
-      WHERE employee_id = ? AND role = 'MANAGER' AND is_active = 1
+      WHERE employee_id = ? AND role IN ('MANAGER', 'ADMIN') AND is_active = 1
     `, [managerId]);
 
     if (!mgr) {

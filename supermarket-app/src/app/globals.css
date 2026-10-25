@@ -482,11 +482,20 @@ table.data-table td.mono {
 
 /* Print receipt */
 @media print {
+  @page {
+    size: 80mm auto;
+    margin: 0;
+  }
+
   html, body {
     background: #ffffff !important;
-    color: #0f172a !important;
+    color: #000000 !important;
     margin: 0 !important;
     padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
   }
 
   /* Hide interactive navigation chrome and buttons */
@@ -505,23 +514,126 @@ table.data-table td.mono {
     background: transparent !important;
   }
 
-  /* 1. When printing POS Receipt */
-  body:has(#printable-receipt) * {
-    visibility: hidden;
+  /* Reset all modal backdrops, overlays and boxes so they don't clip or trap fixed elements */
+  .modal-overlay {
+    position: static !important;
+    inset: auto !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    transform: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    display: block !important;
+    visibility: visible !important;
   }
+
+  .modal-box {
+    position: static !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    max-height: none !important;
+    height: auto !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    display: block !important;
+    visibility: visible !important;
+  }
+
+  /* 1. When printing POS Receipt */
+  body:has(#printable-receipt) {
+    background: #ffffff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Completely collapse all siblings, headers, filters, and tables outside the receipt */
+  body:has(#printable-receipt) aside,
+  body:has(#printable-receipt) header,
+  body:has(#printable-receipt) nav,
+  body:has(#printable-receipt) button,
+  body:has(#printable-receipt) .no-print,
+  body:has(#printable-receipt) main > div > div:not(:has(#printable-receipt)),
+  body:has(#printable-receipt) main > div:not(:has(#printable-receipt)) {
+    display: none !important;
+  }
+
+  body:has(#printable-receipt) .modal-overlay,
+  body:has(#printable-receipt) .modal-box,
   #printable-receipt,
   #printable-receipt * {
-    visibility: visible;
+    visibility: visible !important;
   }
+
   #printable-receipt {
-    position: fixed;
-    left: 0;
-    top: 0;
-    width: 100%;
-    color: #000 !important;
-    background: #fff !important;
-    padding: 10px;
-    font-family: monospace;
+    position: static !important;
+    width: 76mm !important;
+    max-width: 76mm !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+    color: #000000 !important;
+    background: #ffffff !important;
+    font-family: 'Courier New', Courier, monospace !important;
+    font-size: 11px !important;
+    line-height: 1.35 !important;
+    overflow: visible !important;
+    max-height: none !important;
+    display: block !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* When printing Customer Refund Slip */
+  body:has(#printable-refund-slip) {
+    background: #ffffff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  body:has(#printable-refund-slip) aside,
+  body:has(#printable-refund-slip) header,
+  body:has(#printable-refund-slip) nav,
+  body:has(#printable-refund-slip) button,
+  body:has(#printable-refund-slip) .no-print,
+  body:has(#printable-refund-slip) main > div > div:not(:has(#printable-refund-slip)),
+  body:has(#printable-refund-slip) main > div:not(:has(#printable-refund-slip)) {
+    display: none !important;
+  }
+
+  body:has(#printable-refund-slip) .modal-overlay,
+  body:has(#printable-refund-slip) .modal-box,
+  #printable-refund-slip,
+  #printable-refund-slip * {
+    visibility: visible !important;
+  }
+
+  #printable-refund-slip {
+    position: static !important;
+    width: 76mm !important;
+    max-width: 76mm !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+    color: #000000 !important;
+    background: #ffffff !important;
+    font-family: 'Courier New', Courier, monospace !important;
+    font-size: 11px !important;
+    line-height: 1.35 !important;
+    overflow: visible !important;
+    max-height: none !important;
+    display: block !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   /* 2. When printing Staff ID Badge */

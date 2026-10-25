@@ -137,6 +137,7 @@ export default function PrintableReceipt({
       >
         {/* Modal Header */}
         <div
+          className="no-print"
           style={{
             padding: "16px 20px",
             borderBottom: "1px solid var(--border)",
@@ -474,6 +475,7 @@ export default function PrintableReceipt({
 
         {/* Modal Footer Actions */}
         <div
+          className="no-print"
           style={{
             padding: "14px 20px",
             borderTop: "1px solid var(--border)",
@@ -492,6 +494,55 @@ export default function PrintableReceipt({
             </button>
           )}
         </div>
+
+        {/* Scoped print rules for thermal receipt */}
+        <style jsx global>{`
+          @media print {
+            aside,
+            header,
+            nav,
+            button,
+            .no-print,
+            main > div > div:not(:has(#printable-receipt)),
+            main > div:not(:has(#printable-receipt)) {
+              display: none !important;
+            }
+
+            .modal-overlay,
+            .modal-box {
+              position: static !important;
+              background: transparent !important;
+              backdrop-filter: none !important;
+              -webkit-backdrop-filter: none !important;
+              transform: none !important;
+              overflow: visible !important;
+              max-height: none !important;
+              height: auto !important;
+              padding: 0 !important;
+              margin: 0 !important;
+              border: none !important;
+              box-shadow: none !important;
+              display: block !important;
+            }
+
+            #printable-receipt {
+              position: static !important;
+              width: 76mm !important;
+              max-width: 76mm !important;
+              margin: 0 auto !important;
+              padding: 0 !important;
+              overflow: visible !important;
+              max-height: none !important;
+              background: #ffffff !important;
+              color: #000000 !important;
+              display: block !important;
+              box-sizing: border-box !important;
+              font-family: 'Courier New', Courier, monospace !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+          }
+        `}</style>
       </div>
     </div>
   );

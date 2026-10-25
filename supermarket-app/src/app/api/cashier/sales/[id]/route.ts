@@ -5,12 +5,20 @@ import { query } from "@/lib/db";
 export async function GET(_: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await context.params;
-    const saleId = Number(id);
+    const rawInput = decodeURIComponent(id || "").trim();
 
-    if (isNaN(saleId)) {
-      return NextResponse.json({ error: "Invalid sale ID" }, { status: 400 });
+    if (!rawInput) {
+      return NextResponse.json({ error: "Sale ID or Receipt Number is required" }, { status: 400 });
     }
 
+    // Try parsing as direct numeric ID
+    const directNumericId = !isNaN(Number(rawInput)) ? Number(rawInput) : null;
+
+    // Try extracting trailing digits (e.g. REC-BR03-000072 -> 72)
+    const trailingMatch = rawInput.match(/(\d+)$/);
+    const trailingId = trailingMatch ? Number(trailingMatch[1]) : null;
+
+    // Search sale by direct ID, receipt string, or trailing ID
     const [sale]: any = await query(`
       SELECT 
         s.sale_id,
@@ -42,14 +50,26 @@ export async function GET(_: Request, context: { params: Promise<{ id: string }>
       JOIN employees e ON s.cashier_id = e.employee_id
       LEFT JOIN customers c ON s.customer_id = c.customer_id
       WHERE s.sale_id = ?
-    `, [saleId]);
+         OR CONCAT('REC-', COALESCE(b.branch_code, 'BR'), '-', LPAD(s.sale_id, 6, '0')) = ?
+         OR CONCAT(COALESCE(b.branch_code, 'BR'), '-', LPAD(s.sale_id, 6, '0')) = ?
+         OR (? IS NOT NULL AND s.sale_id = ?)
+      LIMIT 1
+    `, [
+      directNumericId || -1,
+      rawInput,
+      rawInput,
+      trailingId,
+      trailingId || -1,
+    ]);
 
     if (!sale) {
-      return NextResponse.json({ error: "Sale not found" }, { status: 404 });
+      return NextResponse.json({ error: `Sale not found for "${rawInput}"` }, { status: 404 });
     }
 
+    const saleId = sale.sale_id;
+
     // Line items with product details and existing returns
-    const items = await query<any>(`
+    const rawItems = await query<any>(`
       SELECT 
         si.sale_item_id,
         si.sale_id,
@@ -76,6 +96,21 @@ export async function GET(_: Request, context: { params: Promise<{ id: string }>
       WHERE si.sale_id = ?
       ORDER BY si.sale_item_id ASC
     `, [saleId]);
+
+    const items = rawItems.map((item) => {
+      const soldQty = Number(item.quantity || 0);
+      const retQty = Number(item.returned_quantity || 0);
+      const remQty = Math.max(0, soldQty - retQty);
+      return {
+        ...item,
+        quantity: soldQty,
+        returned_quantity: retQty,
+        remaining_returnable_qty: remQty,
+        unit_price: Number(item.unit_price || 0),
+        discount_amount: Number(item.discount_amount || 0),
+        line_total: Number(item.line_total || 0),
+      };
+    });
 
     // Payment records
     const payments = await query<any>(`
@@ -112,6 +147,10 @@ export async function GET(_: Request, context: { params: Promise<{ id: string }>
 
     return NextResponse.json({
       ...sale,
+      subtotal: Number(sale.subtotal || 0),
+      discount_total: Number(sale.discount_total || 0),
+      tax_total: Number(sale.tax_total || 0),
+      total_amount: Number(sale.total_amount || 0),
       receipt_number: receiptNumber,
       tendered_cash: tenderedVal,
       amountTendered: tenderedVal,

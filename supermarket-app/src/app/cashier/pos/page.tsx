@@ -1329,78 +1329,7 @@ export default function POSBillingPage() {
                 </div>
               );
             })()}
-
-            {/* Promotional Coupon Section */}
-            <div
-              style={{
-                background: appliedCoupon ? "#ecfdf5" : "#f8fafc",
-                border: appliedCoupon ? "1px solid #a7f3d0" : "1px solid var(--border)",
-                padding: "10px 14px",
-                borderRadius: 10,
-                marginBottom: 14,
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-secondary)" }}>
-                  🏷️ Promotional Coupon
-                </span>
-                {appliedCoupon && (
-                  <span style={{ fontSize: 11, fontWeight: 700, color: "#34d399" }}>
-                    ✓ Applied: <strong>{appliedCoupon}</strong>
-                  </span>
-                )}
-              </div>
-              <div style={{ display: "flex", gap: 8 }}>
-                <input
-                  type="text"
-                  className="input"
-                  style={{
-                    flex: 1,
-                    padding: "6px 10px",
-                    fontSize: 12,
-                    textTransform: "uppercase",
-                    fontFamily: "monospace",
-                    letterSpacing: "0.05em",
-                  }}
-                  placeholder="Enter coupon code (e.g. TOP20, DAIRY10)..."
-                  value={couponCode}
-                  onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                  disabled={!!appliedCoupon}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && couponCode.trim() && !appliedCoupon) {
-                      e.preventDefault();
-                      setAppliedCoupon(couponCode.trim().toUpperCase());
-                    }
-                  }}
-                />
-                {appliedCoupon ? (
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    style={{ fontSize: 11, padding: "6px 12px", color: "var(--accent-rose)" }}
-                    onClick={() => {
-                      setAppliedCoupon(null);
-                      setCouponCode("");
-                    }}
-                  >
-                    Remove
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    style={{ fontSize: 11, padding: "6px 12px" }}
-                    onClick={() => {
-                      if (!couponCode.trim()) return;
-                      setAppliedCoupon(couponCode.trim().toUpperCase());
-                    }}
-                  >
-                    Apply
-                  </button>
-                )}
-              </div>
-            </div>
-
+            
             {/* Customer Loyalty Banner in Checkout */}
             {customer && (() => {
               const currentPoints = Number(customer.points_balance || 0);

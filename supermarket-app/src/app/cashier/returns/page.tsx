@@ -4,7 +4,9 @@ import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useCashier, ManagerUser } from "@/lib/cashierContext";
+import { useApp } from "@/lib/context";
 import ManagerAuthModal from "@/components/ManagerAuthModal";
+import PrintableRefundSlip, { RefundSlipData } from "@/components/PrintableRefundSlip";
 
 interface SaleItemReturnInfo {
   sale_item_id: number;
@@ -23,23 +25,17 @@ interface SaleData {
   sale_id: number;
   receipt_number: string;
   branch_name: string;
+  branch_code?: string;
   cashier_name: string;
   customer_name?: string | null;
+  customer_card?: string | null;
   sale_date: string;
   status: string;
+  subtotal: number;
+  discount_total: number;
+  tax_total: number;
   total_amount: number;
   items: SaleItemReturnInfo[];
-}
-
-interface ProcessedReturnRecord {
-  returnId: number;
-  saleId: number;
-  productName: string;
-  barcode: string;
-  quantity: number;
-  refundAmount: number;
-  restocked: boolean;
-  managerName: string;
 }
 
 function ReturnsContent() {
@@ -49,11 +45,17 @@ function ReturnsContent() {
   const preItemId = searchParams.get("itemId");
 
   const { cashier } = useCashier();
+  const { authenticatedUser } = useApp();
+  const activeEmployeeId = cashier?.employee_id || authenticatedUser?.employee_id;
 
   const [saleSearch, setSaleSearch] = useState(preSaleId || "");
   const [sale, setSale] = useState<SaleData | null>(null);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState("");
+
+  // Recent sales for quick 1-click lookup
+  const [recentSales, setRecentSales] = useState<any[]>([]);
+  const [loadingRecent, setLoadingRecent] = useState(false);
 
   // Return selection form
   const [selectedItemId, setSelectedItemId] = useState<number | null>(
@@ -62,16 +64,38 @@ function ReturnsContent() {
   const [returnQty, setReturnQty] = useState<number>(1);
   const [returnReason, setReturnReason] = useState("Damaged product packaging");
   const [customReason, setCustomReason] = useState("");
+  const [refundMethod, setRefundMethod] = useState<"CASH" | "CARD" | "STORE_CREDIT">("CASH");
   const [restockInventory, setRestockInventory] = useState(true);
 
   // Manager Approval Modal
   const [showManagerModal, setShowManagerModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [processedReturn, setProcessedReturn] = useState<ProcessedReturnRecord | null>(null);
+  const [processedReturn, setProcessedReturn] = useState<RefundSlipData | null>(null);
+  const [showPrintModal, setShowPrintModal] = useState(false);
 
-  const fetchSale = async (id: string) => {
-    const cleanId = id.replace(/\D/g, "");
-    if (!cleanId) return;
+  // Fetch recent sales for quick lookup
+  useEffect(() => {
+    const fetchRecentSales = async () => {
+      setLoadingRecent(true);
+      try {
+        const branchParam = cashier?.branch_id ? `&branchId=${cashier.branch_id}` : "";
+        const res = await fetch(`/api/cashier/sales?pageSize=5&status=COMPLETED${branchParam}`);
+        const data = await res.json();
+        if (data.sales && Array.isArray(data.sales)) {
+          setRecentSales(data.sales);
+        }
+      } catch (err) {
+        console.warn("Failed to load recent sales:", err);
+      } finally {
+        setLoadingRecent(false);
+      }
+    };
+    fetchRecentSales();
+  }, [cashier?.branch_id]);
+
+  const fetchSale = async (queryInput: string) => {
+    const cleanQuery = queryInput.trim();
+    if (!cleanQuery) return;
 
     setSearching(true);
     setSearchError("");
@@ -79,25 +103,25 @@ function ReturnsContent() {
     setProcessedReturn(null);
 
     try {
-      const res = await fetch(`/api/cashier/sales/${cleanId}`);
+      const res = await fetch(`/api/cashier/sales/${encodeURIComponent(cleanQuery)}`);
       const data = await res.json();
       if (data.sale_id) {
         if (data.status === "CANCELLED") {
-          setSearchError(`Sale #${data.sale_id} has been voided/cancelled. Returns cannot be processed.`);
+          setSearchError(`Sale #${data.sale_id} (${data.receipt_number}) was voided/cancelled. Returns cannot be processed.`);
           return;
         }
         setSale(data);
         if (preItemId) {
           setSelectedItemId(Number(preItemId));
         } else if (data.items && data.items.length > 0) {
-          const firstEligible = data.items.find((i: SaleItemReturnInfo) => i.remaining_returnable_qty > 0);
+          const firstEligible = data.items.find((i: SaleItemReturnInfo) => Number(i.remaining_returnable_qty) > 0);
           if (firstEligible) setSelectedItemId(firstEligible.sale_item_id);
         }
       } else {
         setSearchError(data.error || "Sale not found");
       }
     } catch {
-      setSearchError("Failed to lookup sale");
+      setSearchError("Failed to lookup sale. Please verify network connection or receipt number.");
     } finally {
       setSearching(false);
     }
@@ -116,32 +140,51 @@ function ReturnsContent() {
 
   const selectedItem = sale?.items.find((i) => i.sale_item_id === selectedItemId);
 
-  // Calculate refund amount
-  const calculatedRefund = selectedItem
-    ? Number(
-        (
-          (selectedItem.unit_price - selectedItem.discount_amount / selectedItem.quantity) *
-          returnQty
-        ).toFixed(2)
-      )
+  // Calculate tax ratio if VAT was applied on sale
+  const saleSubtotal = Number(sale?.subtotal || 0);
+  const saleTax = Number(sale?.tax_total || 0);
+  const taxRatio = saleSubtotal > 0 && saleTax > 0 ? (saleTax / saleSubtotal) : 0;
+
+  // Calculate refund amount (effective price after item discount, plus proportional tax)
+  const itemNetPrice = selectedItem
+    ? Math.max(0, Number(selectedItem.unit_price) - (Number(selectedItem.discount_amount || 0) / Number(selectedItem.quantity || 1)))
     : 0;
+
+  const calculatedRefund = selectedItem
+    ? Number((itemNetPrice * (1 + taxRatio) * returnQty).toFixed(2))
+    : 0;
+
+  // Sync returnQty within bounds when selectedItem changes
+  useEffect(() => {
+    if (selectedItem) {
+      const maxAvailable = Number(selectedItem.remaining_returnable_qty || 0);
+      setReturnQty((prev) => Math.max(1, Math.min(prev, Math.max(1, maxAvailable))));
+    }
+  }, [selectedItemId, selectedItem]);
 
   const handleReturnSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedItem) {
-      alert("Please select an item to return.");
+      alert("Please select an eligible item to return.");
       return;
     }
-    if (returnQty <= 0 || returnQty > selectedItem.remaining_returnable_qty) {
-      alert(`Invalid quantity. Maximum returnable units: ${selectedItem.remaining_returnable_qty}`);
+    const maxQty = Number(selectedItem.remaining_returnable_qty || 0);
+    if (returnQty <= 0 || returnQty > maxQty) {
+      alert(`Invalid quantity. Maximum returnable units: ${maxQty}`);
       return;
     }
     // Prompt Manager Authorization Modal
     setShowManagerModal(true);
   };
 
-  const executeReturn = async (mgr: ManagerUser) => {
-    if (!cashier || !selectedItem) return;
+  const executeReturn = async (mgr: ManagerUser, pin: string) => {
+    const empId = activeEmployeeId;
+    if (!empId) {
+      alert("No active cashier session found. Please sign in.");
+      return;
+    }
+    if (!selectedItem) return;
+
     setSubmitting(true);
     try {
       const finalReason = returnReason === "Other" ? customReason : returnReason;
@@ -153,17 +196,23 @@ function ReturnsContent() {
           saleItemId: selectedItem.sale_item_id,
           quantity: returnQty,
           reason: finalReason || "Returned product",
-          cashierId: cashier.employee_id,
+          refundMethod,
+          cashierId: empId,
           managerId: mgr.employee_id,
-          managerPin: "1234",
+          managerPin: pin || "1234",
           restockInventory,
         }),
       });
 
       const data = await res.json();
       if (data.success) {
-        setProcessedReturn(data.returnRecord);
-        // Refresh sale details
+        const record = data.returnRecord;
+        setProcessedReturn({
+          ...record,
+          customerName: sale?.customer_name || null,
+        });
+        setShowPrintModal(true);
+        // Refresh sale details to show updated remaining quantities & return history
         if (sale) fetchSale(String(sale.sale_id));
       } else {
         alert("Return failed: " + data.error);
@@ -215,14 +264,14 @@ function ReturnsContent() {
               ← Back to {preSaleId || sale?.sale_id ? `Sale #${preSaleId || sale?.sale_id}` : "Previous Page"}
             </button>
             <span style={{ fontSize: 12, color: "var(--text-muted)" }}>/</span>
-            <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>Returns & Customer Refunds</span>
+            <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>Returns &amp; Customer Refunds</span>
           </div>
 
           <h1 style={{ fontSize: 22, fontWeight: 800, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 8 }}>
-            ↩️ Returns & Customer Refunds
+            ↩️ Returns &amp; Customer Refunds
           </h1>
           <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
-            Audit-trailed return terminal with manager authorization and conditional inventory restock
+            Audit-trailed return terminal with manager authorization, conditional inventory restock, and customer credit slip issuance
           </p>
         </div>
 
@@ -260,31 +309,69 @@ function ReturnsContent() {
           Step 1: Locate Original Completed Sale
         </div>
 
-        <form onSubmit={handleSearchSubmit} style={{ display: "flex", gap: 10, maxWidth: 500 }}>
+        <form onSubmit={handleSearchSubmit} style={{ display: "flex", gap: 10, maxWidth: 560, flexWrap: "wrap" }}>
           <input
             type="text"
             className="input"
-            placeholder="Enter Receipt # or Sale ID (e.g. 1, 2, REC-BR01-000001)..."
+            placeholder="Enter Receipt # or Sale ID (e.g. REC-BR03-000072, 72)..."
             value={saleSearch}
             onChange={(e) => setSaleSearch(e.target.value)}
+            style={{ flex: 1, minWidth: 260 }}
           />
           <button type="submit" className="btn btn-primary" disabled={searching}>
-            {searching ? "Searching..." : "Find Sale"}
+            {searching ? "Searching..." : "🔍 Find Sale"}
           </button>
         </form>
+
+        {/* Quick Lookup Chips */}
+        {recentSales.length > 0 && !sale && (
+          <div style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)" }}>Recent Completed Sales:</span>
+            {recentSales.map((s) => (
+              <button
+                key={s.sale_id}
+                type="button"
+                onClick={() => {
+                  setSaleSearch(s.receipt_number || String(s.sale_id));
+                  fetchSale(String(s.sale_id));
+                }}
+                style={{
+                  background: "var(--bg-surface)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 6,
+                  padding: "4px 8px",
+                  fontSize: 11,
+                  color: "var(--accent-blue)",
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                <span>🧾 {s.receipt_number}</span>
+                <span style={{ color: "var(--text-muted)", fontSize: 10 }}>({fmt(s.total_amount)})</span>
+              </button>
+            ))}
+          </div>
+        )}
 
         {searchError && (
           <div
             style={{
               marginTop: 12,
-              padding: "8px 12px",
+              padding: "10px 14px",
               borderRadius: 8,
               background: "rgba(248, 81, 73, 0.15)",
               color: "var(--accent-rose)",
-              fontSize: 12,
+              fontSize: 12.5,
+              border: "1px solid rgba(248, 81, 73, 0.3)",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
             }}
           >
-            ⚠️ {searchError}
+            <span>⚠️</span>
+            <span>{searchError}</span>
           </div>
         )}
       </div>
@@ -305,11 +392,13 @@ function ReturnsContent() {
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <div>
-                <div style={{ fontWeight: 800, fontSize: 15, color: "var(--text-primary)" }}>
+                <div style={{ fontWeight: 800, fontSize: 16, color: "var(--text-primary)" }}>
                   Receipt #{sale.receipt_number}
                 </div>
-                <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                  Processed at {sale.branch_name} on {new Date(sale.sale_date).toLocaleDateString("en-LK")}
+                <div style={{ fontSize: 11.5, color: "var(--text-muted)", marginTop: 2 }}>
+                  Processed at <strong>{sale.branch_name}</strong> by {sale.cashier_name} on{" "}
+                  {new Date(sale.sale_date).toLocaleDateString("en-LK")}
+                  {sale.customer_name ? ` • Customer: ${sale.customer_name}` : ""}
                 </div>
               </div>
               <span className="badge badge-completed">{sale.status}</span>
@@ -328,20 +417,21 @@ function ReturnsContent() {
                     <th style={{ textAlign: "center" }}>Sold</th>
                     <th style={{ textAlign: "center" }}>Ret.</th>
                     <th style={{ textAlign: "center" }}>Eligible</th>
-                    <th style={{ textAlign: "right" }}>Net Price</th>
+                    <th style={{ textAlign: "right" }}>Net Unit</th>
                   </tr>
                 </thead>
                 <tbody>
                   {sale.items.map((item) => {
                     const isSelected = selectedItemId === item.sale_item_id;
-                    const canReturn = item.remaining_returnable_qty > 0;
+                    const canReturn = Number(item.remaining_returnable_qty) > 0;
+                    const netPrice = item.unit_price - (Number(item.discount_amount || 0) / Number(item.quantity || 1));
                     return (
                       <tr
                         key={item.sale_item_id}
                         onClick={() => canReturn && setSelectedItemId(item.sale_item_id)}
                         style={{
                           cursor: canReturn ? "pointer" : "not-allowed",
-                          background: isSelected ? "rgba(88, 166, 255, 0.08)" : undefined,
+                          background: isSelected ? "rgba(88, 166, 255, 0.12)" : undefined,
                         }}
                       >
                         <td>
@@ -365,13 +455,30 @@ function ReturnsContent() {
                           {item.remaining_returnable_qty}
                         </td>
                         <td style={{ textAlign: "right", fontWeight: 700 }}>
-                          {fmt(item.unit_price - item.discount_amount / item.quantity)}
+                          {fmt(netPrice)}
                         </td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
+            </div>
+
+            {/* Sale Summary Footer */}
+            <div
+              style={{
+                marginTop: 12,
+                padding: "8px 12px",
+                borderRadius: 8,
+                background: "var(--bg-surface)",
+                fontSize: 11,
+                color: "var(--text-muted)",
+                display: "flex",
+                justifyContent: "space-between",
+              }}
+            >
+              <span>Subtotal: {fmt(sale.subtotal)} | Tax: {fmt(sale.tax_total)}</span>
+              <span>Total Paid: <strong style={{ color: "var(--text-primary)" }}>{fmt(sale.total_amount)}</strong></span>
             </div>
           </div>
 
@@ -390,7 +497,7 @@ function ReturnsContent() {
             {selectedItem ? (
               <form onSubmit={handleReturnSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                 <div style={{ fontWeight: 800, fontSize: 15, color: "var(--text-primary)" }}>
-                  Step 2: Return Details & Refund Calculation
+                  Step 2: Return Details &amp; Refund Calculation
                 </div>
 
                 <div
@@ -405,7 +512,7 @@ function ReturnsContent() {
                   <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginTop: 2 }}>
                     {selectedItem.product_name}
                   </div>
-                  <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>
+                  <div style={{ fontSize: 11, color: "var(--text-secondary)", marginTop: 2 }}>
                     Remaining Returnable Units: <strong>{selectedItem.remaining_returnable_qty}</strong>
                   </div>
                 </div>
@@ -421,7 +528,11 @@ function ReturnsContent() {
                     max={selectedItem.remaining_returnable_qty}
                     className="input"
                     value={returnQty}
-                    onChange={(e) => setReturnQty(Math.max(1, Math.min(selectedItem.remaining_returnable_qty, Number(e.target.value))))}
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      const maxAllowed = Number(selectedItem.remaining_returnable_qty || 1);
+                      setReturnQty(Math.max(1, Math.min(maxAllowed, val)));
+                    }}
                     required
                   />
                 </div>
@@ -456,6 +567,63 @@ function ReturnsContent() {
                   />
                 )}
 
+                {/* Refund Method Selection */}
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: 6 }}>
+                    Refund Payout Method
+                  </label>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+                    <button
+                      type="button"
+                      onClick={() => setRefundMethod("CASH")}
+                      style={{
+                        padding: "8px 6px",
+                        fontSize: 12,
+                        fontWeight: 600,
+                        borderRadius: 8,
+                        border: refundMethod === "CASH" ? "2px solid var(--accent-emerald)" : "1px solid var(--border)",
+                        background: refundMethod === "CASH" ? "rgba(16, 185, 129, 0.12)" : "var(--bg-surface)",
+                        color: refundMethod === "CASH" ? "var(--accent-emerald)" : "var(--text-secondary)",
+                        cursor: "pointer",
+                      }}
+                    >
+                      💵 Cash Drawer
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRefundMethod("CARD")}
+                      style={{
+                        padding: "8px 6px",
+                        fontSize: 12,
+                        fontWeight: 600,
+                        borderRadius: 8,
+                        border: refundMethod === "CARD" ? "2px solid var(--accent-blue)" : "1px solid var(--border)",
+                        background: refundMethod === "CARD" ? "rgba(56, 189, 248, 0.12)" : "var(--bg-surface)",
+                        color: refundMethod === "CARD" ? "var(--accent-blue)" : "var(--text-secondary)",
+                        cursor: "pointer",
+                      }}
+                    >
+                      💳 Card Reversal
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRefundMethod("STORE_CREDIT")}
+                      style={{
+                        padding: "8px 6px",
+                        fontSize: 12,
+                        fontWeight: 600,
+                        borderRadius: 8,
+                        border: refundMethod === "STORE_CREDIT" ? "2px solid var(--accent-purple)" : "1px solid var(--border)",
+                        background: refundMethod === "STORE_CREDIT" ? "rgba(168, 85, 247, 0.12)" : "var(--bg-surface)",
+                        color: refundMethod === "STORE_CREDIT" ? "var(--accent-purple)" : "var(--text-secondary)",
+                        cursor: "pointer",
+                      }}
+                    >
+                      🎫 Store Credit
+                    </button>
+                  </div>
+                </div>
+
                 {/* Restock to shelf checkbox */}
                 <div
                   style={{
@@ -463,7 +631,7 @@ function ReturnsContent() {
                     alignItems: "center",
                     gap: 10,
                     padding: "8px 12px",
-                    background: "#f8fafc",
+                    background: "var(--bg-surface)",
                     borderRadius: 8,
                     border: "1px solid var(--border)",
                   }}
@@ -475,7 +643,7 @@ function ReturnsContent() {
                     onChange={(e) => setRestockInventory(e.target.checked)}
                   />
                   <label htmlFor="restockCheck" style={{ fontSize: 12, cursor: "pointer", color: "var(--text-primary)" }}>
-                    <strong>Restock to Inventory:</strong> Item is undamaged and approved for resale
+                    <strong>Restock to Inventory:</strong> Product is undamaged and approved for resale
                   </label>
                 </div>
 
@@ -492,9 +660,10 @@ function ReturnsContent() {
                   }}
                 >
                   <div>
-                    <div style={{ fontSize: 11, color: "var(--text-muted)" }}>Total Refund Amount</div>
+                    <div style={{ fontSize: 11, color: "var(--text-muted)" }}>Total Customer Refund</div>
                     <div style={{ fontSize: 10.5, color: "var(--text-secondary)" }}>
-                      Cash or original payment refund
+                      {refundMethod === "CASH" ? "Handed in cash from register" : refundMethod === "CARD" ? "Card reversal" : "Issued as credit note"}
+                      {taxRatio > 0 ? " (includes tax)" : ""}
                     </div>
                   </div>
                   <div style={{ fontSize: 22, fontWeight: 900, color: "var(--accent-rose)" }}>
@@ -508,7 +677,7 @@ function ReturnsContent() {
                   style={{ padding: "12px 18px", fontSize: 14, justifyContent: "center" }}
                   disabled={submitting}
                 >
-                  🛡️ Request Manager Approval & Process Refund
+                  🛡️ Request Manager Approval &amp; Process Refund
                 </button>
               </form>
             ) : (
@@ -520,7 +689,7 @@ function ReturnsContent() {
         </div>
       )}
 
-      {/* Return Success Credit Slip Receipt */}
+      {/* Return Success Credit Slip Receipt Banner */}
       {processedReturn && (
         <div
           style={{
@@ -539,25 +708,25 @@ function ReturnsContent() {
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ fontSize: 22 }}>✅</span>
               <h3 style={{ fontSize: 17, fontWeight: 800, color: "var(--accent-emerald)" }}>
-                Return #{processedReturn.returnId} Processed Successfully!
+                Return Note #RET-{String(processedReturn.returnId).padStart(6, "0")} Processed Successfully!
               </h3>
             </div>
             <p style={{ fontSize: 13, color: "var(--text-primary)", marginTop: 6 }}>
-              Refunded <strong>{fmt(processedReturn.refundAmount)}</strong> for {processedReturn.quantity}×{" "}
-              {processedReturn.productName}
+              Refunded <strong>{fmt(processedReturn.refundAmount)}</strong> via <strong>{processedReturn.refundMethod}</strong> for{" "}
+              {processedReturn.quantity}× {processedReturn.productName}
             </p>
-            <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>
-              Authorized by Manager: <strong>{processedReturn.managerName}</strong> • Restocked:{" "}
+            <div style={{ fontSize: 11.5, color: "var(--text-muted)", marginTop: 2 }}>
+              Authorized by: <strong>{processedReturn.managerName}</strong> • Restocked:{" "}
               {processedReturn.restocked ? "Yes (Inventory updated)" : "No (Written off / Damaged)"}
             </div>
           </div>
 
           <div style={{ display: "flex", gap: 10 }}>
-            <button className="btn btn-primary" onClick={() => window.print()}>
-              🖨️ Print Refund Credit Slip
+            <button className="btn btn-primary" onClick={() => setShowPrintModal(true)}>
+              🖨️ View &amp; Print Refund Slip
             </button>
             <Link href="/cashier/history" className="btn btn-ghost">
-              View History
+              📋 All Transactions
             </Link>
           </div>
         </div>
@@ -567,12 +736,20 @@ function ReturnsContent() {
       <ManagerAuthModal
         isOpen={showManagerModal}
         title="Manager Approval: Authorize Customer Refund"
-        description={`Authorizing refund of ${fmt(calculatedRefund)} for ${returnQty}× ${selectedItem?.product_name}.`}
+        description={`Authorizing refund of ${fmt(calculatedRefund)} via ${refundMethod} for ${returnQty}× ${selectedItem?.product_name}.`}
         onClose={() => setShowManagerModal(false)}
-        onSuccess={(mgr) => {
-          executeReturn(mgr);
+        onSuccess={(mgr, pin) => {
+          executeReturn(mgr, pin);
         }}
       />
+
+      {/* Printable Refund Credit Note Modal */}
+      {showPrintModal && processedReturn && (
+        <PrintableRefundSlip
+          refund={processedReturn}
+          onClose={() => setShowPrintModal(false)}
+        />
+      )}
     </div>
   );
 }
