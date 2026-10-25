@@ -479,41 +479,6 @@ export function Sidebar() {
         </div>
       </div>
 
-      {/* User Footer */}
-      {!collapsed ? (
-        <div className="p-3 border-t border-slate-200 bg-slate-50/80">
-          <div className="flex items-center gap-2.5">
-            <div
-              className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ${isAdmin
-                  ? "bg-gradient-to-tr from-purple-600 to-indigo-600"
-                  : "bg-gradient-to-tr from-blue-600 to-indigo-500"
-                }`}
-            >
-              {currentEmployee?.full_name ? currentEmployee.full_name[0] : "A"}
-            </div>
-            <div className="overflow-hidden">
-              <div className="text-xs font-semibold text-slate-800 truncate">
-                {currentEmployee?.full_name ?? "Administrator"}
-              </div>
-              <div
-                className={`text-[10px] font-mono font-semibold ${isAdmin ? "text-purple-600" : "text-emerald-600"
-                  }`}
-              >
-                {isAdmin ? "SUPER ADMIN" : currentEmployee?.role ?? "STAFF"}
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="p-3 border-t border-slate-200 flex justify-center">
-          <div
-            className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ${isAdmin ? "bg-purple-600" : "bg-blue-600"
-              }`}
-          >
-            {currentEmployee?.full_name ? currentEmployee.full_name[0] : "A"}
-          </div>
-        </div>
-      )}
     </aside>
   );
 }
