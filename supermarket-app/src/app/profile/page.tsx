@@ -78,7 +78,7 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto animate-in fade-in duration-300 pb-12">
+    <div className="space-y-6 max-w-3xl mx-auto animate-in fade-in duration-300 pb-12">
       {/* Top Header */}
       <div className="flex items-center justify-between pb-4 border-b border-slate-200">
         <div>
@@ -88,7 +88,7 @@ export default function ProfilePage() {
           </div>
           <h1 className="text-2xl font-black text-slate-900 mt-1">Staff Profile &amp; Credentials</h1>
           <p className="text-xs text-slate-500 mt-1">
-            View your allocated store details, security role, and update your account password.
+            View allocated store details, security role, and update your account password.
           </p>
         </div>
 
@@ -194,20 +194,20 @@ export default function ProfilePage() {
       </div>
 
       {/* Change Password Card */}
-      <div className="rounded-2xl bg-white border border-slate-200 p-6 space-y-5 shadow-xs">
+      <div className="rounded-2xl bg-white border border-slate-200 p-6 space-y-4 shadow-xs">
         <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
           <KeyRound className="w-5 h-5 text-purple-600" />
           <div>
             <h3 className="text-sm font-bold text-slate-900">Change Account Password</h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Keep your credentials secure. Passwords must be at least 6 characters.
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              Keep your credentials secure. Passwords must be at least 6 characters long.
             </p>
           </div>
         </div>
 
         {passwordNotice && (
           <div
-            className={`p-3.5 rounded-xl text-xs flex items-center gap-2.5 font-medium border ${
+            className={`p-3 rounded-xl text-xs flex items-center gap-2.5 font-medium border ${
               passwordNotice.type === "success"
                 ? "bg-emerald-50 border-emerald-200 text-emerald-800"
                 : "bg-amber-50 border-amber-200 text-amber-800"

@@ -15,8 +15,6 @@ import {
   CheckCircle2,
   AlertCircle,
   Lock,
-  Clock,
-  ScanBarcode,
 } from "lucide-react";
 
 export default function CashierProfilePage() {
@@ -109,15 +107,6 @@ export default function CashierProfilePage() {
             Authenticated terminal operator details and login security credentials.
           </p>
         </div>
-
-        <Link
-          href="/cashier/activity"
-          className="btn btn-ghost"
-          style={{ padding: "8px 14px", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}
-        >
-          <Clock className="w-3.5 h-3.5 text-blue-400" />
-          <span>Shift Activity Logs</span>
-        </Link>
       </div>
 
       {/* Main Profile Details Card */}

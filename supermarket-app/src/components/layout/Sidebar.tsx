@@ -40,6 +40,7 @@ import {
   ArrowLeftRight,
   PackageSearch,
   Bell,
+  History,
 } from "lucide-react";
 
 interface NavItem {
@@ -77,8 +78,9 @@ const ADMIN_NAV_GROUPS: NavGroup[] = [
   {
     group: "SYSTEM & ACCOUNT",
     items: [
+      { title: "My Profile", href: "/profile", icon: UserCircle },
+      { title: "Sign-in History", href: "/activity", icon: History },
       { title: "System Settings", href: "/admin/settings", icon: Settings },
-      { title: "Admin Profile", href: "/profile", icon: UserCircle },
     ],
   },
 ];
@@ -125,6 +127,13 @@ const NAV_GROUPS: NavGroup[] = [
       { title: "Audit & Error Logs", href: "/admin/audit", icon: ShieldAlert, permission: "view_audit_log" },
     ],
   },
+  {
+    group: "ACCOUNT",
+    items: [
+      { title: "My Profile", href: "/profile", icon: UserCircle },
+      { title: "Sign-in History", href: "/activity", icon: History },
+    ],
+  },
 ];
 
 const CLERK_NAV_GROUPS: NavGroup[] = [
@@ -150,6 +159,7 @@ const CLERK_NAV_GROUPS: NavGroup[] = [
     group: "ACCOUNT",
     items: [
       { title: "My Profile", href: "/profile", icon: UserCircle },
+      { title: "Sign-in History", href: "/activity", icon: History },
     ],
   },
 ];
@@ -169,6 +179,7 @@ const MARKETING_NAV_GROUPS: NavGroup[] = [
     group: "ACCOUNT",
     items: [
       { title: "My Profile", href: "/profile", icon: UserCircle },
+      { title: "Sign-in History", href: "/activity", icon: History },
     ],
   },
 ];
@@ -189,6 +200,7 @@ const CATALOG_NAV_GROUPS: NavGroup[] = [
     group: "ACCOUNT",
     items: [
       { title: "My Profile", href: "/profile", icon: UserCircle },
+      { title: "Sign-in History", href: "/activity", icon: History },
     ],
   },
 ];
@@ -208,7 +220,6 @@ const CASHIER_NAV_GROUPS: NavGroup[] = [
     group: "STOCK & ACTIVITY",
     items: [
       { title: "Price & Stock Lookup", href: "/cashier/products", icon: PackageSearch },
-      { title: "Sign-in Logs & Alerts", href: "/cashier/activity", icon: Bell },
       { title: "Customers & Loyalty", href: "/customers", icon: Users },
     ],
   },
@@ -216,6 +227,7 @@ const CASHIER_NAV_GROUPS: NavGroup[] = [
     group: "ACCOUNT",
     items: [
       { title: "My Profile", href: "/cashier/profile", icon: UserCircle },
+      { title: "Sign-in History", href: "/cashier/activity", icon: History },
     ],
   },
 ];
@@ -325,12 +337,12 @@ export function Sidebar() {
                 role === "CATALOG_MANAGER"
                   ? "/catalog"
                   : role === "MARKETING"
-                  ? "/marketing/dashboard"
-                  : role === "STOCK_CLERK"
-                  ? "/inventory/dashboard"
-                  : role === "CASHIER"
-                  ? "/cashier/dashboard"
-                  : "/dashboard"
+                    ? "/marketing/dashboard"
+                    : role === "STOCK_CLERK"
+                      ? "/inventory/dashboard"
+                      : role === "CASHIER"
+                        ? "/cashier/dashboard"
+                        : "/dashboard"
               }
               className="flex items-center gap-3 transition-opacity hover:opacity-90"
             >
@@ -408,22 +420,20 @@ export function Sidebar() {
                     <Link
                       key={`${item.href}-${item.title}`}
                       href={item.href}
-                      className={`group relative flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
-                        active
+                      className={`group relative flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${active
                           ? "bg-blue-600 text-white shadow-xs font-semibold"
                           : item.highlight
-                          ? "bg-blue-50 text-blue-700 border border-blue-200/80 hover:bg-blue-100/80"
-                          : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/90 font-medium"
-                      } ${!allowed ? "opacity-60" : ""}`}
+                            ? "bg-blue-50 text-blue-700 border border-blue-200/80 hover:bg-blue-100/80"
+                            : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/90 font-medium"
+                        } ${!allowed ? "opacity-60" : ""}`}
                     >
                       <Icon
-                        className={`w-4 h-4 shrink-0 transition-colors ${
-                          active
+                        className={`w-4 h-4 shrink-0 transition-colors ${active
                             ? "text-white"
                             : item.highlight
-                            ? "text-blue-600"
-                            : "text-slate-400 group-hover:text-slate-700"
-                        }`}
+                              ? "text-blue-600"
+                              : "text-slate-400 group-hover:text-slate-700"
+                          }`}
                       />
                       {!collapsed && (
                         <div className="flex items-center justify-between w-full">
@@ -432,11 +442,10 @@ export function Sidebar() {
                             {!allowed && <Lock className="w-3 h-3 text-amber-500/80" />}
                             {item.badge && (
                               <span
-                                className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold ${
-                                  active
+                                className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold ${active
                                     ? "bg-blue-700 text-white"
                                     : "bg-blue-100 text-blue-700 border border-blue-200"
-                                }`}
+                                  }`}
                               >
                                 {item.badge}
                               </span>

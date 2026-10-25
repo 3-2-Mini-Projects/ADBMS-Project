@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { getServerSession } from "@/lib/auth";
+import { getServerSession, logAuthEvent } from "@/lib/auth";
 import { queryOne, query } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -68,6 +68,13 @@ export async function POST(req: Request) {
       "UPDATE employees SET password_hash = ? WHERE employee_id = ?",
       [newHash, session.employee_id]
     );
+
+    await logAuthEvent({
+      event: "PASSWORD_CHANGED" as any,
+      employee_id: session.employee_id,
+      email: session.email,
+      role: session.role,
+    });
 
     return NextResponse.json({ success: true, message: "Password updated successfully." });
   } catch (err: unknown) {
