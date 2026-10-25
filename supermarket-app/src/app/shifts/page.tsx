@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import type { Html5Qrcode } from "html5-qrcode";
+import { useRouter } from "next/navigation";
 import { useApp } from "@/lib/context";
 import { Shift } from "@/lib/types";
 import {
@@ -25,9 +26,24 @@ import {
 } from "lucide-react";
 
 export default function ShiftsPage() {
-  const { currentBranch, employees, showToast } = useApp();
+  const router = useRouter();
+  const { currentBranch, employees, showToast, currentEmployee, authenticatedUser } = useApp();
+  const userRole = currentEmployee?.role || authenticatedUser?.role;
+  const isCashier = userRole === "CASHIER";
+
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (isCashier) {
+      showToast("Access restricted: Shifts & Attendance are not accessible to cashiers.", "warning");
+      router.replace("/cashier/dashboard");
+    }
+  }, [isCashier, router, showToast]);
+
+  if (isCashier) {
+    return null;
+  }
 
   // Schedule Shift Modal
   const [addModalOpen, setAddModalOpen] = useState(false);

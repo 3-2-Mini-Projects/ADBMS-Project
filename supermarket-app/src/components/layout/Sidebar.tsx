@@ -39,6 +39,8 @@ import {
   Ticket,
   KeyRound,
   ArrowLeftRight,
+  PackageSearch,
+  Bell,
 } from "lucide-react";
 
 interface NavItem {
@@ -218,18 +220,19 @@ const CASHIER_NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    group: "CUSTOMERS & SHIFTS",
+    group: "STOCK & ACTIVITY",
     items: [
+      { title: "Price & Stock Lookup", href: "/cashier/products", icon: PackageSearch },
+      { title: "Sign-in Logs & Alerts", href: "/cashier/activity", icon: Bell },
       { title: "Customers & Loyalty", href: "/customers", icon: Users },
-      { title: "Shifts & Attendance", href: "/shifts", icon: Clock },
     ],
   },
   {
     group: "ACCOUNT",
     items: [
-      { title: "My Profile", href: "/profile", icon: UserCircle },
-      { title: "Settings", href: "/settings", icon: Settings },
-      { title: "Logout", href: "/logout", icon: LogOut },
+      { title: "My Profile", href: "/cashier/profile", icon: UserCircle },
+      { title: "Settings", href: "/cashier/settings", icon: Settings },
+      { title: "Sign Out", href: "/cashier/logout", icon: LogOut },
     ],
   },
 ];
@@ -270,6 +273,10 @@ export function Sidebar() {
   // Resolve exactly one active navigation item so multiple buttons don't light up simultaneously
   const resolveActiveHref = (): string | null => {
     // Role-specific aliases & landing pages
+    if (role === "CASHIER" && cleanPath === "/dashboard") {
+      return "/cashier/dashboard";
+    }
+
     if (role === "CATALOG_MANAGER" && cleanPath === "/dashboard") {
       return "/catalog";
     }

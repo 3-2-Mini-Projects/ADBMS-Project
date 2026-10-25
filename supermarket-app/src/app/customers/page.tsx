@@ -46,11 +46,15 @@ interface LoyaltyLedgerItem {
 
 export default function CustomersPage() {
   const pathname = usePathname();
-  const { showToast, branches, currentEmployee, authenticatedUser } = useApp();
+  const { showToast, branches, currentEmployee, authenticatedUser, currentBranch } = useApp();
   const isMarketing =
     pathname?.startsWith("/marketing") ||
     currentEmployee?.role === "MARKETING" ||
     authenticatedUser?.role === "MARKETING";
+  const isCashier =
+    pathname?.startsWith("/cashier") ||
+    currentEmployee?.role === "CASHIER" ||
+    authenticatedUser?.role === "CASHIER";
 
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -91,6 +95,12 @@ export default function CustomersPage() {
       const params = new URLSearchParams();
       if (q.trim()) params.append("search", q.trim());
       if (bId && bId !== "ALL") params.append("branchId", bId);
+      if (isCashier) {
+        params.append("isCashier", "true");
+        if (currentBranch?.branch_id) {
+          params.append("cashierBranchId", String(currentBranch.branch_id));
+        }
+      }
       const res = await fetch(`/api/customers?${params.toString()}`);
       const data = await res.json();
       if (Array.isArray(data)) setCustomers(data);
@@ -140,7 +150,10 @@ export default function CustomersPage() {
       const res = await fetch("/api/customers", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editingCustomer),
+        body: JSON.stringify({
+          ...editingCustomer,
+          role: isCashier ? "CASHIER" : undefined,
+        }),
       });
       const data = await res.json();
       if (res.ok && data.success) {
@@ -196,8 +209,8 @@ export default function CustomersPage() {
           </p>
         </div>
 
-        {/* Action Button: Register Customer (Hidden for Marketing Manager) */}
-        {!isMarketing && (
+        {/* Action Button: Register Customer (Hidden for Marketing & Cashier) */}
+        {!isMarketing && !isCashier && (
           <button
             onClick={() => setRegisterModalOpen(true)}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-all hover:scale-[1.02] active:scale-[0.98] self-start sm:self-auto"
@@ -207,6 +220,14 @@ export default function CustomersPage() {
           </button>
         )}
       </div>
+
+      {/* Cashier View Banner */}
+      {isCashier && (
+        <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-semibold shadow-xs">
+          <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0" />
+          <span>Cashier Portal: Showing all branches loyalty customers & your branch customers (You can edit name, phone, email & city)</span>
+        </div>
+      )}
 
       {/* Search & Branch Filter Controls */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
@@ -265,7 +286,9 @@ export default function CustomersPage() {
                 className="w-full bg-transparent text-xs text-slate-900 font-bold focus:outline-none cursor-pointer truncate"
               >
                 <option value="ALL" className="bg-white text-slate-900">
-                  All Branches (All Customers)
+                  {isCashier
+                    ? `All Loyalty Customers + ${currentBranch?.name || "My Branch"}`
+                    : "All Branches (All Customers)"}
                 </option>
                 {branches.map((b) => (
                   <option key={b.branch_id} value={String(b.branch_id)} className="bg-white text-slate-900">
@@ -357,7 +380,7 @@ export default function CustomersPage() {
                         <button
                           onClick={() => openCustomerEdit(c)}
                           className="px-2 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 shadow-xs transition-all flex items-center gap-1 text-[11px] font-semibold"
-                          title="Edit Customer"
+                          title="Edit Customer Details"
                         >
                           <Pencil className="w-3.5 h-3.5" />
                           <span>Edit</span>
@@ -513,6 +536,13 @@ export default function CustomersPage() {
               </button>
             </div>
 
+            {isCashier && (
+              <div className="text-[11px] bg-amber-50 border border-amber-200 text-amber-800 px-3 py-2 rounded-xl flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>Cashier Mode: You can update customer name, phone, email, and city. Membership tier and points balance are manager-protected.</span>
+              </div>
+            )}
+
             <form onSubmit={handleUpdateCustomer} className="space-y-4">
               {/* Row 1: Card Number & Full Name */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -618,28 +648,59 @@ export default function CustomersPage() {
               {/* Row 4: Membership Tier & Points Balance */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-semibold text-slate-700 block mb-1">Membership Tier</label>
-                  <select
-                    value={editingCustomer.tier}
-                    onChange={(e) => setEditingCustomer({ ...editingCustomer, tier: e.target.value as any })}
-                    className="w-full px-3 py-2 rounded-xl bg-white border border-slate-300 text-xs text-slate-900 shadow-xs focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-                  >
-                    <option value="BRONZE">BRONZE</option>
-                    <option value="SILVER">SILVER</option>
-                    <option value="GOLD">GOLD</option>
-                    <option value="PLATINUM">PLATINUM</option>
-                  </select>
+                  <label className="text-xs font-semibold text-slate-700 block mb-1 flex items-center justify-between">
+                    <span>Membership Tier</span>
+                    {isCashier && (
+                      <span className="text-[10px] text-amber-700 font-mono flex items-center gap-1 font-bold">
+                        <Lock className="w-2.5 h-2.5" />
+                        Manager Locked
+                      </span>
+                    )}
+                  </label>
+                  <div className="relative">
+                    <select
+                      disabled={isCashier}
+                      value={editingCustomer.tier}
+                      onChange={(e) => setEditingCustomer({ ...editingCustomer, tier: e.target.value as any })}
+                      className={`w-full px-3 py-2 rounded-xl border border-slate-300 text-xs text-slate-900 shadow-xs ${
+                        isCashier
+                          ? "bg-slate-100 cursor-not-allowed select-none text-slate-600"
+                          : "bg-white focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                      }`}
+                    >
+                      <option value="BRONZE">BRONZE</option>
+                      <option value="SILVER">SILVER</option>
+                      <option value="GOLD">GOLD</option>
+                      <option value="PLATINUM">PLATINUM</option>
+                    </select>
+                  </div>
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-slate-700 block mb-1">Points Balance</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={editingCustomer.points_balance}
-                    onChange={(e) => setEditingCustomer({ ...editingCustomer, points_balance: Number(e.target.value) })}
-                    className="w-full px-3 py-2 rounded-xl bg-white border border-slate-300 font-mono text-xs text-slate-900 shadow-xs focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-                  />
+                  <label className="text-xs font-semibold text-slate-700 block mb-1 flex items-center justify-between">
+                    <span>Points Balance</span>
+                    {isCashier && (
+                      <span className="text-[10px] text-amber-700 font-mono flex items-center gap-1 font-bold">
+                        <Lock className="w-2.5 h-2.5" />
+                        Manager Locked
+                      </span>
+                    )}
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="0"
+                      disabled={isCashier}
+                      readOnly={isCashier}
+                      value={editingCustomer.points_balance}
+                      onChange={(e) => setEditingCustomer({ ...editingCustomer, points_balance: Number(e.target.value) })}
+                      className={`w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-xs text-slate-900 shadow-xs ${
+                        isCashier
+                          ? "bg-slate-100 cursor-not-allowed select-none text-slate-600"
+                          : "bg-white focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                      }`}
+                    />
+                  </div>
                 </div>
               </div>
 

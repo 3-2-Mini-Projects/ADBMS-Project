@@ -16,6 +16,7 @@ import {
   Lock,
 } from "lucide-react";
 import { StockAlertBell } from "./StockAlertBell";
+import { CashierNotificationBell } from "@/components/CashierNotificationBell";
 
 export function Header() {
   const {
@@ -131,8 +132,12 @@ export function Header() {
           </Link>
         ) : null}
 
-        {/* Real-Time Stock Alert Bell */}
-        <StockAlertBell />
+        {/* Real-Time Alerts & Notification Bell */}
+        {pathname.startsWith("/cashier") || currentEmployee?.role === "CASHIER" ? (
+          <CashierNotificationBell />
+        ) : (
+          <StockAlertBell />
+        )}
 
         {/* Authenticated Staff Card / Sign In Button */}
         {!currentEmployee ? (

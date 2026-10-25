@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AppProvider } from "@/lib/context";
+import { CashierProvider } from "@/lib/cashierContext";
 import { AppShell } from "@/components/layout/AppShell";
 import { ToastContainer } from "@/components/ui/ToastContainer";
 
@@ -27,8 +28,10 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col bg-slate-50 text-slate-900 selection:bg-blue-200 selection:text-blue-900">
         <AppProvider>
-          <AppShell>{children}</AppShell>
-          <ToastContainer />
+          <CashierProvider>
+            <AppShell>{children}</AppShell>
+            <ToastContainer />
+          </CashierProvider>
         </AppProvider>
       </body>
     </html>

@@ -8,6 +8,12 @@ export async function GET(req: Request) {
     return auth.error;
   }
   const { session } = auth;
+  if (session.role === "CASHIER") {
+    return NextResponse.json(
+      { error: "Access denied. Shifts and attendance records are not accessible to cashiers." },
+      { status: 403 }
+    );
+  }
 
   try {
     const { searchParams } = new URL(req.url);
