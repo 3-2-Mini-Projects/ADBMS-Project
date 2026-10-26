@@ -1,10 +1,3 @@
--- ============================================================
--- SUPERMARKET OLTP / ADBMS - PRODUCT CATALOG MANAGEMENT MODULE
--- Role: Catalog Manager
--- Tables: categories, suppliers, products, product_price_history, slow_movers, product_supervisors
--- Components: DDL & Constraints, Views, Functions, Procedures, Triggers, Events
--- ============================================================
-
 USE supermarket_ADBMS;
 
 -- ============================================================

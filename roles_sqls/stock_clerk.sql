@@ -1,11 +1,6 @@
 USE supermarket_ADBMS;
 
 -- ============================================================
--- STOCK CLERK PART: INVENTORY & PURCHASING
--- VIEWS, FUNCTIONS, PROCEDURES, TRIGGERS AND EVENTS
--- ============================================================
-
--- ============================================================
 -- 0. INVENTORY DATA-INTEGRITY CONSTRAINTS
 -- ============================================================
 -- Run the two checks below before applying the ALTER statements.
