@@ -1,0 +1,506 @@
+import { NextResponse } from "next/server";
+import { query } from "@/lib/db";
+import { authorizeRequest } from "@/lib/auth";
+
+export async function GET(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const view = searchParams.get("view");
+    const calculate = searchParams.get("calculate");
+    const check = searchParams.get("check");
+
+    // 1. Calculate discount using get_discount() function
+    if (calculate === "discount") {
+      const amount = parseFloat(searchParams.get("amount") || "0");
+      const promoId = parseInt(searchParams.get("promo_id") || "0", 10);
+
+      try {
+        const [fnResult]: any = await query("SELECT get_discount(?, ?) AS calculated_discount", [amount, promoId]);
+        return NextResponse.json({
+          success: true,
+          amount,
+          promo_id: promoId,
+          calculated_discount: Number(fnResult?.calculated_discount ?? 0),
+          method: "get_discount() SQL function",
+        });
+      } catch (fnErr: any) {
+        // Fallback calculation in JS if SQL function is not compiled
+        const [promo]: any = await query(
+          "SELECT discount_percent, is_active, start_date, end_date FROM promotions WHERE promo_id = ?",
+          [promoId]
+        );
+        let disc = 0;
+        if (promo && promo.is_active) {
+          disc = (amount * Number(promo.discount_percent || 0)) / 100;
+        }
+        return NextResponse.json({
+          success: true,
+          amount,
+          promo_id: promoId,
+          calculated_discount: disc,
+          method: "fallback calculation",
+        });
+      }
+    }
+
+    // 2. Check if promo is active using promo_isactive() function
+    if (check === "active") {
+      const promoId = parseInt(searchParams.get("promo_id") || "0", 10);
+      try {
+        const [fnResult]: any = await query("SELECT promo_isactive(?) AS is_active", [promoId]);
+        return NextResponse.json({
+          success: true,
+          promo_id: promoId,
+          is_active: Boolean(fnResult?.is_active),
+          method: "promo_isactive() SQL function",
+        });
+      } catch {
+        const [promo]: any = await query(
+          "SELECT (is_active = 1 AND CURDATE() BETWEEN start_date AND end_date) AS is_active FROM promotions WHERE promo_id = ?",
+          [promoId]
+        );
+        return NextResponse.json({
+          success: true,
+          promo_id: promoId,
+          is_active: Boolean(promo?.is_active),
+          method: "fallback calculation",
+        });
+      }
+    }
+
+    // 3. Query active promotions directly from active_promotions_vw
+    let activePromotions: any[] = [];
+    try {
+      activePromotions = await query(`
+        SELECT 
+          promo_id,
+          promotion_name AS name,
+          discount_percent,
+          start_date,
+          end_date,
+          product_id,
+          product_name,
+          category_id,
+          category_name,
+          1 AS is_active,
+          'ACTIVE' AS status,
+          DATEDIFF(end_date, CURDATE()) AS days_left
+        FROM active_promotions_vw
+        ORDER BY promo_id DESC
+      `);
+    } catch {
+      activePromotions = await query(`
+        SELECT 
+          p.promo_id,
+          p.name,
+          p.discount_percent,
+          p.start_date,
+          p.end_date,
+          p.product_id,
+          pro.name AS product_name,
+          p.category_id,
+          c.name AS category_name,
+          p.is_active,
+          'ACTIVE' AS status,
+          DATEDIFF(p.end_date, CURDATE()) AS days_left
+        FROM promotions p
+        LEFT JOIN products pro ON pro.product_id = p.product_id
+        LEFT JOIN categories c ON c.category_id = p.category_id
+        WHERE p.is_active = 1 AND CURDATE() BETWEEN p.start_date AND p.end_date
+        ORDER BY p.promo_id DESC
+      `);
+    }
+
+    if (view === "active") {
+      return NextResponse.json({ promotions: activePromotions });
+    }
+
+    // Ensure get_active_promotions() and get_deactive_promotions() procedures exist
+    try {
+      await query(`
+        CREATE PROCEDURE IF NOT EXISTS get_active_promotions()
+        BEGIN
+            SELECT *
+            FROM promotions
+            WHERE is_active = 1
+              AND CURDATE() BETWEEN start_date AND end_date;
+        END
+      `);
+    } catch {}
+
+    try {
+      await query(`
+        CREATE PROCEDURE IF NOT EXISTS get_deactive_promotions()
+        BEGIN
+            SELECT *,
+                CASE
+                    WHEN is_active = 0 THEN 'DEACTIVATED'
+                    WHEN CURDATE() < start_date THEN 'SCHEDULED'
+                    WHEN CURDATE() > end_date THEN 'EXPIRED'
+                END AS promotion_status
+            FROM promotions
+            WHERE is_active = 0
+               OR CURDATE() < start_date
+               OR CURDATE() > end_date;
+        END
+      `);
+    } catch {}
+
+    // 3a. Execute CALL get_active_promotions() procedure
+    if (view === "active_proc") {
+      let activeRows: any[] = [];
+      try {
+        const res: any = await query("CALL get_active_promotions()");
+        activeRows = Array.isArray(res) && Array.isArray(res[0]) ? res[0] : (Array.isArray(res) ? res : []);
+      } catch (err: any) {
+        console.warn("CALL get_active_promotions() error:", err.message);
+        activeRows = await query(`
+          SELECT * FROM promotions WHERE is_active = 1 AND CURDATE() BETWEEN start_date AND end_date
+        `);
+      }
+
+      const prods: any = await query("SELECT product_id, name FROM products");
+      const cats: any = await query("SELECT category_id, name FROM categories");
+      const prodMap = new Map(prods.map((p: any) => [p.product_id, p.name]));
+      const catMap = new Map(cats.map((c: any) => [c.category_id, c.name]));
+
+      const enriched = activeRows.map((r: any) => ({
+        ...r,
+        product_name: r.product_id ? prodMap.get(r.product_id) || null : null,
+        category_name: r.category_id ? catMap.get(r.category_id) || null : null,
+        status: "ACTIVE",
+        days_left: r.end_date ? Math.ceil((new Date(r.end_date).getTime() - new Date().setHours(0, 0, 0, 0)) / (1000 * 60 * 60 * 24)) : 0,
+      }));
+
+      return NextResponse.json({
+        success: true,
+        procedure: "get_active_promotions",
+        method: "CALL get_active_promotions()",
+        promotions: enriched,
+      });
+    }
+
+    // 3b. Execute CALL get_deactive_promotions() procedure
+    if (view === "deactive_proc") {
+      let deactiveRows: any[] = [];
+      try {
+        const res: any = await query("CALL get_deactive_promotions()");
+        deactiveRows = Array.isArray(res) && Array.isArray(res[0]) ? res[0] : (Array.isArray(res) ? res : []);
+      } catch (err: any) {
+        console.warn("CALL get_deactive_promotions() error:", err.message);
+        deactiveRows = await query(`
+          SELECT *,
+            CASE
+              WHEN is_active = 0 THEN 'DEACTIVATED'
+              WHEN CURDATE() < start_date THEN 'SCHEDULED'
+              WHEN CURDATE() > end_date THEN 'EXPIRED'
+            END AS promotion_status
+          FROM promotions
+          WHERE is_active = 0
+             OR CURDATE() < start_date
+             OR CURDATE() > end_date
+        `);
+      }
+
+      const prods: any = await query("SELECT product_id, name FROM products");
+      const cats: any = await query("SELECT category_id, name FROM categories");
+      const prodMap = new Map(prods.map((p: any) => [p.product_id, p.name]));
+      const catMap = new Map(cats.map((c: any) => [c.category_id, c.name]));
+
+      const enriched = deactiveRows.map((r: any) => {
+        const rawStatus = r.promotion_status || (r.is_active === 0 ? "DEACTIVATED" : new Date(r.start_date) > new Date() ? "SCHEDULED" : "EXPIRED");
+        return {
+          ...r,
+          product_name: r.product_id ? prodMap.get(r.product_id) || null : null,
+          category_name: r.category_id ? catMap.get(r.category_id) || null : null,
+          status: rawStatus,
+          days_left: r.end_date ? Math.ceil((new Date(r.end_date).getTime() - new Date().setHours(0, 0, 0, 0)) / (1000 * 60 * 60 * 24)) : 0,
+        };
+      });
+
+      return NextResponse.json({
+        success: true,
+        procedure: "get_deactive_promotions",
+        method: "CALL get_deactive_promotions()",
+        promotions: enriched,
+      });
+    }
+
+    // 4. Query all promotions
+    const promotions = await query(`
+      SELECT 
+        pr.promo_id,
+        pr.name,
+        pr.discount_percent,
+        pr.start_date,
+        pr.end_date,
+        pr.product_id,
+        p.name AS product_name,
+        pr.category_id,
+        c.name AS category_name,
+        pr.is_active,
+        CASE
+          WHEN CURDATE() BETWEEN pr.start_date AND pr.end_date AND pr.is_active = 1 THEN 'ACTIVE'
+          WHEN CURDATE() < pr.start_date THEN 'SCHEDULED'
+          ELSE 'EXPIRED'
+        END AS status,
+        DATEDIFF(pr.end_date, CURDATE()) AS days_left
+      FROM promotions pr
+      LEFT JOIN products p ON pr.product_id = p.product_id
+      LEFT JOIN categories c ON pr.category_id = c.category_id
+      ORDER BY pr.promo_id DESC
+    `);
+
+    // 5. Query coupons
+    const coupons = await query(`
+      SELECT 
+        cp.coupon_id,
+        cp.code,
+        cp.promo_id,
+        pr.name AS promo_name,
+        pr.discount_percent,
+        cp.customer_id,
+        c.full_name AS customer_name,
+        cp.expiry_date,
+        cp.is_used,
+        cp.used_at
+      FROM coupons cp
+      JOIN promotions pr ON cp.promo_id = pr.promo_id
+      LEFT JOIN customers c ON cp.customer_id = c.customer_id
+      ORDER BY cp.coupon_id DESC
+    `);
+
+    return NextResponse.json({
+      promotions,
+      activePromotions,
+      coupons,
+    });
+  } catch (err: any) {
+    console.error("GET /api/promotions error:", err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
+export async function POST(req: Request) {
+  const auth = await authorizeRequest("manage_promotions");
+  if (auth.error) {
+    return auth.error;
+  }
+
+  try {
+    const body = await req.json();
+    const { action } = body;
+
+    // Issue Coupon
+    if (action === "create_coupon") {
+      const { code, promo_id, customer_id, expiry_date } = body;
+      if (!code || !promo_id) {
+        return NextResponse.json({ error: "Coupon code and linked promotion are required." }, { status: 400 });
+      }
+
+      const res: any = await query(
+        `INSERT INTO coupons (code, promo_id, customer_id, expiry_date, is_used)
+         VALUES (?, ?, ?, ?, 0)`,
+        [code.toUpperCase().trim(), promo_id, customer_id || null, expiry_date || null]
+      );
+      return NextResponse.json({
+        success: true,
+        coupon_id: res.insertId,
+        message: `Coupon code ${code.toUpperCase().trim()} issued successfully.`,
+      });
+    }
+
+    // Test Coupon Application via proc_apply_coupon procedure
+    if (action === "test_apply_coupon") {
+      const { sale_id, code } = body;
+      if (!sale_id || !code) {
+        return NextResponse.json({ error: "Sale ID and Coupon Code are required" }, { status: 400 });
+      }
+
+      try {
+        await query("CALL proc_apply_coupon(?, ?)", [sale_id, code.toUpperCase().trim()]);
+        return NextResponse.json({
+          success: true,
+          message: `Coupon ${code} validated and applied successfully via proc_apply_coupon() procedure!`,
+        });
+      } catch (procErr: any) {
+        return NextResponse.json(
+          {
+            error: procErr.sqlMessage || procErr.message || "proc_apply_coupon failed",
+          },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Create Promotion Campaign via create_promotion procedure (Triggers before_promotions_insert)
+    const { name, discount_percent, start_date, end_date, product_id, category_id } = body;
+
+    if (!name || !discount_percent || !start_date || !end_date) {
+      return NextResponse.json({ error: "Name, discount percent, start and end dates are required" }, { status: 400 });
+    }
+
+    const discountNum = Number(discount_percent);
+
+    let promo_id: number;
+    try {
+      const procRes: any = await query(
+        `CALL create_promotion(?, ?, ?, ?, ?, ?)`,
+        [name, discountNum, start_date, end_date, product_id || null, category_id || null]
+      );
+      promo_id = procRes?.[0]?.[0]?.promo_id || procRes?.insertId;
+    } catch (procErr: any) {
+      // Catch trigger validation error from before_promotions_insert
+      if (procErr.sqlMessage && (procErr.sqlState === "45000" || procErr.code === "ER_SIGNAL_EXCEPTION")) {
+        return NextResponse.json({ error: procErr.sqlMessage }, { status: 400 });
+      }
+
+      // Fallback direct insert
+      try {
+        const res: any = await query(
+          `INSERT INTO promotions (name, discount_percent, start_date, end_date, product_id, category_id, is_active)
+           VALUES (?, ?, ?, ?, ?, ?, 1)`,
+          [name, discountNum, start_date, end_date, product_id || null, category_id || null]
+        );
+        promo_id = res.insertId;
+      } catch (insertErr: any) {
+        return NextResponse.json(
+          { error: insertErr.sqlMessage || insertErr.message || "Failed to create promotion" },
+          { status: 400 }
+        );
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      promo_id,
+      message: `Promotion "${name}" created successfully via create_promotion() procedure!`,
+    });
+  } catch (err: any) {
+    console.error("POST /api/promotions error:", err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
+export async function PATCH(req: Request) {
+  const auth = await authorizeRequest("manage_promotions");
+  if (auth.error) {
+    return auth.error;
+  }
+
+  try {
+    const body = await req.json();
+    const { promo_id, is_active, name, start_date, end_date, discount_percent } = body;
+
+    if (!promo_id) {
+      return NextResponse.json({ error: "promo_id is required" }, { status: 400 });
+    }
+
+    // Fast path: Only updating is_active toggle
+    if (is_active !== undefined && name === undefined && start_date === undefined && end_date === undefined && discount_percent === undefined) {
+      await query("UPDATE promotions SET is_active = ? WHERE promo_id = ?", [is_active ? 1 : 0, promo_id]);
+      return NextResponse.json({
+        success: true,
+        message: `Promotion status updated to ${is_active ? "ACTIVE" : "INACTIVE"}.`,
+      });
+    }
+
+    // Dynamic field update (name, start_date, end_date, discount_percent)
+    const updates: string[] = [];
+    const params: any[] = [];
+
+    if (name !== undefined) {
+      if (!String(name).trim()) {
+        return NextResponse.json({ error: "Promotion name cannot be empty." }, { status: 400 });
+      }
+      updates.push("name = ?");
+      params.push(String(name).trim());
+    }
+
+    if (start_date !== undefined) {
+      updates.push("start_date = ?");
+      params.push(start_date);
+    }
+
+    if (end_date !== undefined) {
+      updates.push("end_date = ?");
+      params.push(end_date);
+    }
+
+    if (discount_percent !== undefined) {
+      const disc = Number(discount_percent);
+      if (isNaN(disc) || disc <= 0 || disc > 100) {
+        return NextResponse.json({ error: "Discount percent must be between 0 and 100." }, { status: 400 });
+      }
+      updates.push("discount_percent = ?");
+      params.push(disc);
+    }
+
+    if (is_active !== undefined) {
+      updates.push("is_active = ?");
+      params.push(is_active ? 1 : 0);
+    }
+
+    if (updates.length === 0) {
+      return NextResponse.json({ error: "No fields to update provided." }, { status: 400 });
+    }
+
+    // Validate date order if both are supplied or in DB
+    if (start_date && end_date && new Date(end_date) < new Date(start_date)) {
+      return NextResponse.json({ error: "End date cannot precede start date." }, { status: 400 });
+    }
+
+    params.push(promo_id);
+    await query(`UPDATE promotions SET ${updates.join(", ")} WHERE promo_id = ?`, params);
+
+    return NextResponse.json({
+      success: true,
+      message: `Promotion #${promo_id} updated successfully in the promotion table!`,
+    });
+  } catch (err: any) {
+    console.error("PATCH /api/promotions error:", err);
+    return NextResponse.json({ error: err.sqlMessage || err.message || "Failed to update promotion" }, { status: 500 });
+  }
+}
+
+export async function PUT(req: Request) {
+  return PATCH(req);
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    let promoId = searchParams.get("promo_id");
+    let couponId = searchParams.get("coupon_id");
+
+    if (!promoId && !couponId) {
+      try {
+        const body = await req.json();
+        promoId = body.promo_id;
+        couponId = body.coupon_id;
+      } catch {}
+    }
+
+    if (promoId) {
+      try {
+        await query("UPDATE sales SET promo_id = NULL WHERE promo_id = ?", [promoId]);
+      } catch {}
+      await query("DELETE FROM coupons WHERE promo_id = ?", [promoId]);
+      await query("DELETE FROM promotions WHERE promo_id = ?", [promoId]);
+      return NextResponse.json({
+        success: true,
+        message: `Promotion #${promoId} deleted successfully from backend promotion table.`,
+      });
+    }
+
+    if (couponId) {
+      await query("DELETE FROM coupons WHERE coupon_id = ?", [couponId]);
+      return NextResponse.json({ success: true, message: "Coupon deleted successfully." });
+    }
+
+    return NextResponse.json({ error: "Missing promo_id or coupon_id to delete" }, { status: 400 });
+  } catch (err: any) {
+    console.error("DELETE /api/promotions error:", err);
+    return NextResponse.json({ error: err.sqlMessage || err.message || "Failed to delete promotion" }, { status: 500 });
+  }
+}

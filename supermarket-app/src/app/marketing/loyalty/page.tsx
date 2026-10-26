@@ -1,0 +1,765 @@
+"use client";
+
+import React, { useEffect, useState, useMemo } from "react";
+import Link from "next/link";
+import { useApp } from "@/lib/context";
+import {
+  Award,
+  Users,
+  RefreshCw,
+  Plus,
+  Minus,
+  Search,
+  Filter,
+  Trophy,
+  Eye,
+  CheckCircle2,
+  X,
+  CreditCard,
+  Phone,
+  Sparkles,
+  Gift,
+} from "lucide-react";
+
+interface CustomerSummaryRow {
+  customer_id: number;
+  card_no: string;
+  full_name: string;
+  phone: string;
+  email: string;
+  tier: string;
+  points_balance: number;
+  total_points_earned: number;
+  total_points_redeemed: number;
+  total_spent: number;
+  total_orders: number;
+}
+
+interface TopCustomerRow {
+  customer_id: number;
+  card_no: string;
+  full_name: string;
+  phone?: string;
+  tier: string;
+  points_balance: number;
+  total_points_earned: number;
+  transaction_month?: string;
+}
+
+export default function LoyaltyManagementPage() {
+  const { showToast, currentBranch, currentEmployee, authenticatedUser, isLoading: isAppLoading } = useApp();
+  const [data, setData] = useState<any>(null);
+  const [customerSummaries, setCustomerSummaries] = useState<CustomerSummaryRow[]>([]);
+  const [topCustomers, setTopCustomers] = useState<TopCustomerRow[]>([]);
+  const [customersList, setCustomersList] = useState<any[]>([]);
+
+  const [loading, setLoading] = useState(true);
+  const [submittingAction, setSubmittingAction] = useState(false);
+
+  // Active View Tab: 'summary' (customer_summary_vw) | 'top' (top_customers_vw)
+  const [activeTab, setActiveTab] = useState<"summary" | "top">("summary");
+
+  // Filtering & Search
+  const [selectedTierFilter, setSelectedTierFilter] = useState<string>("ALL");
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // Modals state
+  const [awardModalOpen, setAwardModalOpen] = useState(false);
+  const [redeemModalOpen, setRedeemModalOpen] = useState(false);
+
+  // Form states for Award / Redeem
+  const [selectedCustomerId, setSelectedCustomerId] = useState<number | "">("");
+  const [pointsInput, setPointsInput] = useState<string>("");
+  const [noteInput, setNoteInput] = useState<string>("");
+
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const targetBranchId = currentBranch?.branch_id || currentEmployee?.branch_id || authenticatedUser?.branch_id;
+      const branchParam = targetBranchId ? `&branchId=${targetBranchId}` : "";
+      const queryParam = targetBranchId ? `?branchId=${targetBranchId}` : "";
+
+      const [dashRes, summaryRes, topRes, custRes] = await Promise.all([
+        fetch(`/api/marketing/dashboard${queryParam}`).then((r) => r.json()),
+        fetch(`/api/marketing/actions?view=customer_summary${branchParam}`).then((r) => r.json()),
+        fetch(`/api/marketing/actions?view=top_customers${branchParam}`).then((r) => r.json()),
+        fetch(`/api/customers${queryParam}`).then((r) => r.json()),
+      ]);
+
+      if (dashRes && !dashRes.error) setData(dashRes);
+      if (Array.isArray(summaryRes)) setCustomerSummaries(summaryRes);
+
+      const custArray: TopCustomerRow[] = Array.isArray(topRes)
+        ? topRes
+        : Array.isArray(topRes?.customers)
+          ? topRes.customers
+          : [];
+
+      if (custArray.length > 0) {
+        setTopCustomers(custArray.slice(0, 10));
+      } else if (Array.isArray(summaryRes) && summaryRes.length > 0) {
+        const top10 = [...summaryRes]
+          .filter((c) => Number(c.points_balance || 0) > 0)
+          .sort((a, b) => Number(b.total_points_earned || 0) - Number(a.total_points_earned || 0))
+          .slice(0, 10);
+        setTopCustomers(top10);
+      } else {
+        setTopCustomers([]);
+      }
+      if (Array.isArray(custRes)) setCustomersList(custRes);
+    } catch (err) {
+      console.error("Error loading loyalty management data:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!isAppLoading || currentBranch?.branch_id || currentEmployee?.branch_id || authenticatedUser?.branch_id) {
+      loadData();
+    }
+  }, [isAppLoading, currentBranch?.branch_id, currentEmployee?.branch_id, authenticatedUser?.branch_id]);
+
+  // Open Award Modal (with optional pre-selected customer)
+  const openAwardModal = (customerId?: number) => {
+    setSelectedCustomerId(customerId ?? (customersList.length > 0 ? customersList[0].customer_id : ""));
+    setPointsInput("");
+    setNoteInput("");
+    setAwardModalOpen(true);
+  };
+
+  // Open Redeem Modal (with optional pre-selected customer)
+  const openRedeemModal = (customerId?: number) => {
+    setSelectedCustomerId(customerId ?? (customersList.length > 0 ? customersList[0].customer_id : ""));
+    setPointsInput("");
+    setRedeemModalOpen(true);
+  };
+
+
+  // Submit Award Points (add_ltpoints)
+  const handleAwardSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const pts = parseInt(pointsInput, 10);
+    if (!selectedCustomerId || !pts || pts <= 0) {
+      showToast("Please select a customer and enter a valid points amount.", "error");
+      return;
+    }
+
+    setSubmittingAction(true);
+    try {
+      const res = await fetch("/api/marketing/actions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "add_points",
+          customer_id: selectedCustomerId,
+          points: pts,
+          note: noteInput.trim() || "Points awarded by Marketing Manager",
+        }),
+      });
+
+      const result = await res.json();
+      if (res.ok && result.success) {
+        showToast(result.message || `Awarded ${pts} points successfully via add_ltpoints()!`, "success");
+        setAwardModalOpen(false);
+        await loadData();
+      } else {
+        showToast(result.error || "Failed to award points", "error");
+      }
+    } catch (err: any) {
+      showToast("Error submitting add_ltpoints procedure", "error");
+    } finally {
+      setSubmittingAction(false);
+    }
+  };
+
+  // Submit Redeem Points (redeem_points)
+  const handleRedeemSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const pts = parseInt(pointsInput, 10);
+    if (!selectedCustomerId || !pts || pts <= 0) {
+      showToast("Please select a customer and enter a valid points amount.", "error");
+      return;
+    }
+
+    const targetCustomer = customersList.find((c) => c.customer_id === Number(selectedCustomerId));
+    if (targetCustomer && targetCustomer.points_balance < pts) {
+      showToast(`Customer only has ${targetCustomer.points_balance} points available!`, "error");
+      return;
+    }
+
+    setSubmittingAction(true);
+    try {
+      const res = await fetch("/api/marketing/actions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "redeem_points",
+          customer_id: selectedCustomerId,
+          points: pts,
+        }),
+      });
+
+      const result = await res.json();
+      if (res.ok && result.success) {
+        showToast(result.message || `Redeemed ${pts} points successfully via redeem_points()!`, "success");
+        setRedeemModalOpen(false);
+        await loadData();
+      } else {
+        showToast(result.error || "Failed to redeem points", "error");
+      }
+    } catch (err: any) {
+      showToast("Error submitting redeem_points procedure", "error");
+    } finally {
+      setSubmittingAction(false);
+    }
+  };
+
+  const tierBreakdown = data?.tierBreakdown || [];
+
+  // Filtered Customer Summaries
+  const filteredSummaries = useMemo(() => {
+    return customerSummaries.filter((c) => {
+      const matchesTier = selectedTierFilter === "ALL" || c.tier?.toUpperCase() === selectedTierFilter;
+      const matchesSearch =
+        searchTerm === "" ||
+        c.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        c.card_no?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        c.phone?.toLowerCase().includes(searchTerm.toLowerCase());
+      return matchesTier && matchesSearch;
+    });
+  }, [customerSummaries, selectedTierFilter, searchTerm]);
+
+  // Selected customer for modal display
+  const activeSelectedCust = customersList.find((c) => c.customer_id === Number(selectedCustomerId));
+
+  return (
+    <div className="space-y-6 animate-in fade-in duration-300">
+      {/* Header */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-black text-slate-900 flex items-center gap-2.5">
+            <Award className="w-6 h-6 text-amber-600" />
+            <span>Loyalty Points Management</span>
+          </h1>
+          <p className="text-xs text-slate-500 mt-1">
+            Configure customer tier qualifications, points distribution, and member rankings.
+          </p>
+        </div>
+      </div>
+
+      {/* Tier Cards with Clickable Filter */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { name: "BRONZE", minPts: "0 pts", earnRate: "1 pt / Rs. 100", borderHover: "hover:border-amber-400", activeColor: "border-amber-500 ring-2 ring-amber-100 bg-amber-50/70" },
+          { name: "SILVER", minPts: "500 pts", earnRate: "1.2 pts / Rs. 100", borderHover: "hover:border-slate-400", activeColor: "border-slate-500 ring-2 ring-slate-100 bg-slate-50/70" },
+          { name: "GOLD", minPts: "1,500 pts", earnRate: "1.5 pts / Rs. 100", borderHover: "hover:border-yellow-400", activeColor: "border-amber-500 ring-2 ring-amber-100 bg-amber-50/70" },
+          { name: "PLATINUM", minPts: "3,000 pts", earnRate: "2.0 pts / Rs. 100", borderHover: "hover:border-purple-400", activeColor: "border-purple-500 ring-2 ring-purple-100 bg-purple-50/70" },
+        ].map((t) => {
+          const stats = tierBreakdown.find((tb: any) => tb.tier === t.name);
+          const count = stats?.customer_count ?? 0;
+          const isSelected = selectedTierFilter === t.name;
+
+          return (
+            <div
+              key={t.name}
+              onClick={() => {
+                setSelectedTierFilter(isSelected ? "ALL" : t.name);
+                setActiveTab("summary");
+              }}
+              className={`p-5 rounded-2xl border cursor-pointer transition-all space-y-3 shadow-xs ${
+                isSelected ? t.activeColor : `bg-white border-slate-200 ${t.borderHover}`
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-bold font-mono text-sm text-slate-900 flex items-center gap-1.5">
+                  <span>{t.name}</span>
+                  {isSelected && (
+                    <span className="text-[10px] text-amber-700 font-sans font-semibold">(Filter Active)</span>
+                  )}
+                </span>
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                  {t.minPts}
+                </span>
+              </div>
+              <div>
+                <div className="text-2xl font-black text-slate-900 font-mono">{count} members</div>
+                <div className="text-xs text-slate-500 mt-1">Earn: {t.earnRate}</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Main Content Card with Navigation Tabs for ADBMS Views & Ledger */}
+      <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-xs">
+        {/* Navigation Tabs Header */}
+        <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50/50">
+          <div className="flex items-center gap-2 overflow-x-auto">
+            <button
+              onClick={() => setActiveTab("summary")}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
+                activeTab === "summary"
+                  ? "bg-amber-100 text-amber-900 border border-amber-200 shadow-xs"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+              }`}
+            >
+              <Users className="w-3.5 h-3.5" />
+              <span>Customer Summary</span>
+            </button>
+
+
+            <button
+              onClick={() => setActiveTab("top")}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
+                activeTab === "top"
+                  ? "bg-amber-100 text-amber-900 border border-amber-200 shadow-xs"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+              }`}
+            >
+              <Trophy className="w-3.5 h-3.5" />
+              <span>Top 10 Customers</span>
+            </button>
+
+          </div>
+
+          {/* Quick Refresh */}
+          <button
+            onClick={loadData}
+            disabled={loading}
+            className="p-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors self-end md:self-auto"
+            title="Refresh View Data"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+          </button>
+        </div>
+
+        {/* ========================================================================= */}
+        {/* TAB 1: Customer Points & Spends Summary (customer_summary_vw) */}
+        {/* ========================================================================= */}
+        {activeTab === "summary" && (
+          <div className="space-y-4">
+            {/* Filter Bar */}
+            <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50/50">
+              {/* Search */}
+              <div className="relative w-full sm:w-80">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  placeholder="Search name, card no, or phone..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-white border border-slate-300 text-xs text-slate-900 placeholder:text-slate-400 shadow-xs focus:outline-none focus:border-amber-600 focus:ring-2 focus:ring-amber-100"
+                />
+              </div>
+
+              {/* Tier Filter Pills */}
+              <div className="flex items-center gap-1.5 self-start sm:self-auto flex-wrap">
+                <span className="text-[11px] text-slate-500 font-semibold mr-1 flex items-center gap-1">
+                  <Filter className="w-3 h-3 text-slate-400" /> Tier:
+                </span>
+                <button
+                  onClick={() => setSelectedTierFilter("ALL")}
+                  className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${
+                    selectedTierFilter === "ALL"
+                      ? "bg-amber-500 text-white shadow-xs"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900"
+                  }`}
+                >
+                  ALL
+                </button>
+              </div>
+            </div>
+
+            {/* Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-50 text-slate-600 font-semibold uppercase text-[11px] tracking-wider">
+                    <th className="py-3 px-4 font-mono">Card No</th>
+                    <th className="py-3 px-4">Customer</th>
+                    <th className="py-3 px-4">Tier</th>
+                    <th className="py-3 px-4 text-right">Points Balance</th>
+                    <th className="py-3 px-4 text-right">Points Earned</th>
+                    <th className="py-3 px-4 text-right">Points Redeemed</th>
+                    <th className="py-3 px-4 text-right">Total Spent</th>
+                    <th className="py-3 px-4 text-center">Orders</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-mono">
+                  {loading ? (
+                    <tr>
+                      <td colSpan={8} className="py-12 text-center text-slate-500 font-sans">
+                        <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-amber-600" />
+                        Querying customer_summary_vw...
+                      </td>
+                    </tr>
+                  ) : filteredSummaries.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="py-12 text-center text-slate-500 font-sans">
+                        No customers found matching the filter criteria.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredSummaries.map((c) => (
+                      <tr key={c.customer_id} className="hover:bg-slate-50/70 transition-colors">
+                        <td className="py-3 px-4 text-amber-700 font-bold">{c.card_no}</td>
+                        <td className="py-3 px-4 font-sans font-medium text-slate-900">
+                          <div>{c.full_name}</div>
+                          <div className="text-[10px] text-slate-400 font-mono">{c.phone || c.email}</div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span
+                            className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold ${
+                              c.tier === "PLATINUM"
+                                ? "bg-purple-50 text-purple-700 border border-purple-200"
+                                : c.tier === "GOLD"
+                                ? "bg-amber-50 text-amber-700 border border-amber-200"
+                                : c.tier === "SILVER"
+                                ? "bg-slate-100 text-slate-700 border border-slate-200"
+                                : "bg-orange-50 text-orange-700 border border-orange-200"
+                            }`}
+                          >
+                            {c.tier}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-right font-bold text-amber-800">
+                          {Number(c.points_balance || 0).toLocaleString()} pts
+                        </td>
+                        <td className="py-3 px-4 text-right text-emerald-700 font-bold">
+                          +{Number(c.total_points_earned || 0).toLocaleString()}
+                        </td>
+                        <td className="py-3 px-4 text-right text-rose-700 font-bold">
+                          -{Number(c.total_points_redeemed || 0).toLocaleString()}
+                        </td>
+                        <td className="py-3 px-4 text-right text-slate-700 font-sans">
+                          Rs. {Number(c.total_spent || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="py-3 px-4 text-center text-slate-500 font-sans">{c.total_orders || 0}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+
+        {/* ========================================================================= */}
+        {/* TAB 2: Top 10 Customers by Highest Points Earned (top_customers_vw) */}
+        {/* ========================================================================= */}
+        {activeTab === "top" && (
+          <div className="space-y-4">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-50 text-slate-600 font-semibold uppercase text-[11px] tracking-wider">
+                    <th className="py-3 px-4 text-center">Rank</th>
+                    <th className="py-3 px-4 font-mono">Card No</th>
+                    <th className="py-3 px-4">Customer Name</th>
+                    <th className="py-3 px-4">Tier</th>
+                    <th className="py-3 px-4 text-right">Points Earned (Highest)</th>
+                    <th className="py-3 px-4 text-right">Points Balance</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-mono">
+                  {loading ? (
+                    <tr>
+                      <td colSpan={6} className="py-12 text-center text-slate-500 font-sans">
+                        <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-amber-600" />
+                        Loading top 10 customers...
+                      </td>
+                    </tr>
+                  ) : topCustomers.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-12 text-center text-slate-500 font-sans">
+                        No customers found for this period.
+                      </td>
+                    </tr>
+                  ) : (
+                    topCustomers.slice(0, 10).map((c, index) => (
+                      <tr key={c.customer_id} className="hover:bg-slate-50/70 transition-colors">
+                        <td className="py-3 px-4 text-center">
+                          {index === 0 ? (
+                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-100 text-amber-800 font-black text-xs border border-amber-300" title="Rank 1">
+                              🥇
+                            </span>
+                          ) : index === 1 ? (
+                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-800 font-black text-xs border border-slate-300" title="Rank 2">
+                              🥈
+                            </span>
+                          ) : index === 2 ? (
+                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-50 text-amber-900 font-black text-xs border border-amber-200" title="Rank 3">
+                              🥉
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-slate-100 text-slate-600 font-bold text-xs border border-slate-200">
+                              #{index + 1}
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-amber-700 font-bold">{c.card_no}</td>
+                        <td className="py-3 px-4 font-sans font-medium text-slate-900">{c.full_name}</td>
+                        <td className="py-3 px-4">
+                          <span
+                            className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold ${
+                              c.tier === "PLATINUM"
+                                ? "bg-purple-50 text-purple-700 border border-purple-200"
+                                : c.tier === "GOLD"
+                                ? "bg-amber-50 text-amber-700 border border-amber-200"
+                                : c.tier === "SILVER"
+                                ? "bg-slate-100 text-slate-700 border border-slate-200"
+                                : "bg-orange-50 text-orange-700 border border-orange-200"
+                            }`}
+                          >
+                            {c.tier}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-right text-emerald-700 font-bold">
+                          +{Number(c.total_points_earned || 0).toLocaleString()} pts
+                        </td>
+                        <td className="py-3 px-4 text-right text-amber-700 font-bold">
+                          {Number(c.points_balance || 0).toLocaleString()} pts
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ========================================================================= */}
+      {/* MODAL 1: Award Loyalty Points (CALL add_ltpoints) */}
+      {/* ========================================================================= */}
+      {awardModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 shadow-2xl relative space-y-5 text-slate-900">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700">
+                  <Plus className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-base">Award Points (add_ltpoints)</h3>
+                  <p className="text-xs text-slate-500">Executes stored procedure add_ltpoints()</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setAwardModalOpen(false)}
+                className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAwardSubmit} className="space-y-4">
+              {/* Customer Selector */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Select Customer <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={selectedCustomerId}
+                  onChange={(e) => setSelectedCustomerId(Number(e.target.value))}
+                  className="w-full px-3 py-2 rounded-xl bg-white border border-slate-300 text-xs text-slate-900 shadow-xs focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
+                  required
+                >
+                  <option value="">-- Choose Customer --</option>
+                  {customersList.map((c) => (
+                    <option key={c.customer_id} value={c.customer_id}>
+                      {c.card_no} - {c.full_name} ({c.tier}, {c.points_balance} pts)
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Customer Summary Card */}
+              {activeSelectedCust && (
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs flex items-center justify-between">
+                  <div>
+                    <span className="font-bold text-slate-900">{activeSelectedCust.full_name}</span>
+                    <span className="text-slate-500 text-[11px] block">{activeSelectedCust.card_no}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] px-2 py-0.5 rounded font-bold bg-slate-100 text-slate-700 mr-2 border border-slate-200">
+                      {activeSelectedCust.tier}
+                    </span>
+                    <span className="font-mono font-bold text-amber-700">{activeSelectedCust.points_balance} pts</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Points Amount */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Points to Award <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  placeholder="e.g. 100"
+                  value={pointsInput}
+                  onChange={(e) => setPointsInput(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-white border border-slate-300 text-sm font-mono text-slate-900 shadow-xs focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
+                  required
+                />
+              </div>
+
+              {/* Note / Reason */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">Note / Campaign Reason</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Bonus points for loyalty anniversary"
+                  value={noteInput}
+                  onChange={(e) => setNoteInput(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-white border border-slate-300 text-xs text-slate-900 shadow-xs focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setAwardModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingAction}
+                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs flex items-center gap-2 transition-all disabled:opacity-50"
+                >
+                  {submittingAction ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                  <span>{submittingAction ? "Awarding..." : "Award Points"}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL 2: Redeem Loyalty Points (CALL redeem_points) */}
+      {/* ========================================================================= */}
+      {redeemModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 shadow-2xl relative space-y-5 text-slate-900">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-700">
+                  <Minus className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-base">Redeem Points (redeem_points)</h3>
+                  <p className="text-xs text-slate-500">Executes stored procedure redeem_points()</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setRedeemModalOpen(false)}
+                className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleRedeemSubmit} className="space-y-4">
+              {/* Customer Selector */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Select Customer <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={selectedCustomerId}
+                  onChange={(e) => setSelectedCustomerId(Number(e.target.value))}
+                  className="w-full px-3 py-2 rounded-xl bg-white border border-slate-300 text-xs text-slate-900 shadow-xs focus:outline-none focus:border-rose-600 focus:ring-2 focus:ring-rose-100"
+                  required
+                >
+                  <option value="">-- Choose Customer --</option>
+                  {customersList.map((c) => (
+                    <option key={c.customer_id} value={c.customer_id}>
+                      {c.card_no} - {c.full_name} ({c.tier}, {c.points_balance} pts)
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Customer Summary Card */}
+              {activeSelectedCust && (
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs flex items-center justify-between">
+                  <div>
+                    <span className="font-bold text-slate-900">{activeSelectedCust.full_name}</span>
+                    <span className="text-slate-500 text-[11px] block">{activeSelectedCust.card_no}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] text-slate-500 block">Available Points</span>
+                    <span className="font-mono font-bold text-amber-700 text-sm">
+                      {activeSelectedCust.points_balance} pts
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Points to Redeem */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Points to Redeem <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max={activeSelectedCust ? activeSelectedCust.points_balance : undefined}
+                  step="1"
+                  placeholder="e.g. 50"
+                  value={pointsInput}
+                  onChange={(e) => setPointsInput(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-white border border-slate-300 text-sm font-mono text-slate-900 shadow-xs focus:outline-none focus:border-rose-600 focus:ring-2 focus:ring-rose-100"
+                  required
+                />
+                {activeSelectedCust && parseInt(pointsInput, 10) > activeSelectedCust.points_balance && (
+                  <p className="text-[11px] text-rose-600 font-semibold mt-1">
+                    Entered points exceed available balance of {activeSelectedCust.points_balance} pts!
+                  </p>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setRedeemModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={
+                    submittingAction ||
+                    (activeSelectedCust ? parseInt(pointsInput, 10) > activeSelectedCust.points_balance : false)
+                  }
+                  className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-xs flex items-center gap-2 transition-all disabled:opacity-50"
+                >
+                  {submittingAction ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Minus className="w-3.5 h-3.5" />
+                  )}
+                  <span>{submittingAction ? "Redeeming..." : "Redeem Points"}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}

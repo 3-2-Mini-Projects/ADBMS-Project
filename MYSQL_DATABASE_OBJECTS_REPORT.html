@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Supermarket ADBMS - MySQL Database Objects Report</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+
+    :root {
+      --primary: #0284c7;
+      --primary-dark: #0369a1;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --bg-alt: #f8fafc;
+      --badge-bg: #e0f2fe;
+      --badge-text: #0369a1;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: var(--text);
+      background-color: #ffffff;
+      line-height: 1.5;
+      padding: 40px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .no-print-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #0f172a;
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 12px;
+      margin-bottom: 30px;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    }
+
+    .print-btn {
+      background: #0284c7;
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.2s;
+    }
+
+    .print-btn:hover {
+      background: #0369a1;
+    }
+
+    header {
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 20px;
+      margin-bottom: 30px;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: -0.5px;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    .meta-pills {
+      display: flex;
+      gap: 12px;
+      margin-top: 15px;
+      flex-wrap: wrap;
+    }
+
+    .meta-pill {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 12px;
+      background: var(--bg-alt);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      color: #334155;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 12px;
+      margin-bottom: 35px;
+    }
+
+    .stat-card {
+      background: var(--bg-alt);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      text-align: center;
+    }
+
+    .stat-num {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--primary);
+    }
+
+    .stat-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-top: 40px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      margin-bottom: 25px;
+      background: #fff;
+    }
+
+    th {
+      background: #f1f5f9;
+      color: #334155;
+      font-weight: 700;
+      text-align: left;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.5px;
+    }
+
+    td {
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      color: #334155;
+      vertical-align: top;
+    }
+
+    tr:nth-child(even) td {
+      background-color: #fafafa;
+    }
+
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      background: #f1f5f9;
+      color: #0369a1;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+
+    .code-path {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10.5px;
+      color: #475569;
+      word-break: break-all;
+    }
+
+    .badge-event {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+    .badge-insert { background: #dcfce7; color: #166534; }
+    .badge-update { background: #fef3c7; color: #92400e; }
+    .badge-delete { background: #fee2e2; color: #991b1b; }
+
+    @media print {
+      body {
+        padding: 0;
+        font-size: 11px;
+      }
+      .no-print-bar {
+        display: none !important;
+      }
+      h2 {
+        page-break-before: auto;
+        margin-top: 25px;
+      }
+      tr {
+        page-break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="no-print-bar">
+    <div>
+      <strong>📄 Supermarket ADBMS - MySQL Object Report</strong>
+      <span style="opacity: 0.7; font-size: 12px; margin-left: 10px;">Ready for Print or PDF Save</span>
+    </div>
+    <button class="print-btn" onclick="window.print()">
+      🖨️ Click to Print / Save as PDF
+    </button>
+  </div>
+
+  <header>
+    <h1>Supermarket Retail Management System (ADBMS)</h1>
+    <div class="subtitle">Complete Database Schema Architecture, Object Directory & Codebase Usage Report</div>
+    <div class="meta-pills">
+      <div class="meta-pill"><strong>Database:</strong> supermarket_ADBMS</div>
+      <div class="meta-pill"><strong>RDBMS Engine:</strong> MySQL 8.0 (InnoDB)</div>
+      <div class="meta-pill"><strong>Application Stack:</strong> Next.js 15, TypeScript, TailwindCSS</div>
+      <div class="meta-pill"><strong>Total Database Objects:</strong> 142</div>
+      <div class="meta-pill"><strong>Date:</strong> October 2026</div>
+    </div>
+  </header>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-num">26</div>
+      <div class="stat-label">Base Tables</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">28</div>
+      <div class="stat-label">Database Views</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">36</div>
+      <div class="stat-label">Stored Procedures</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">22</div>
+      <div class="stat-label">UDF Functions</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">21</div>
+      <div class="stat-label">Triggers</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">9</div>
+      <div class="stat-label">Scheduled Events</div>
+    </div>
+  </div>
+
+  <!-- SECTION 1: STORED PROCEDURES -->
+  <h2>⚡ Stored Procedures (36 Procedures)</h2>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 25%;">Procedure Name</th>
+        <th style="width: 28%;">Where Used in Application</th>
+        <th style="width: 47%;">Functional Role & Business Logic</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>sp_transfer_stock</code></td>
+        <td class="code-path">src/app/api/inventory/transfers/route.ts</td>
+        <td>Executes ACID-compliant stock relocations with row-level locks (<code>FOR UPDATE</code>) across branches.</td>
+      </tr>
+      <tr>
+        <td><code>sp_auto_dispose_expired_batches</code></td>
+        <td class="code-path">src/app/api/inventory/batches/route.ts<br>src/app/api/inventory/disposal/route.ts</td>
+        <td>Automated midnight sweep zeroing expired batches, updating branch inventory, and logging to <code>audit_log</code>.</td>
+      </tr>
+      <tr>
+        <td><code>sp_record_stock_disposal</code></td>
+        <td class="code-path">src/app/api/inventory/disposal/route.ts</td>
+        <td>Clerk write-off routine deducting damaged/expired stock and logging audit entries.</td>
+      </tr>
+      <tr>
+        <td><code>sp_check_low_stock</code></td>
+        <td class="code-path">src/app/api/inventory/audit/route.ts</td>
+        <td>Audit routine identifying all inventory items below safety reorder levels.</td>
+      </tr>
+      <tr>
+        <td><code>sp_expiring_batches</code></td>
+        <td class="code-path">src/app/api/inventory/audit/route.ts</td>
+        <td>Diagnostic routine scanning batches approaching expiration date within given window.</td>
+      </tr>
+      <tr>
+        <td><code>sp_update_inventory</code></td>
+        <td class="code-path">src/app/api/inventory/route.ts</td>
+        <td>Atomic stock quantity adjustment updating inventory and audit trails.</td>
+      </tr>
+      <tr>
+        <td><code>create_promotion</code></td>
+        <td class="code-path">src/app/api/promotions/route.ts</td>
+        <td>Inserts marketing discounts with date validity and discount percentage validation.</td>
+      </tr>
+      <tr>
+        <td><code>get_active_promotions</code></td>
+        <td class="code-path">src/app/api/promotions/route.ts</td>
+        <td>Retrieves all campaigns currently valid as of current timestamp.</td>
+      </tr>
+      <tr>
+        <td><code>get_deactive_promotions</code></td>
+        <td class="code-path">src/app/api/promotions/route.ts</td>
+        <td>Retrieves ended and disabled campaigns for history reports.</td>
+      </tr>
+      <tr>
+        <td><code>proc_apply_coupon</code></td>
+        <td class="code-path">src/app/api/coupons/route.ts<br>src/app/api/promotions/route.ts</td>
+        <td>Validates coupon code limits, customer eligibility, and returns calculated discount.</td>
+      </tr>
+      <tr>
+        <td><code>add_ltpoints</code></td>
+        <td class="code-path">src/app/api/marketing/actions/route.ts</td>
+        <td>Credits loyalty points to customer profiles upon qualifying transactions.</td>
+      </tr>
+      <tr>
+        <td><code>redeem_points</code></td>
+        <td class="code-path">src/app/api/marketing/actions/route.ts</td>
+        <td>Deducts customer points balance for bill reduction credit at POS checkout.</td>
+      </tr>
+      <tr>
+        <td><code>recalculate_tiers</code></td>
+        <td class="code-path">src/app/api/marketing/actions/route.ts</td>
+        <td>Evaluates 12-month spend and upgrades/downgrades customer loyalty tiers.</td>
+      </tr>
+      <tr>
+        <td><code>register_customer</code></td>
+        <td class="code-path">src/app/api/customers/route.ts</td>
+        <td>Enrolls customer with phone normalization and duplicate prevention.</td>
+      </tr>
+      <tr>
+        <td><code>CreateSale</code> / <code>CompleteSale</code></td>
+        <td class="code-path">POS Checkout Engine</td>
+        <td>Initializes transaction header and closes sale with payment reconciliation.</td>
+      </tr>
+      <tr>
+        <td><code>AddSaleItem</code> / <code>UpdateSaleTotals</code></td>
+        <td class="code-path">POS Cart Engine</td>
+        <td>Inserts line item, verifies stock, and recalculates subtotal, taxes, and net payable.</td>
+      </tr>
+      <tr>
+        <td><code>ProcessReturn</code></td>
+        <td class="code-path">Returns & Refunds Engine</td>
+        <td>Processes product returns, refunds customer, and restores non-damaged stock.</td>
+      </tr>
+      <tr>
+        <td><code>sp_create_purchase_order</code></td>
+        <td class="code-path">Procurement API</td>
+        <td>Generates supplier purchase orders with items, unit costs, and delivery branches.</td>
+      </tr>
+      <tr>
+        <td><code>sp_receive_purchase_order</code></td>
+        <td class="code-path">Procurement API</td>
+        <td>Receives supplier deliveries, inserts new batches, and increments branch inventory.</td>
+      </tr>
+      <tr>
+        <td><code>proc_clock_in_out</code></td>
+        <td class="code-path">HR Shift System</td>
+        <td>Records employee shift attendance timestamps with location checks.</td>
+      </tr>
+      <tr>
+        <td><code>proc_assign_shift</code></td>
+        <td class="code-path">HR Scheduling System</td>
+        <td>Schedules employee shifts with automated overlap conflict validation.</td>
+      </tr>
+      <tr>
+        <td><code>proc_transfer_employee</code></td>
+        <td class="code-path">HR Management System</td>
+        <td>Transfers staff between store branches with audit record logging.</td>
+      </tr>
+      <tr>
+        <td><code>proc_monthly_payroll</code></td>
+        <td class="code-path">HR Payroll Engine</td>
+        <td>Computes monthly salaries based on clocked hours, rates, and overtime.</td>
+      </tr>
+      <tr>
+        <td><code>proc_add_employee</code> / <code>proc_add_product</code></td>
+        <td class="code-path">Admin Master Data</td>
+        <td>Enrolls staff with hashed passwords and registers new SKUs with barcodes.</td>
+      </tr>
+      <tr>
+        <td><code>proc_update_price</code> / <code>proc_discontinue_product</code></td>
+        <td class="code-path">Catalog Management</td>
+        <td>Modifies retail pricing with audit history and deactivates retired products.</td>
+      </tr>
+      <tr>
+        <td><code>proc_flag_slow_movers</code></td>
+        <td class="code-path">Inventory Analytics</td>
+        <td>Identifies SKUs with zero sales in 30 days and flags in <code>slow_movers</code> table.</td>
+      </tr>
+      <tr>
+        <td><code>proc_assign_top10_coupons</code></td>
+        <td class="code-path">Marketing Automation</td>
+        <td>Awards exclusive coupons to the top 10 shoppers network-wide.</td>
+      </tr>
+      <tr>
+        <td><code>proc_log_error</code></td>
+        <td class="code-path">Database Exception Handler</td>
+        <td>Centralized SQL error logger writing exceptions into <code>error_log</code>.</td>
+      </tr>
+      <tr>
+        <td><code>sp_top_10_loyalty_customers_all_branches</code></td>
+        <td class="code-path">Marketing Analytics</td>
+        <td>Company-wide top VIP customer ranking report.</td>
+      </tr>
+      <tr>
+        <td><code>sp_top_10_loyalty_customers_per_branch</code></td>
+        <td class="code-path">Marketing Analytics</td>
+        <td>Branch-level VIP customer ranking report.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- SECTION 2: UDFs -->
+  <h2>🧮 User-Defined Functions (UDFs) (22 Functions)</h2>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 25%;">Function Name</th>
+        <th style="width: 15%;">Return Type</th>
+        <th style="width: 28%;">Where Used in Application</th>
+        <th style="width: 32%;">Calculation / Logic</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>fn_suggested_reorder_qty</code></td>
+        <td><code>INT</code></td>
+        <td class="code-path">src/app/api/inventory/route.ts</td>
+        <td>Replenishment formula: <code>(Sales_Velocity * Lead_Days) + Buffer - On_Hand</code>.</td>
+      </tr>
+      <tr>
+        <td><code>fn_product_sales_velocity</code></td>
+        <td><code>DECIMAL(10,2)</code></td>
+        <td class="code-path">src/app/api/inventory/route.ts</td>
+        <td>Computes average daily units sold over the trailing 30-day window.</td>
+      </tr>
+      <tr>
+        <td><code>fn_branch_replenishment_cost</code></td>
+        <td><code>DECIMAL(12,2)</code></td>
+        <td class="code-path">src/app/inventory/reorder-suggestions/page.tsx</td>
+        <td>Sum of reorder quantities multiplied by unit purchase costs for a branch.</td>
+      </tr>
+      <tr>
+        <td><code>fn_work_hours</code></td>
+        <td><code>DECIMAL(7,2)</code></td>
+        <td class="code-path">src/app/api/shifts/scan-attendance/route.ts</td>
+        <td>Computes net hours worked between shift clock-in and clock-out timestamps.</td>
+      </tr>
+      <tr>
+        <td><code>get_discount</code></td>
+        <td><code>DECIMAL(9,2)</code></td>
+        <td class="code-path">src/app/api/promotions/route.ts</td>
+        <td>Calculates currency discount amount for active promotional rules.</td>
+      </tr>
+      <tr>
+        <td><code>promo_isactive</code></td>
+        <td><code>TINYINT</code></td>
+        <td class="code-path">src/app/api/promotions/route.ts</td>
+        <td>Returns <code>1</code> if current timestamp is within campaign dates, else <code>0</code>.</td>
+      </tr>
+      <tr>
+        <td><code>fn_available_qty</code></td>
+        <td><code>INT</code></td>
+        <td class="code-path">Inventory Calculation Engine</td>
+        <td>Computes total unreserved on-hand units available for sale.</td>
+      </tr>
+      <tr>
+        <td><code>fn_days_to_expiry</code></td>
+        <td><code>INT</code></td>
+        <td class="code-path">Batch Expiry Logic</td>
+        <td>Calculates remaining calendar days until a batch reaches expiry date.</td>
+      </tr>
+      <tr>
+        <td><code>fn_stock_status</code></td>
+        <td><code>VARCHAR(20)</code></td>
+        <td class="code-path">Grid Display Utility</td>
+        <td>Returns standardized stock status tags (<code>OUT_OF_STOCK</code>, <code>LOW</code>, <code>NORMAL</code>).</td>
+      </tr>
+      <tr>
+        <td><code>fn_profit_margin</code></td>
+        <td><code>DECIMAL(7,2)</code></td>
+        <td class="code-path">Financial Analytics</td>
+        <td>Calculates profit margin %: <code>((Price - Cost) / Price) * 100</code>.</td>
+      </tr>
+      <tr>
+        <td><code>fn_price_with_tax</code></td>
+        <td><code>DECIMAL(12,2)</code></td>
+        <td class="code-path">POS Pricing Engine</td>
+        <td>Computes retail price inclusive of branch-specific tax percentage.</td>
+      </tr>
+      <tr>
+        <td><code>fn_category_path</code></td>
+        <td><code>VARCHAR(1000)</code></td>
+        <td class="code-path">Catalog Navigation</td>
+        <td>Recursively traverses category tree into full breadcrumb string.</td>
+      </tr>
+      <tr>
+        <td><code>CalculateLineTotal</code></td>
+        <td><code>DECIMAL(12,2)</code></td>
+        <td class="code-path">POS Checkout Engine</td>
+        <td>Calculates net line item total after discounts and line tax.</td>
+      </tr>
+      <tr>
+        <td><code>GetSaleDiscount</code> / <code>GetTotalPaid</code></td>
+        <td><code>DECIMAL(12,2)</code></td>
+        <td class="code-path">Cashier Settlement Engine</td>
+        <td>Computes total order discounts and aggregates multi-tender payments.</td>
+      </tr>
+      <tr>
+        <td><code>lt_points_earned</code></td>
+        <td><code>INT</code></td>
+        <td class="code-path">Loyalty Engine</td>
+        <td>Calculates loyalty points earned based on net checkout amount and tier.</td>
+      </tr>
+      <tr>
+        <td><code>modify_customer_tier</code></td>
+        <td><code>VARCHAR(20)</code></td>
+        <td class="code-path">Loyalty Engine</td>
+        <td>Assigns loyalty tier based on 12-month customer expenditure.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- SECTION 3: DATABASE VIEWS -->
+  <h2>👁️ Database Views (28 Views)</h2>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 25%;">View Name</th>
+        <th style="width: 28%;">Where Used in Application</th>
+        <th style="width: 47%;">Description & Joined Tables</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>vw_branch_inventory</code></td>
+        <td class="code-path">src/app/api/inventory/route.ts<br>src/app/api/inventory/dashboard/route.ts</td>
+        <td>Denormalized real-time stock levels joining <code>inventory</code>, <code>products</code>, <code>branches</code>, and <code>categories</code>.</td>
+      </tr>
+      <tr>
+        <td><code>vw_batch_expiry_status</code></td>
+        <td class="code-path">src/app/api/inventory/batches/route.ts<br>src/app/api/inventory/dashboard/route.ts</td>
+        <td>Live batch expiration statuses joining <code>product_batches</code>, <code>products</code>, and <code>branches</code>.</td>
+      </tr>
+      <tr>
+        <td><code>vw_stock_alert_dashboard</code></td>
+        <td class="code-path">src/app/api/inventory/stock-alerts/route.ts</td>
+        <td>Active alerts joining <code>stock_alerts</code>, <code>products</code>, and store locations.</td>
+      </tr>
+      <tr>
+        <td><code>vw_purchase_order_summary</code></td>
+        <td class="code-path">src/app/api/purchases/route.ts</td>
+        <td>Procurement overview joining <code>purchase_orders</code>, <code>suppliers</code>, and receiving branches.</td>
+      </tr>
+      <tr>
+        <td><code>vw_purchase_order_details</code></td>
+        <td class="code-path">src/app/api/purchases/[id]/route.ts</td>
+        <td>Line item delivery audit joining <code>purchase_order_items</code> with <code>products</code>.</td>
+      </tr>
+      <tr>
+        <td><code>daily_sales_vw</code></td>
+        <td class="code-path">src/app/api/reports/route.ts<br>src/app/api/dashboard/stats/route.ts</td>
+        <td>Daily revenue aggregation by branch joining <code>sales</code>, <code>payments</code>, and branches.</td>
+      </tr>
+      <tr>
+        <td><code>branch_sales_vw</code> / <code>cashier_sales_vw</code></td>
+        <td class="code-path">src/app/admin/reports/page.tsx</td>
+        <td>Comparative performance ranking revenue across branches and individual cashiers.</td>
+      </tr>
+      <tr>
+        <td><code>payment_summary_vw</code></td>
+        <td class="code-path">src/components/dashboard/DashboardView.tsx</td>
+        <td>Financial reconciliation breaking down revenue by payment method (Cash, Card, Points).</td>
+      </tr>
+      <tr>
+        <td><code>return_report_vw</code></td>
+        <td class="code-path">src/app/admin/reports/page.tsx</td>
+        <td>Customer returns analysis joining <code>returns</code>, <code>sale_items</code>, and products.</td>
+      </tr>
+      <tr>
+        <td><code>active_promotions_vw</code></td>
+        <td class="code-path">src/app/api/promotions/route.ts</td>
+        <td>Active discounts formatted for POS checkout discount engines.</td>
+      </tr>
+      <tr>
+        <td><code>top_customers_vw</code> / <code>customer_summary_vw</code></td>
+        <td class="code-path">src/app/marketing/loyalty/page.tsx</td>
+        <td>VIP shoppers ranked by cumulative spend and visit frequency.</td>
+      </tr>
+      <tr>
+        <td><code>v_employee_directory</code> / <code>v_attendance_report</code></td>
+        <td class="code-path">HR Management System</td>
+        <td>Employee directory and attendance summaries joining <code>shifts</code> with <code>employees</code>.</td>
+      </tr>
+      <tr>
+        <td><code>v_audit_trail</code></td>
+        <td class="code-path">System Security Log</td>
+        <td>Security audit log resolving employee IDs to full names and timestamps.</td>
+      </tr>
+      <tr>
+        <td><code>v_product_etl</code> / <code>v_branch_etl</code></td>
+        <td class="code-path">Data Warehouse Staging</td>
+        <td>ETL dimension staging views feeding business intelligence data marts.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- SECTION 4: TRIGGERS -->
+  <h2>🪤 Database Triggers (21 Triggers)</h2>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 25%;">Trigger Name</th>
+        <th style="width: 15%;">Event & Timing</th>
+        <th style="width: 18%;">Target Table</th>
+        <th style="width: 42%;">Business Rule / Automated Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>trg_inventory_after_update</code></td>
+        <td><span class="badge-event badge-update">AFTER UPDATE</span></td>
+        <td><code>inventory</code></td>
+        <td>When quantity falls below reorder point, automatically creates low stock alert.</td>
+      </tr>
+      <tr>
+        <td><code>after_sale_item_insert</code></td>
+        <td><span class="badge-event badge-insert">AFTER INSERT</span></td>
+        <td><code>sale_items</code></td>
+        <td>Automatically deducts sold quantity from branch inventory upon POS checkout.</td>
+      </tr>
+      <tr>
+        <td><code>after_sale_item_delete</code></td>
+        <td><span class="badge-event badge-delete">AFTER DELETE</span></td>
+        <td><code>sale_items</code></td>
+        <td>Restores stock back to inventory if an item is canceled or voided from cart.</td>
+      </tr>
+      <tr>
+        <td><code>after_sale_item_update</code></td>
+        <td><span class="badge-event badge-update">AFTER UPDATE</span></td>
+        <td><code>sale_items</code></td>
+        <td>Adjusts inventory quantity if a sale line item quantity is modified.</td>
+      </tr>
+      <tr>
+        <td><code>before_sale_item_insert</code></td>
+        <td><span class="badge-event badge-insert">BEFORE INSERT</span></td>
+        <td><code>sale_items</code></td>
+        <td>Integrity check: validates price &gt;= 0 and quantity &gt; 0.</td>
+      </tr>
+      <tr>
+        <td><code>trg_sales_au_award_points</code></td>
+        <td><span class="badge-event badge-update">AFTER UPDATE</span></td>
+        <td><code>sales</code></td>
+        <td>Automatically awards loyalty points when sale status changes to <code>COMPLETED</code>.</td>
+      </tr>
+      <tr>
+        <td><code>trg_products_au_price_history</code></td>
+        <td><span class="badge-event badge-update">AFTER UPDATE</span></td>
+        <td><code>products</code></td>
+        <td>Logs previous and new retail price into <code>product_price_history</code>.</td>
+      </tr>
+      <tr>
+        <td><code>trg_products_bd</code></td>
+        <td><span class="badge-event badge-delete">BEFORE DELETE</span></td>
+        <td><code>products</code></td>
+        <td>Integrity safeguard: blocks deletion of products with existing inventory or sales.</td>
+      </tr>
+      <tr>
+        <td><code>trg_product_batch_before_insert</code></td>
+        <td><span class="badge-event badge-insert">BEFORE INSERT</span></td>
+        <td><code>product_batches</code></td>
+        <td>Validates that batch expiry date is strictly in the future.</td>
+      </tr>
+      <tr>
+        <td><code>before_promotions_insert</code></td>
+        <td><span class="badge-event badge-insert">BEFORE INSERT</span></td>
+        <td><code>promotions</code></td>
+        <td>Enforces promotion rules: <code>start_date &lt; end_date</code> and discount &lt;= 100%.</td>
+      </tr>
+      <tr>
+        <td><code>before_insert_customers</code></td>
+        <td><span class="badge-event badge-insert">BEFORE INSERT</span></td>
+        <td><code>customers</code></td>
+        <td>Normalizes phone numbers and prevents duplicate customer registration.</td>
+      </tr>
+      <tr>
+        <td><code>trg_purchase_item_after_insert</code></td>
+        <td><span class="badge-event badge-insert">AFTER INSERT</span></td>
+        <td><code>purchase_order_items</code></td>
+        <td>Automatically recalculates and updates <code>purchase_orders.total_amount</code>.</td>
+      </tr>
+      <tr>
+        <td><code>trg_shifts_bi</code></td>
+        <td><span class="badge-event badge-insert">BEFORE INSERT</span></td>
+        <td><code>shifts</code></td>
+        <td>Prevents overlapping shift assignments for the same staff member.</td>
+      </tr>
+      <tr>
+        <td><code>trg_employees_au</code></td>
+        <td><span class="badge-event badge-update">AFTER UPDATE</span></td>
+        <td><code>employees</code></td>
+        <td>Logs employee role reassignments and branch transfers to <code>audit_log</code>.</td>
+      </tr>
+      <tr>
+        <td><code>trg_branches_bd</code></td>
+        <td><span class="badge-event badge-delete">BEFORE DELETE</span></td>
+        <td><code>branches</code></td>
+        <td>Prevents deleting branches with active stock or open cash registers.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- SECTION 5: SCHEDULED EVENTS -->
+  <h2>⏰ Scheduled Database Events (9 Events)</h2>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 25%;">Event Name</th>
+        <th style="width: 15%;">Interval</th>
+        <th style="width: 15%;">Status</th>
+        <th style="width: 45%;">Automated Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>GenerateDailySalesSummary</code></td>
+        <td>Every 1 Day (00:00)</td>
+        <td><code>ENABLED</code></td>
+        <td>Aggregates branch daily sales and revenue totals into <code>daily_sales_summary</code>.</td>
+      </tr>
+      <tr>
+        <td><code>evt_daily_expire_promotions</code></td>
+        <td>Every 1 Day</td>
+        <td><code>ENABLED</code></td>
+        <td>Daily sweep marking marketing campaigns past their end date as <code>EXPIRED</code>.</td>
+      </tr>
+      <tr>
+        <td><code>update_promotion_status</code></td>
+        <td>Every 1 Day</td>
+        <td><code>ENABLED</code></td>
+        <td>Activates scheduled promotions matching current date.</td>
+      </tr>
+      <tr>
+        <td><code>evt_nightly_mark_absent</code></td>
+        <td>Every 1 Day</td>
+        <td><code>ENABLED</code></td>
+        <td>Marks scheduled shifts with no clock-in timestamp as <code>ABSENT</code>.</td>
+      </tr>
+      <tr>
+        <td><code>ev_daily_flag_slow_movers</code></td>
+        <td>Every 1 Day</td>
+        <td><code>ENABLED</code></td>
+        <td>Scans for products with zero sales in 30 days and flags into <code>slow_movers</code>.</td>
+      </tr>
+      <tr>
+        <td><code>ev_weekly_cleanup_slow_movers</code></td>
+        <td>Every 1 Week</td>
+        <td><code>ENABLED</code></td>
+        <td>Removes products that regained sales velocity from the slow-movers watchlist.</td>
+      </tr>
+      <tr>
+        <td><code>evt_weekly_slow_movers</code></td>
+        <td>Every 1 Week</td>
+        <td><code>ENABLED</code></td>
+        <td>Generates weekly stagnation report for procurement managers.</td>
+      </tr>
+      <tr>
+        <td><code>evt_monthly_archive_audit</code></td>
+        <td>Every 1 Month</td>
+        <td><code>ENABLED</code></td>
+        <td>Archives audit logs older than 90 days into <code>audit_log_archive</code>.</td>
+      </tr>
+      <tr>
+        <td><code>evt_monthly_deactivate_dormant_products</code></td>
+        <td>Every 1 Month</td>
+        <td><code>ENABLED</code></td>
+        <td>Soft-deactivates products with zero sales and zero stock movements across 365 days.</td>
+      </tr>
+    </tbody>
+  </table>
+
+</body>
+</html>
